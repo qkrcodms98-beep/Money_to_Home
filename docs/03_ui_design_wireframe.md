@@ -2,11 +2,11 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 상태 | v1.0 |
+| 문서 상태 | v1.1. 검토 후보 가운데 33장을 본 와이어프레임에 넣고, PC 지도의 패널을 왼쪽으로 정했다 (2026-10-11). |
 | 작성일 | 2026-10-11 |
-| 기준 문서 | `docs/02_requirements.md` (v1.9), `docs/03_ui_design.md` (v1.4) |
-| 범위 | 지금까지 그린 와이어프레임 111장 전부. 본 와이어프레임 77장과 검토 후보 34장 |
-| 그림 | `docs/wireframes/`의 PNG 111개. 캔버스의 화면을 그대로 찍은 것이다. 문서에 넣은 모바일 그림은 `docs/wireframes/small/`의 줄인 그림이다. |
+| 기준 문서 | `docs/02_requirements.md` (v1.10), `docs/03_ui_design.md` (v1.5) |
+| 범위 | 와이어프레임 110장. 본 와이어프레임 109장과 보류 1장 |
+| 그림 | `docs/wireframes/`의 PNG 110개. 캔버스의 화면을 그대로 찍은 것이다. 문서에 넣은 모바일 그림은 `docs/wireframes/small/`의 줄인 그림이다. |
 
 ## 목차
 
@@ -14,7 +14,7 @@
 2. 공통 규칙
 3. 전체 흐름과 그림 목록
 
-1부. 본 와이어프레임 (77장)
+1부. 본 와이어프레임 (109장)
 
 4. P-01 시작
 5. P-02 재무정보 입력
@@ -24,17 +24,18 @@
 9. 대출 없이 계산했을 때 바뀌는 화면
 10. P-07 로그인
 11. P-08 회원가입
+12. 추가 상태 · 1차 (A)
+13. 추가 상태 · 2차 (B)
+14. 3차 화면 (C)
+15. 웹 화면 (W)
 
-2부. 검토 후보 (34장, 아직 확정하지 않음)
+2부. 보류 (1장)
 
-12. A. 1차에 필요한 상태
-13. B. 2차에 필요한 상태
-14. C. 3차 기능의 화면
-15. W. 웹 화면
+16. 보류: 구별 변동 그래프 (C7)
 
 마무리
 
-16. 확인이 필요한 것
+17. 정한 것과 남은 것
 
 부록 A. 요구사항 번호로 그림 찾기
 
@@ -57,14 +58,16 @@
 
 | 묶음 | 장수 | 상태 | 캔버스 |
 | --- | --- | --- | --- |
-| 본 와이어프레임 | 77장 (지도와 아래 창 21장, 시작·입력·회원 56장) | 확정 | https://claude.ai/artifact/5UqYcGVQwwPqFp4BDJXcXW |
-| 검토 후보 | 34장 (1차 8장, 2차 6장, 3차 10장, 웹 10장) | 확정하지 않음. 팀장이 확인한 것만 본 와이어프레임으로 옮긴다. | https://claude.ai/artifact/6YqFCCvi4fdvBY7joChpQk |
+| 본 와이어프레임 | 109장 (지도와 아래 창 20장, 시작·입력·회원 56장, 추가 상태 14장, 3차 화면 9장, 웹 화면 10장) | 확정 | https://claude.ai/artifact/5UqYcGVQwwPqFp4BDJXcXW |
+| 보류 | 1장 (구별 변동 그래프) | 자료가 정해지지 않아 미뤄 두었다. | https://claude.ai/artifact/6YqFCCvi4fdvBY7joChpQk |
 
+- 처음에는 본 와이어프레임 77장과 검토 후보 34장으로 나눠 그렸다. 2026-10-11에 후보 33장을 본 와이어프레임에 넣고, 오른쪽 패널로 그렸던 PC 지도 한 장(P-05 ⑩)을 뺐다.
+- A1, B3, C6, W7 같은 번호는 후보일 때 붙인 번호를 그대로 쓴다. 다른 문서가 이 번호로 그림을 가리키기 때문이다.
 - 캔버스 링크는 만든 사람만 열 수 있다. 다른 사람에게 보여 주려면 페이지의 공유 메뉴에서 공유한다.
 - 그림은 캔버스의 화면을 그대로 찍었다. 모바일 화면은 실제 크기의 2배(가로 780픽셀), 웹 화면은 실제 크기다.
 - 이 문서에는 모바일 그림을 실제 크기(가로 390픽셀)로 줄인 `docs/wireframes/small/`의 그림을 넣었다. 그림을 누르면 2배 크기의 원본이 열린다.
 - 캔버스를 고치면 그 화면의 그림을 다시 찍어 `docs/wireframes/`와 `docs/wireframes/small/`의 파일을 바꾼다. 파일 이름은 3.2와 3.3의 표에 있다.
-- 검토 후보의 그림은 파일 이름이 `cand_`로 시작한다.
+- 보류한 그림은 파일 이름이 `cand_`로 시작한다.
 
 ### 1.3 그림마다 적은 내용
 
@@ -99,8 +102,8 @@
 | --- | --- | --- |
 | 모바일 | 390 × 844 | 기본. 본 와이어프레임의 대부분 |
 | 모바일 (긴 그림) | 390 × 1040, 390 × 1260 | 스크롤해야 보이는 내용까지 한 장에 담으려고 길게 그린 것. 시나리오 탭, 3차 내용이 든 아파트 정보 탭 |
-| 웹 | 1280 × 800 | 가로 1200픽셀 이상의 배치. 본 와이어프레임의 P-05 ⑩, 검토 후보의 W1 ~ W6 |
-| 웹 (지도) | 1440 × 900 | 검토 후보의 W7 ~ W10 |
+| 웹 | 1280 × 800 | 가로 1200픽셀 이상의 배치. W1 ~ W6 |
+| 웹 (지도) | 1440 × 900 | W7 ~ W10 |
 
 모바일과 웹을 다른 페이지로 만들지 않는다. 같은 HTML의 배치만 미디어 쿼리로 바꾼다.
 
@@ -114,7 +117,7 @@
 | 아래 버튼 | 화면 아래에 붙는 검은 버튼 하나. 꺼진 상태는 회색 | 키패드가 올라오면 키패드 바로 위에 붙는다. 값이 비었거나 오류가 있으면 켜지지 않는다. | P-01 ~ P-04, P-07, P-08 |
 | 입력란 | 밑줄 하나. 위에 이름, 아래 왼쪽에 설명, 아래 오른쪽에 읽어 주는 금액 | 오류가 있으면 밑줄이 빨갛게 바뀌고 설명 자리에 오류 문구가 나온다. | 입력, 회원 |
 | 검은 알림 | 버튼 위나 화면 아래에 뜨는 한 줄 | 서버나 네트워크 오류, 저장 결과를 알린다. 입력한 값은 지우지 않는다. | 전체 |
-| 안내 아이콘 ( ! ) | 지름 22픽셀의 작은 동그라미 | 누르거나 마우스를 올리면 "판매 중인 매물이 아니라 최근 1년 실거래 기록"이라는 안내가 뜬다. | 지도, 목록 |
+| 안내 아이콘 ( ! ) | 지름 22픽셀의 작은 동그라미 | 누르거나 마우스를 올리면 "판매 중인 매물이 아니라 최근 1년 실거래 기록"이라는 안내와 실거래 수집 기준일이 뜬다. | 지도, 목록 |
 | 푸터 | 없음 | 안내 문구는 시작 화면, 안내 아이콘, 시나리오 탭 아래에 둔다. | 없음 |
 
 누를 수 있는 요소는 누르는 영역을 가로세로 44픽셀 이상으로 한다 (NFR-24).
@@ -159,7 +162,7 @@
 - 손잡이와 머리 부분을 끌어 키우고 줄인다. 1차에는 손잡이를 누르면 다음 단계로 바뀐다.
 - 내용 영역은 스크롤만 된다.
 - 닫기 버튼, 아래로 길게 끌기, 브라우저의 뒤로 가기로 닫는다.
-- 웹에서는 아래 창이 옆 패널이 되고 단계가 없다.
+- 웹에서는 아래 창이 왼쪽 패널이 되고 단계가 없다 (W7 ~ W10).
 
 ### 2.6 입력 화면의 공통 동작
 
@@ -211,20 +214,20 @@
                                                                            └ 수정 → 입력 단계
 ```
 
-| 화면 | 본 와이어프레임 | 검토 후보에 있는 것 |
-| --- | --- | --- |
-| P-01 시작 | 5장 | W1 |
-| P-02 재무정보 입력 | 14장 (흐름 7, 예외 7) | W2 |
-| P-03 대출상품 선택 | 10장 (흐름 5, 조건 창과 예외 5) | C8, W3 |
-| P-04 저축 계획 | 11장 (흐름 6, 경계 값과 예외 5) | W4 |
-| P-05 지도, P-06 아래 창 | 21장 (기본 흐름 10, 추가 상태와 예외 11) | A1 ~ A9, B1 ~ B6, C2, C6, C6b, C7, W7 ~ W10 |
-| 대출 없이 계산했을 때 | 5장 | |
-| P-07 로그인 | 4장 | W5 |
-| P-08 회원가입 | 7장 | W6 |
-| 화면 번호가 없는 3차 화면 | | C0, C1, C3, C4, C5 |
-| 합계 | 77장 | 34장 |
+| 화면 | 기본 흐름과 예외 | 추가 상태 | 3차 | 웹 |
+| --- | --- | --- | --- | --- |
+| P-01 시작 | 5장 | | | W1 |
+| P-02 재무정보 입력 | 14장 | | | W2 |
+| P-03 대출상품 선택 | 10장 | | C8 | W3 |
+| P-04 저축 계획 | 11장 | | | W4 |
+| P-05 지도, P-06 아래 창 | 20장 | A1 ~ A9 (8장), B1 ~ B6 (6장) | C2, C6, C6b | W7 ~ W10 |
+| 대출 없이 계산했을 때 | 5장 | | | |
+| P-07 로그인 | 4장 | | | W5 |
+| P-08 회원가입 | 7장 | | | W6 |
+| P-09 저장한 결과, P-10 비밀번호 변경, P-11 회원 탈퇴 | | | C0, C1, C3, C4, C5 | |
+| 합계 109장 | 76장 | 14장 | 9장 | 10장 |
 
-### 3.2 본 와이어프레임 77장
+### 3.2 본 와이어프레임 109장
 
 그림 이름을 누르면 설명으로 간다.
 
@@ -279,7 +282,6 @@
 |  | [P-06 ⑦ 목록에서 연 아파트 80% (아파트 정보)](#wf-P06_AptInfo80) | 1차 | 390 × 844 | `P06_AptInfo80.png` |
 |  | [P-06 ⑧ 아파트 전체 (시나리오)](#wf-P06_ScenarioFull) | 1차 | 390 × 1040 | `P06_ScenarioFull.png` |
 |  | [P-05 ⑨ 결과 없음](#wf-P05_Empty) | 1차 | 390 × 844 | `P05_Empty.png` |
-|  | [P-05 ⑩ 웹 1200px 이상 (오른쪽 패널)](#wf-P05_Web) | 2차 | 1280 × 800 | `P05_Web.png` |
 | P-05 지도와 P-06 아래 창 · 추가 상태와 예외 | [P-05 ⑪ 광주시 전체 (구 표시, 경계선, 밖은 흐리게)](#wf-P05_City) | 2차 | 390 × 844 | `P05_City.png` |
 |  | [P-05 ⑫ 입력이 빠졌을 때](#wf-P05_NoInput) | 1차 | 390 × 844 | `P05_NoInput.png` |
 |  | [P-05 ⑬ 구·동 선택](#wf-P05_Region) | 1차 | 390 × 844 | `P05_Region.png` |
@@ -307,51 +309,51 @@
 |  | [P-08 ⑤ 예외: 비밀번호 확인 불일치](#wf-P08e_PwMismatch) | 2차 | 390 × 844 | `P08e_PwMismatch.png` |
 |  | [P-08 ⑥ 가입 전 확인](#wf-P08f_Ready) | 2차 | 390 × 844 | `P08f_Ready.png` |
 |  | [P-08 ⑦ 가입 완료](#wf-P08g_Welcome) | 2차 | 390 × 844 | `P08g_Welcome.png` |
+| 추가 상태 · 1차 (A) | [A1 시나리오: 목표 기간이 '지금'](#wf-A1_GoalNow) | 1차 | 390 × 1040 | `A1_GoalNow.png` |
+|  | [A2 시나리오: 다시 계산하는 중](#wf-A2_Recalc) | 1차 | 390 × 1040 | `A2_Recalc.png` |
+|  | [A3 시나리오: 다시 계산한 뒤](#wf-A3_Recalced) | 1차 | 390 × 1040 | `A3_Recalced.png` |
+|  | [A4 시나리오: 다시 계산하지 못함](#wf-A4_RecalcFail) | 1차 | 390 × 1040 | `A4_RecalcFail.png` |
+|  | [A5 지도: 자금 부족 표시를 끔](#wf-A5_LackOff) | 1차 | 390 × 844 | `A5_LackOff.png` |
+|  | [A6 목록: 목표할 수 있는 곳이 없음](#wf-A6_NoTarget) | 1차 | 390 × 844 | `A6_NoTarget.png` |
+|  | [A7 동을 누름: '지금'이 없는 동](#wf-A7_NoNow) | 1차 | 390 × 844 | `A7_NoNow.png` |
+|  | [A9 아파트 정보 탭: 전체로 올림](#wf-A9_InfoFull) | 1차 | 390 × 844 | `A9_InfoFull.png` |
+| 추가 상태 · 2차 (B) | [B1 목록: 정렬을 펼침](#wf-B1_SortOpen) | 2차 | 390 × 844 | `B1_SortOpen.png` |
+|  | [B2 목록: 가격 낮은 순](#wf-B2_SortPrice) | 2차 | 390 × 844 | `B2_SortPrice.png` |
+|  | [B3 목록: 카드에서 다른 면적으로 넘김](#wf-B3_AreaNext) | 2차 | 390 × 844 | `B3_AreaNext.png` |
+|  | [B4 지도: 범례를 펼침](#wf-B4_LegendOpen) | 2차 | 390 × 844 | `B4_LegendOpen.png` |
+|  | [B5 지도: 안내 아이콘을 누름](#wf-B5_InfoTip) | 2차 | 390 × 844 | `B5_InfoTip.png` |
+|  | [B6 지도: 로그인한 상태](#wf-B6_LoggedIn) | 2차 | 390 × 844 | `B6_LoggedIn.png` |
+| 3차 화면 (C) | [C0 계정 메뉴](#wf-C0_AccountMenu) | 3차 | 390 × 844 | `C0_AccountMenu.png` |
+|  | [C1 P-09 저장한 결과 목록](#wf-C1_SavedList) | 3차 | 390 × 844 | `C1_SavedList.png` |
+|  | [C2 시나리오: 결과를 저장함](#wf-C2_Saved) | 3차 | 390 × 1040 | `C2_Saved.png` |
+|  | [C3 P-09 저장한 결과 열어 보기](#wf-C3_SavedOpen) | 3차 | 390 × 844 | `C3_SavedOpen.png` |
+|  | [C4 P-10 비밀번호 변경](#wf-C4_Password) | 3차 | 390 × 844 | `C4_Password.png` |
+|  | [C5 P-11 회원 탈퇴](#wf-C5_Withdraw) | 3차 | 390 × 844 | `C5_Withdraw.png` |
+|  | [C6 아파트 정보 탭: 로드뷰와 3차 내용](#wf-C6_InfoExtra) | 3차 | 390 × 1260 | `C6_InfoExtra.png` |
+|  | [C6b 아파트 정보 탭: 로드뷰가 없을 때](#wf-C6b_NoRoadview) | 3차 | 390 × 844 | `C6b_NoRoadview.png` |
+|  | [C8 용어 설명](#wf-C8_Glossary) | 3차 | 390 × 844 | `C8_Glossary.png` |
+| 웹 화면 (W) | [W1 웹: 시작](#wf-W1_Start) | 2차 | 1280 × 800 | `W1_Start.png` |
+|  | [W2 웹: 재무정보](#wf-W2_Profile) | 2차 | 1280 × 800 | `W2_Profile.png` |
+|  | [W3 웹: 대출상품](#wf-W3_Loan) | 2차 | 1280 × 800 | `W3_Loan.png` |
+|  | [W4 웹: 저축 계획](#wf-W4_Plan) | 2차 | 1280 × 800 | `W4_Plan.png` |
+|  | [W5 웹: 로그인](#wf-W5_Login) | 2차 | 1280 × 800 | `W5_Login.png` |
+|  | [W6 웹: 회원가입](#wf-W6_Signup) | 2차 | 1280 × 800 | `W6_Signup.png` |
+|  | [W7 웹: 지도와 목록](#wf-W7_MapList) | 2차 | 1440 × 900 | `W7_MapList.png` |
+|  | [W8 웹: 아파트를 고름 (시나리오)](#wf-W8_MapApt) | 2차 | 1440 × 900 | `W8_MapApt.png` |
+|  | [W9 웹: 패널을 접음](#wf-W9_MapWide) | 2차 | 1440 × 900 | `W9_MapWide.png` |
+|  | [W10 웹: 아파트를 고름 (아파트 정보)](#wf-W10_MapInfo) | 2차 | 1440 × 900 | `W10_MapInfo.png` |
 
-### 3.3 검토 후보 34장
+### 3.3 보류 1장
 
-아직 확정하지 않았다. 파일 이름은 `cand_`로 시작한다.
+자료가 정해지지 않아 미뤄 둔 그림이다. 파일 이름은 `cand_`로 시작한다.
 
 | 묶음 | 그림 | 단계 | 크기 | 파일 |
 | --- | --- | --- | --- | --- |
-| A. 1차에 필요한 상태 | [A1 시나리오: 목표 기간이 '지금'](#cand-Main) | 1차 | 390 × 1040 | `cand_A1_GoalNow.png` |
-|  | [A2 시나리오: 다시 계산하는 중](#cand-A2_Recalc) | 1차 | 390 × 1040 | `cand_A2_Recalc.png` |
-|  | [A3 시나리오: 다시 계산한 뒤](#cand-A3_Recalced) | 1차 | 390 × 1040 | `cand_A3_Recalced.png` |
-|  | [A4 시나리오: 다시 계산하지 못함](#cand-A4_RecalcFail) | 1차 | 390 × 1040 | `cand_A4_RecalcFail.png` |
-|  | [A5 지도: 자금 부족 표시를 끔](#cand-A5_LackOff) | 1차 | 390 × 844 | `cand_A5_LackOff.png` |
-|  | [A6 목록: 목표할 수 있는 곳이 없음](#cand-A6_NoTarget) | 1차 | 390 × 844 | `cand_A6_NoTarget.png` |
-|  | [A7 동을 누름: '지금'이 없는 동](#cand-A7_NoNow) | 1차 | 390 × 844 | `cand_A7_NoNow.png` |
-|  | [A9 아파트 정보 탭: 전체로 올림](#cand-A9_InfoFull) | 1차 | 390 × 844 | `cand_A9_InfoFull.png` |
-| B. 2차에 필요한 상태 | [B1 목록: 정렬을 펼침](#cand-B1_SortOpen) | 2차 | 390 × 844 | `cand_B1_SortOpen.png` |
-|  | [B2 목록: 가격 낮은 순](#cand-B2_SortPrice) | 2차 | 390 × 844 | `cand_B2_SortPrice.png` |
-|  | [B3 목록: 카드에서 다른 면적으로 넘김](#cand-B3_AreaNext) | 2차 | 390 × 844 | `cand_B3_AreaNext.png` |
-|  | [B4 지도: 범례를 펼침](#cand-B4_LegendOpen) | 2차 | 390 × 844 | `cand_B4_LegendOpen.png` |
-|  | [B5 지도: 안내 아이콘을 누름](#cand-B5_InfoTip) | 2차 | 390 × 844 | `cand_B5_InfoTip.png` |
-|  | [B6 지도: 로그인한 상태](#cand-B6_LoggedIn) | 2차 | 390 × 844 | `cand_B6_LoggedIn.png` |
-| C. 3차 기능의 화면 | [C0 계정 메뉴](#cand-C0_AccountMenu) | 3차 | 390 × 844 | `cand_C0_AccountMenu.png` |
-|  | [C1 저장한 결과 목록 (새 화면 P-09)](#cand-C1_SavedList) | 3차 | 390 × 844 | `cand_C1_SavedList.png` |
-|  | [C2 시나리오: 결과를 저장함](#cand-C2_Saved) | 3차 | 390 × 1040 | `cand_C2_Saved.png` |
-|  | [C3 저장한 결과 열어 보기](#cand-C3_SavedOpen) | 3차 | 390 × 844 | `cand_C3_SavedOpen.png` |
-|  | [C4 비밀번호 변경](#cand-C4_Password) | 3차 | 390 × 844 | `cand_C4_Password.png` |
-|  | [C5 회원 탈퇴](#cand-C5_Withdraw) | 3차 | 390 × 844 | `cand_C5_Withdraw.png` |
-|  | [C6 아파트 정보 탭: 로드뷰와 3차 내용](#cand-C6_InfoExtra) | 3차 | 390 × 1260 | `cand_C6_InfoExtra.png` |
-|  | [C6b 아파트 정보 탭: 로드뷰가 없을 때](#cand-C6b_NoRoadview) | 3차 | 390 × 844 | `cand_C6b_NoRoadview.png` |
-|  | [C7 시나리오: 구별 변동 그래프](#cand-C7_Trend) | 3차 | 390 × 844 | `cand_C7_Trend.png` |
-|  | [C8 용어 설명](#cand-C8_Glossary) | 3차 | 390 × 844 | `cand_C8_Glossary.png` |
-| W. 웹 화면 (1200px 이상) | [W1 웹: 시작](#cand-W1_Start) | 2차 | 1280 × 800 | `cand_W1_Start.png` |
-|  | [W2 웹: 재무정보](#cand-W2_Profile) | 2차 | 1280 × 800 | `cand_W2_Profile.png` |
-|  | [W3 웹: 대출상품](#cand-W3_Loan) | 2차 | 1280 × 800 | `cand_W3_Loan.png` |
-|  | [W4 웹: 저축 계획](#cand-W4_Plan) | 2차 | 1280 × 800 | `cand_W4_Plan.png` |
-|  | [W5 웹: 로그인](#cand-W5_Login) | 2차 | 1280 × 800 | `cand_W5_Login.png` |
-|  | [W6 웹: 회원가입](#cand-W6_Signup) | 2차 | 1280 × 800 | `cand_W6_Signup.png` |
-|  | [W7 웹: 지도와 목록](#cand-W7_MapList) | 2차 | 1440 × 900 | `cand_W7_MapList.png` |
-|  | [W8 웹: 아파트를 고름 (시나리오)](#cand-W8_MapApt) | 2차 | 1440 × 900 | `cand_W8_MapApt.png` |
-|  | [W9 웹: 패널을 접음](#cand-W9_MapWide) | 2차 | 1440 × 900 | `cand_W9_MapWide.png` |
-|  | [W10 웹: 아파트를 고름 (아파트 정보)](#cand-W10_MapInfo) | 2차 | 1440 × 900 | `cand_W10_MapInfo.png` |
+| 보류 | [C7 시나리오: 구별 변동 그래프](#cand-C7_Trend) | 3차 | 390 × 844 | `cand_C7_Trend.png` |
 
 ---
 
-> **1부. 본 와이어프레임** (4 ~ 11장, 77장). 확정한 화면이다.
+> **1부. 본 와이어프레임** (4 ~ 15장, 109장). 확정한 화면이다.
 
 ## 4. P-01 시작
 
@@ -1817,14 +1819,15 @@
 | --- | --- |
 | ① ~ ③ | 지도: 기본, 조건 창, 넓게 본 모습 |
 | ④ ~ ⑧ | 아래 창: 동의 30%, 목록 80%, 아파트 30%, 아파트 정보 80%, 시나리오 전체 |
-| ⑨, ⑩ | 결과 없음, 웹 배치 |
+| ⑨ | 결과 없음 |
+| ⑩ | 비어 있다. PC 배치는 왼쪽 패널로 정해 W7 ~ W10에 그렸다. |
 | ⑪ ~ ⑰ | 지도의 추가 상태와 예외: 광주시 전체, 입력이 빠짐, 구·동 선택, 검색, 불러오는 중, 지도 실패 |
 | ⑱ ~ ⑳ | 아래 창의 추가 상태: 좌표 없음, 대상 주택 가격 상한 초과, 자금이 부족할 때의 시나리오 |
 | ㉑ | 위치 권한이 꺼져 있음 |
 
 아파트 표시의 모양은 2.4, 아래 창의 세 단계는 2.5에 적었다.
 
-### 8.1 기본 흐름 (10장)
+### 8.1 기본 흐름 (9장)
 
 <a id="wf-Main" name="wf-Main"></a>
 
@@ -1863,7 +1866,7 @@
 
 - 위쪽 고정 영역은 헤더 52 + 내 조건 40 = 92px. 진행 바는 입력 화면에만 둔다.
 - 칩은 면적, 가격, 준공 연도와 자금 부족 표시 스위치. 정렬은 목록의 머리에만 있다.
-- 범례는 버튼으로 접고 편다. 그 옆의 ! 에 마우스를 올리거나 누르면 실거래 기록 안내가 뜬다. 펼친 범례와 안내 문구는 웹 화면에 있다.
+- 범례는 버튼으로 접고 편다. 그 옆의 ! 에 마우스를 올리거나 누르면 실거래 기록 안내가 뜬다. 펼친 범례는 B4에, 안내 문구는 B5에 있다.
 - 예시 값: 보유 5,000만, 월 100만, 5년, 대출 비율 70%, 한도 3억 6,000만.
 - 아파트 표시: 집 모양. 위 띠에 공급면적, 가운데에 실거래 평균가, 아래에 구분과 여유 또는 부족 금액. 띠의 색과 테두리로 구분한다. 오른쪽 아래의 ㎡/평 버튼으로 면적 단위를 바꾼다.
 
@@ -2083,7 +2086,7 @@
 
 - 목록의 카드를 누르면 80%로 열린다. '← 치평동 목록'은 목록에서 열었을 때만 보인다.
 - 세대수, 가격 범위는 2차. 로드뷰는 3차이며 전체로 올렸을 때 불러온다.
-- 미정: 목록에서 열었을 때 처음 보이는 탭.
+- 목록에서 열었을 때 처음 보이는 탭은 아파트 정보다.
 
 <a id="wf-P06_ScenarioFull" name="wf-P06_ScenarioFull"></a>
 
@@ -2152,45 +2155,11 @@
 **동작**
 
 - '조건 초기화'는 조건을 모두 비우고 다시 찾는다.
-- 아파트는 있지만 목표할 수 있는 곳이 없을 때는 문구가 다르다(검토 후보 A6).
+- 아파트는 있지만 목표할 수 있는 곳이 없을 때는 문구가 다르다(A6).
 
 **규칙과 근거** (캔버스 메모)
 
 - 조건에 맞는 아파트가 없을 때. 아파트는 있지만 목표할 수 있는 곳이 없을 때는 문구가 다르다.
-
-<a id="wf-P05_Web" name="wf-P05_Web"></a>
-
-#### P-05 ⑩ 웹 1200px 이상 (오른쪽 패널)
-
-[![P-05 ⑩ 웹 1200px 이상 (오른쪽 패널)](wireframes/P05_Web.png)](wireframes/P05_Web.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Must) | FR-MAP-11 / FR-COMMON-02 |
-| 요구사항 (Should) | NFR-15 |
-| 그림 파일 | [wireframes/P05_Web.png](wireframes/P05_Web.png) |
-
-**언제 보이는가**
-
-가로 1200픽셀 이상의 화면에서 아파트를 골랐을 때. 지금 명세서 기준의 배치다.
-
-**화면 구성** (위에서 아래로)
-
-1. 헤더와 내 조건 줄이 화면 폭 전체를 쓴다.
-2. 왼쪽에 지도: 검색 줄, 조건 칩, 표시, 범례(펼쳐 둠), 안내 문구가 뜬 모습, 조작 버튼
-3. 오른쪽에 400픽셀 패널: 아래 창의 내용(아파트 머리, 탭, 시나리오)이 그대로 들어간다.
-
-**동작**
-
-- 패널에는 30%, 80% 같은 단계가 없고 안에서 스크롤한다.
-- 패널을 왼쪽에 두는 안은 검토 후보 W7 \~ W10에 있다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 같은 HTML을 미디어 쿼리로 다르게 배치한다. 아래 창이 오른쪽 패널(400px)이 되고 단계는 없다.
-- ! 에 마우스를 올린 모습과 펼친 범례를 그렸다.
 
 ### 8.2 추가 상태와 예외 (11장)
 
@@ -2384,7 +2353,7 @@
 
 **규칙과 근거** (캔버스 메모)
 
-- 지도를 옮긴 직후. 이전 표시는 흐리게 남겨 두고 새 결과가 오면 바꾼다. (제안)
+- 지도를 옮긴 직후. 이전 표시는 흐리게 남겨 두고 새 결과가 오면 바꾼다.
 
 <a id="wf-P05_MapFail" name="wf-P05_MapFail"></a>
 
@@ -3113,21 +3082,17 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 가입을 마치면 바로 로그인된 상태가 된다. 헤더가 '로그아웃'으로 바뀐다.
 - '시작하기' → P-02 ①. 입력하던 값이 브라우저에 남아 있으면 그 자리로 간다.
 
----
+## 12. 추가 상태 · 1차 (A)
 
-> **2부. 검토 후보** (12 ~ 15장, 34장). 아직 확정하지 않았다. 팀장이 확인한 것만 본 와이어프레임으로 옮긴다. 여기 적은 배치와 단계는 제안이다.
-
-## 12. A. 1차에 필요한 상태
-
-본 와이어프레임에 아직 그리지 않은 1차 상태 8장이다. 시나리오의 "다시 계산"이 도는 과정, 자금 부족 표시를 껐을 때, 목표할 수 있는 곳이 없을 때, 아파트 정보 탭을 전체로 올렸을 때를 담았다. 번호 A8은 비어 있다.
+1차에 필요한 상태 8장이다. 시나리오의 "다시 계산"이 도는 과정, 자금 부족 표시를 껐을 때, 목표할 수 있는 곳이 없을 때, 아파트 정보 탭을 전체로 올렸을 때를 담았다. 번호 A8은 비어 있다.
 
 ### 12.1 그림 (8장)
 
-<a id="cand-Main" name="cand-Main"></a>
+<a id="wf-A1_GoalNow" name="wf-A1_GoalNow"></a>
 
 #### A1 시나리오: 목표 기간이 '지금'
 
-[![A1 시나리오: 목표 기간이 '지금'](wireframes/small/cand_A1_GoalNow.png)](wireframes/cand_A1_GoalNow.png)
+[![A1 시나리오: 목표 기간이 '지금'](wireframes/small/A1_GoalNow.png)](wireframes/A1_GoalNow.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3135,7 +3100,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 1040 (스크롤한 전체 내용을 보이려고 길게 그림) |
 | 요구사항 (Must) | FR-PLAN-09 |
 | 계산 규칙 | C-09 3단계 구분, C-11 필요 월 저축액, C-12 허용 상승률 |
-| 그림 파일 | [wireframes/cand_A1_GoalNow.png](wireframes/cand_A1_GoalNow.png) (2배 크기) |
+| 그림 파일 | [wireframes/A1_GoalNow.png](wireframes/A1_GoalNow.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3156,13 +3121,12 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 - 부족자금만 보여 준다. 필요 월 저축액과 허용 상승률 줄이 없다.
 - '목표 기간 안에 가능' 구분이 없어서 배지는 지금 가능 아니면 자금 부족이다.
-- 적용하면: 지도와 아래 창 페이지의 시나리오 화면 옆에 놓는다.
 
-<a id="cand-A2_Recalc" name="cand-A2_Recalc"></a>
+<a id="wf-A2_Recalc" name="wf-A2_Recalc"></a>
 
 #### A2 시나리오: 다시 계산하는 중
 
-[![A2 시나리오: 다시 계산하는 중](wireframes/small/cand_A2_Recalc.png)](wireframes/cand_A2_Recalc.png)
+[![A2 시나리오: 다시 계산하는 중](wireframes/small/A2_Recalc.png)](wireframes/A2_Recalc.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3170,7 +3134,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 1040 (스크롤한 전체 내용을 보이려고 길게 그림) |
 | 요구사항 (Must) | FR-RESULT-06 |
 | 요구사항 (Should) | FR-COMMON-10 |
-| 그림 파일 | [wireframes/cand_A2_Recalc.png](wireframes/cand_A2_Recalc.png) (2배 크기) |
+| 그림 파일 | [wireframes/A2_Recalc.png](wireframes/A2_Recalc.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3190,18 +3154,18 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 월 저축액을 150으로 바꾸고 '다시 계산'을 누른 직후.
 - 버튼을 다시 누를 수 없게 하고, 이전 결과는 흐리게 남겨 둔다.
 
-<a id="cand-A3_Recalced" name="cand-A3_Recalced"></a>
+<a id="wf-A3_Recalced" name="wf-A3_Recalced"></a>
 
 #### A3 시나리오: 다시 계산한 뒤
 
-[![A3 시나리오: 다시 계산한 뒤](wireframes/small/cand_A3_Recalced.png)](wireframes/cand_A3_Recalced.png)
+[![A3 시나리오: 다시 계산한 뒤](wireframes/small/A3_Recalced.png)](wireframes/A3_Recalced.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 1차 |
 | 화면 크기 | 모바일 390 × 1040 (스크롤한 전체 내용을 보이려고 길게 그림) |
 | 요구사항 (Must) | FR-RESULT-06 / FR-PROFILE-04 |
-| 그림 파일 | [wireframes/cand_A3_Recalced.png](wireframes/cand_A3_Recalced.png) (2배 크기) |
+| 그림 파일 | [wireframes/A3_Recalced.png](wireframes/A3_Recalced.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3224,18 +3188,18 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 바꾼 값은 저축 계획에 반영하고, 지도와 목록의 구분과 내 조건 줄의 목표 가능 가격도 함께 바뀐다.
 - 로그인했으면 DB에도 저장하고 알린다. 로그인하지 않았으면 알림 없이 브라우저에만 둔다.
 
-<a id="cand-A4_RecalcFail" name="cand-A4_RecalcFail"></a>
+<a id="wf-A4_RecalcFail" name="wf-A4_RecalcFail"></a>
 
 #### A4 시나리오: 다시 계산하지 못함
 
-[![A4 시나리오: 다시 계산하지 못함](wireframes/small/cand_A4_RecalcFail.png)](wireframes/cand_A4_RecalcFail.png)
+[![A4 시나리오: 다시 계산하지 못함](wireframes/small/A4_RecalcFail.png)](wireframes/A4_RecalcFail.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 1차 |
 | 화면 크기 | 모바일 390 × 1040 (스크롤한 전체 내용을 보이려고 길게 그림) |
 | 요구사항 (Should) | FR-COMMON-07 / NFR-11 |
-| 그림 파일 | [wireframes/cand_A4_RecalcFail.png](wireframes/cand_A4_RecalcFail.png) (2배 크기) |
+| 그림 파일 | [wireframes/A4_RecalcFail.png](wireframes/A4_RecalcFail.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3255,18 +3219,18 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 - 이전 결과를 그대로 두고 아래에 알린다. 입력한 150은 지우지 않는다.
 
-<a id="cand-A5_LackOff" name="cand-A5_LackOff"></a>
+<a id="wf-A5_LackOff" name="wf-A5_LackOff"></a>
 
 #### A5 지도: 자금 부족 표시를 끔
 
-[![A5 지도: 자금 부족 표시를 끔](wireframes/small/cand_A5_LackOff.png)](wireframes/cand_A5_LackOff.png)
+[![A5 지도: 자금 부족 표시를 끔](wireframes/small/A5_LackOff.png)](wireframes/A5_LackOff.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 1차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-MAP-15 |
-| 그림 파일 | [wireframes/cand_A5_LackOff.png](wireframes/cand_A5_LackOff.png) (2배 크기) |
+| 그림 파일 | [wireframes/A5_LackOff.png](wireframes/A5_LackOff.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3285,20 +3249,20 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 **규칙과 근거** (캔버스 메모)
 
 - 스위치를 끄면 자금이 부족한 아파트의 표시가 사라진다. 목록에서도 빠진다.
-- 켜고 끈 상태는 탭을 닫기 전까지 유지한다. (제안)
+- 켜고 끈 상태는 탭을 닫기 전까지 유지한다.
 
-<a id="cand-A6_NoTarget" name="cand-A6_NoTarget"></a>
+<a id="wf-A6_NoTarget" name="wf-A6_NoTarget"></a>
 
 #### A6 목록: 목표할 수 있는 곳이 없음
 
-[![A6 목록: 목표할 수 있는 곳이 없음](wireframes/small/cand_A6_NoTarget.png)](wireframes/cand_A6_NoTarget.png)
+[![A6 목록: 목표할 수 있는 곳이 없음](wireframes/small/A6_NoTarget.png)](wireframes/A6_NoTarget.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 1차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-APT-07 |
-| 그림 파일 | [wireframes/cand_A6_NoTarget.png](wireframes/cand_A6_NoTarget.png) (2배 크기) |
+| 그림 파일 | [wireframes/A6_NoTarget.png](wireframes/A6_NoTarget.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3320,11 +3284,11 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 조건에 맞는 아파트가 아예 없는 경우(⑨ 결과 없음)와 문구가 다르다.
 - '조건 수정'은 저축 계획 화면으로 간다.
 
-<a id="cand-A7_NoNow" name="cand-A7_NoNow"></a>
+<a id="wf-A7_NoNow" name="wf-A7_NoNow"></a>
 
 #### A7 동을 누름: '지금'이 없는 동
 
-[![A7 동을 누름: '지금'이 없는 동](wireframes/small/cand_A7_NoNow.png)](wireframes/cand_A7_NoNow.png)
+[![A7 동을 누름: '지금'이 없는 동](wireframes/small/A7_NoNow.png)](wireframes/A7_NoNow.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3332,7 +3296,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-APT-07 |
 | 요구사항 (Should) | FR-MAP-21 |
-| 그림 파일 | [wireframes/cand_A7_NoNow.png](wireframes/cand_A7_NoNow.png) (2배 크기) |
+| 그림 파일 | [wireframes/A7_NoNow.png](wireframes/A7_NoNow.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3352,11 +3316,11 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 - '지금'이 0곳이면 그 사실을 한 줄로 알리고 다음 구분의 아파트부터 보여 준다.
 
-<a id="cand-A9_InfoFull" name="cand-A9_InfoFull"></a>
+<a id="wf-A9_InfoFull" name="wf-A9_InfoFull"></a>
 
 #### A9 아파트 정보 탭: 전체로 올림
 
-[![A9 아파트 정보 탭: 전체로 올림](wireframes/small/cand_A9_InfoFull.png)](wireframes/cand_A9_InfoFull.png)
+[![A9 아파트 정보 탭: 전체로 올림](wireframes/small/A9_InfoFull.png)](wireframes/A9_InfoFull.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3364,7 +3328,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-MAP-13 / FR-APT-01 |
 | 요구사항 (Should) | FR-APT-13, 15, 16 |
-| 그림 파일 | [wireframes/cand_A9_InfoFull.png](wireframes/cand_A9_InfoFull.png) (2배 크기) |
+| 그림 파일 | [wireframes/A9_InfoFull.png](wireframes/A9_InfoFull.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3387,24 +3351,24 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 1차에는 기본 정보 여섯 줄, 2차에 세대수와 가격 범위가 붙는다.
 - 3차에는 헤더 바로 아래 맨 위에 로드뷰가, 기본 정보 아래에 주변 시설·비슷한 아파트·공유하기가 붙는다 (C6).
 
-## 13. B. 2차에 필요한 상태
+## 13. 추가 상태 · 2차 (B)
 
 2차 기능을 눌렀을 때의 모습 6장이다. 정렬, 카드에서 면적 넘기기, 범례, 안내 아이콘, 로그인한 상태의 지도를 담았다.
 
 ### 13.1 그림 (6장)
 
-<a id="cand-B1_SortOpen" name="cand-B1_SortOpen"></a>
+<a id="wf-B1_SortOpen" name="wf-B1_SortOpen"></a>
 
 #### B1 목록: 정렬을 펼침
 
-[![B1 목록: 정렬을 펼침](wireframes/small/cand_B1_SortOpen.png)](wireframes/cand_B1_SortOpen.png)
+[![B1 목록: 정렬을 펼침](wireframes/small/B1_SortOpen.png)](wireframes/B1_SortOpen.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 2차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Should) | FR-APT-06 |
-| 그림 파일 | [wireframes/cand_B1_SortOpen.png](wireframes/cand_B1_SortOpen.png) (2배 크기) |
+| 그림 파일 | [wireframes/B1_SortOpen.png](wireframes/B1_SortOpen.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3424,11 +3388,11 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 구분순이 기본이다. 구분순은 지금 → 기간 내 → 부족, 같은 구분 안에서는 목표 가능 가격에 가까운 순.
 - 정렬은 목록의 머리에서만 바꾼다.
 
-<a id="cand-B2_SortPrice" name="cand-B2_SortPrice"></a>
+<a id="wf-B2_SortPrice" name="wf-B2_SortPrice"></a>
 
 #### B2 목록: 가격 낮은 순
 
-[![B2 목록: 가격 낮은 순](wireframes/small/cand_B2_SortPrice.png)](wireframes/cand_B2_SortPrice.png)
+[![B2 목록: 가격 낮은 순](wireframes/small/B2_SortPrice.png)](wireframes/B2_SortPrice.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3436,7 +3400,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-MAP-16 |
 | 요구사항 (Should) | FR-APT-06 |
-| 그림 파일 | [wireframes/cand_B2_SortPrice.png](wireframes/cand_B2_SortPrice.png) (2배 크기) |
+| 그림 파일 | [wireframes/B2_SortPrice.png](wireframes/B2_SortPrice.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3458,11 +3422,11 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 이전·다음으로 넘기는 순서도 이 순서를 따른다.
 - 면적이 여러 개인 아파트는 보이고 있는 면적의 가격으로 줄을 세운다.
 
-<a id="cand-B3_AreaNext" name="cand-B3_AreaNext"></a>
+<a id="wf-B3_AreaNext" name="wf-B3_AreaNext"></a>
 
 #### B3 목록: 카드에서 다른 면적으로 넘김
 
-[![B3 목록: 카드에서 다른 면적으로 넘김](wireframes/small/cand_B3_AreaNext.png)](wireframes/cand_B3_AreaNext.png)
+[![B3 목록: 카드에서 다른 면적으로 넘김](wireframes/small/B3_AreaNext.png)](wireframes/B3_AreaNext.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3470,7 +3434,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-APT-05, 12 |
 | 그 밖 | Task T-APT-12 |
-| 그림 파일 | [wireframes/cand_B3_AreaNext.png](wireframes/cand_B3_AreaNext.png) (2배 크기) |
+| 그림 파일 | [wireframes/B3_AreaNext.png](wireframes/B3_AreaNext.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3493,11 +3457,11 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 면적에 따라 구분이 달라질 수 있다. 카드의 자리와 구분별 개수는 가장 싼 면적 기준 그대로 둔다.
 - 카드를 누르면 보이고 있는 면적이 골라진 채로 80% 창이 열린다.
 
-<a id="cand-B4_LegendOpen" name="cand-B4_LegendOpen"></a>
+<a id="wf-B4_LegendOpen" name="wf-B4_LegendOpen"></a>
 
 #### B4 지도: 범례를 펼침
 
-[![B4 지도: 범례를 펼침](wireframes/small/cand_B4_LegendOpen.png)](wireframes/cand_B4_LegendOpen.png)
+[![B4 지도: 범례를 펼침](wireframes/small/B4_LegendOpen.png)](wireframes/B4_LegendOpen.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3505,7 +3469,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Should) | FR-MAP-06 |
 | 요구사항 (Could) | NFR-17 |
-| 그림 파일 | [wireframes/cand_B4_LegendOpen.png](wireframes/cand_B4_LegendOpen.png) (2배 크기) |
+| 그림 파일 | [wireframes/B4_LegendOpen.png](wireframes/B4_LegendOpen.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3526,18 +3490,19 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - '범례'를 누르면 위로 펼쳐지고 다시 누르면 접힌다.
 - 색과 함께 모양(채움, 실선, 점선)으로도 구분한다.
 
-<a id="cand-B5_InfoTip" name="cand-B5_InfoTip"></a>
+<a id="wf-B5_InfoTip" name="wf-B5_InfoTip"></a>
 
 #### B5 지도: 안내 아이콘을 누름
 
-[![B5 지도: 안내 아이콘을 누름](wireframes/small/cand_B5_InfoTip.png)](wireframes/cand_B5_InfoTip.png)
+[![B5 지도: 안내 아이콘을 누름](wireframes/small/B5_InfoTip.png)](wireframes/B5_InfoTip.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 2차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Must) | FR-COMMON-02 |
-| 그림 파일 | [wireframes/cand_B5_InfoTip.png](wireframes/cand_B5_InfoTip.png) (2배 크기) |
+| 요구사항 (Should) | FR-DATA-05 |
+| 그림 파일 | [wireframes/B5_InfoTip.png](wireframes/B5_InfoTip.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3545,7 +3510,8 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 **화면 구성** (위에서 아래로)
 
-1. 아이콘 위에 검은 말풍선: '판매 중인 매물이 아니라 최근 1년 실거래 기록입니다. 금액은 가정에 따른 추정치입니다.'
+1. 아이콘 위에 검은 말풍선: '판매 중인 매물이 아니라 최근 1년 실거래 기록입니다. 금액은 가정에 따른 추정치입니다. 실거래 [기준일] 기준.'
+2. 문구의 끝에 실거래 수집 기준일이 있다. 휴대폰 화면에서 기준일을 보여 주는 자리다.
 
 **동작**
 
@@ -3556,19 +3522,20 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 - 휴대폰에서는 누르면 뜨고, 바깥을 누르면 닫힌다. PC에서는 마우스를 올려도 뜬다.
 - 목록 머리의 ! 도 같은 문구를 보여 준다.
+- 문구 끝에 실거래 수집 기준일을 적는다. 휴대폰 화면에서 기준일을 보여 주는 자리다.
 
-<a id="cand-B6_LoggedIn" name="cand-B6_LoggedIn"></a>
+<a id="wf-B6_LoggedIn" name="wf-B6_LoggedIn"></a>
 
 #### B6 지도: 로그인한 상태
 
-[![B6 지도: 로그인한 상태](wireframes/small/cand_B6_LoggedIn.png)](wireframes/cand_B6_LoggedIn.png)
+[![B6 지도: 로그인한 상태](wireframes/small/B6_LoggedIn.png)](wireframes/B6_LoggedIn.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 2차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Should) | FR-USER-09 |
-| 그림 파일 | [wireframes/cand_B6_LoggedIn.png](wireframes/cand_B6_LoggedIn.png) (2배 크기) |
+| 그림 파일 | [wireframes/B6_LoggedIn.png](wireframes/B6_LoggedIn.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3587,28 +3554,34 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 헤더의 '로그인'이 '로그아웃'으로 바뀐다. 누르면 로그아웃하고 시작 화면으로 간다.
 - 3차에 계정 메뉴(C0)를 넣으면 이 자리가 아이디 버튼으로 바뀐다.
 
-## 14. C. 3차 기능의 화면
+## 14. 3차 화면 (C)
 
-3차 기능을 넣었을 때의 화면 10장이다.
+3차 기능을 넣었을 때의 화면 9장이다. 새 화면 세 개에 번호를 붙였다.
 
-- 저장한 결과 목록, 비밀번호 변경, 회원 탈퇴에는 아직 화면 번호가 없다. 헤더의 계정 메뉴(C0)를 입구로 두는 안을 그렸다. 명세서에는 입구가 정해져 있지 않다.
-- 변동 그래프(C7)는 자료와 그리는 방식이 정해지지 않아(N-06, N-07) 값이 비어 있다.
+| 화면 번호 | 화면 | 그림 | 들어가는 길 |
+| --- | --- | --- | --- |
+| P-09 | 저장한 결과 | C1, C3 | 헤더의 계정 메뉴 (C0) |
+| P-10 | 비밀번호 변경 | C4 | 헤더의 계정 메뉴 (C0) |
+| P-11 | 회원 탈퇴 | C5 | 헤더의 계정 메뉴 (C0) |
 
-### 14.1 그림 (10장)
+- 나머지는 이미 있는 화면에 붙는 3차 기능이다: 결과 저장(C2), 아파트 정보 탭의 로드뷰와 주변 시설(C6, C6b), 용어 설명(C8).
+- 번호 C7(구별 변동 그래프)은 보류해서 16장에 있다.
 
-<a id="cand-C0_AccountMenu" name="cand-C0_AccountMenu"></a>
+### 14.1 그림 (9장)
+
+<a id="wf-C0_AccountMenu" name="wf-C0_AccountMenu"></a>
 
 #### C0 계정 메뉴
 
-[![C0 계정 메뉴](wireframes/small/cand_C0_AccountMenu.png)](wireframes/cand_C0_AccountMenu.png)
+[![C0 계정 메뉴](wireframes/small/C0_AccountMenu.png)](wireframes/C0_AccountMenu.png)
 
 | 항목 | 내용 |
 | --- | --- |
-| 단계 | 3차 (제안) |
+| 단계 | 3차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Should) | FR-USER-09 |
 | 요구사항 (Could) | FR-RESULT-08 / FR-USER-11, 13 |
-| 그림 파일 | [wireframes/cand_C0_AccountMenu.png](wireframes/cand_C0_AccountMenu.png) (2배 크기) |
+| 그림 파일 | [wireframes/C0_AccountMenu.png](wireframes/C0_AccountMenu.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3625,26 +3598,26 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 **규칙과 근거** (캔버스 메모)
 
-- 3차 화면 세 개로 가는 입구가 필요해서 넣은 제안이다. 명세서에는 입구가 정해져 있지 않다.
+- 3차 화면 세 개(P-09 저장한 결과, P-10 비밀번호 변경, P-11 회원 탈퇴)로 들어가는 길이다.
 - 로그인하면 헤더의 '로그아웃' 자리가 아이디 버튼으로 바뀐다.
 
-<a id="cand-C1_SavedList" name="cand-C1_SavedList"></a>
+<a id="wf-C1_SavedList" name="wf-C1_SavedList"></a>
 
-#### C1 저장한 결과 목록 (새 화면 P-09)
+#### C1 P-09 저장한 결과 목록
 
-[![C1 저장한 결과 목록 (새 화면 P-09)](wireframes/small/cand_C1_SavedList.png)](wireframes/cand_C1_SavedList.png)
+[![C1 P-09 저장한 결과 목록](wireframes/small/C1_SavedList.png)](wireframes/C1_SavedList.png)
 
 | 항목 | 내용 |
 | --- | --- |
-| 단계 | 3차 (새 화면, 제안) |
+| 단계 | 3차 (새 화면 P-09) |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Should) | FR-USER-15 |
 | 요구사항 (Could) | FR-RESULT-08 |
-| 그림 파일 | [wireframes/cand_C1_SavedList.png](wireframes/cand_C1_SavedList.png) (2배 크기) |
+| 그림 파일 | [wireframes/C1_SavedList.png](wireframes/C1_SavedList.png) (2배 크기) |
 
 **언제 보이는가**
 
-계정 메뉴에서 '저장한 결과'를 눌렀을 때. 지금 화면 목록에 없는 새 화면이다.
+계정 메뉴에서 '저장한 결과'를 눌렀을 때. 화면 번호는 P-09다.
 
 **화면 구성** (위에서 아래로)
 
@@ -3659,15 +3632,15 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 **규칙과 근거** (캔버스 메모)
 
-- 지금 화면 목록(P-01 \~ P-08)에 없는 새 화면이다. P-09로 넣는 것을 제안한다.
+- 화면 번호는 P-09다.
 - 본인이 저장한 것만 보인다. 누르면 C3으로 간다.
 - 삭제는 명세서에 없어 넣지 않았다.
 
-<a id="cand-C2_Saved" name="cand-C2_Saved"></a>
+<a id="wf-C2_Saved" name="wf-C2_Saved"></a>
 
 #### C2 시나리오: 결과를 저장함
 
-[![C2 시나리오: 결과를 저장함](wireframes/small/cand_C2_Saved.png)](wireframes/cand_C2_Saved.png)
+[![C2 시나리오: 결과를 저장함](wireframes/small/C2_Saved.png)](wireframes/C2_Saved.png)
 
 | 항목 | 내용 |
 | --- | --- |
@@ -3675,7 +3648,7 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | 화면 크기 | 모바일 390 × 1040 (스크롤한 전체 내용을 보이려고 길게 그림) |
 | 요구사항 (Should) | FR-USER-10 |
 | 요구사항 (Could) | FR-RESULT-07 |
-| 그림 파일 | [wireframes/cand_C2_Saved.png](wireframes/cand_C2_Saved.png) (2배 크기) |
+| 그림 파일 | [wireframes/C2_Saved.png](wireframes/C2_Saved.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3696,18 +3669,18 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - '결과 저장'을 누르면 조건과 결과를 함께 저장하고 버튼이 '저장됨'으로 바뀐다.
 - 로그인하지 않았으면 로그인 화면으로 보낸다 (본 와이어프레임의 P-07 ③).
 
-<a id="cand-C3_SavedOpen" name="cand-C3_SavedOpen"></a>
+<a id="wf-C3_SavedOpen" name="wf-C3_SavedOpen"></a>
 
-#### C3 저장한 결과 열어 보기
+#### C3 P-09 저장한 결과 열어 보기
 
-[![C3 저장한 결과 열어 보기](wireframes/small/cand_C3_SavedOpen.png)](wireframes/cand_C3_SavedOpen.png)
+[![C3 P-09 저장한 결과 열어 보기](wireframes/small/C3_SavedOpen.png)](wireframes/C3_SavedOpen.png)
 
 | 항목 | 내용 |
 | --- | --- |
-| 단계 | 3차 |
+| 단계 | 3차 (새 화면 P-09) |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Could) | FR-RESULT-08 |
-| 그림 파일 | [wireframes/cand_C3_SavedOpen.png](wireframes/cand_C3_SavedOpen.png) (2배 크기) |
+| 그림 파일 | [wireframes/C3_SavedOpen.png](wireframes/C3_SavedOpen.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3730,19 +3703,19 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 저장한 그대로 보여 주고 다시 계산하지 않는다.
 - '지도에서 이 아파트 보기'는 지금의 조건으로 지도와 아파트 창을 연다.
 
-<a id="cand-C4_Password" name="cand-C4_Password"></a>
+<a id="wf-C4_Password" name="wf-C4_Password"></a>
 
-#### C4 비밀번호 변경
+#### C4 P-10 비밀번호 변경
 
-[![C4 비밀번호 변경](wireframes/small/cand_C4_Password.png)](wireframes/cand_C4_Password.png)
+[![C4 P-10 비밀번호 변경](wireframes/small/C4_Password.png)](wireframes/C4_Password.png)
 
 | 항목 | 내용 |
 | --- | --- |
-| 단계 | 3차 |
+| 단계 | 3차 (새 화면 P-10) |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Should) | FR-USER-03, 04, 14 |
 | 요구사항 (Could) | FR-USER-13 |
-| 그림 파일 | [wireframes/cand_C4_Password.png](wireframes/cand_C4_Password.png) (2배 크기) |
+| 그림 파일 | [wireframes/C4_Password.png](wireframes/C4_Password.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3764,18 +3737,18 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 지금 비밀번호가 틀리면 그 입력란 아래에 '지금 비밀번호가 맞지 않습니다.'
 - 새 비밀번호의 규칙은 회원가입과 같다.
 
-<a id="cand-C5_Withdraw" name="cand-C5_Withdraw"></a>
+<a id="wf-C5_Withdraw" name="wf-C5_Withdraw"></a>
 
-#### C5 회원 탈퇴
+#### C5 P-11 회원 탈퇴
 
-[![C5 회원 탈퇴](wireframes/small/cand_C5_Withdraw.png)](wireframes/cand_C5_Withdraw.png)
+[![C5 P-11 회원 탈퇴](wireframes/small/C5_Withdraw.png)](wireframes/C5_Withdraw.png)
 
 | 항목 | 내용 |
 | --- | --- |
-| 단계 | 3차 |
+| 단계 | 3차 (새 화면 P-11) |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Could) | FR-USER-11, 12 |
-| 그림 파일 | [wireframes/cand_C5_Withdraw.png](wireframes/cand_C5_Withdraw.png) (2배 크기) |
+| 그림 파일 | [wireframes/C5_Withdraw.png](wireframes/C5_Withdraw.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3795,21 +3768,21 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 **규칙과 근거** (캔버스 메모)
 
-- 비밀번호를 넣어야 '탈퇴하기'가 켜진다. (제안: 명세서에는 확인 방법이 없다.)
+- 비밀번호를 넣어야 '탈퇴하기'가 켜진다.
 - 탈퇴하면 로그아웃하고 시작 화면으로 간다.
 
-<a id="cand-C6_InfoExtra" name="cand-C6_InfoExtra"></a>
+<a id="wf-C6_InfoExtra" name="wf-C6_InfoExtra"></a>
 
 #### C6 아파트 정보 탭: 로드뷰와 3차 내용
 
-[![C6 아파트 정보 탭: 로드뷰와 3차 내용](wireframes/small/cand_C6_InfoExtra.png)](wireframes/cand_C6_InfoExtra.png)
+[![C6 아파트 정보 탭: 로드뷰와 3차 내용](wireframes/small/C6_InfoExtra.png)](wireframes/C6_InfoExtra.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 3차 |
 | 화면 크기 | 모바일 390 × 1260 (스크롤한 전체 내용을 보이려고 길게 그림) |
 | 요구사항 (Could) | FR-MAP-09, 10, 23 / FR-APT-17, 18 |
-| 그림 파일 | [wireframes/cand_C6_InfoExtra.png](wireframes/cand_C6_InfoExtra.png) (2배 크기) |
+| 그림 파일 | [wireframes/C6_InfoExtra.png](wireframes/C6_InfoExtra.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3838,18 +3811,18 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 비슷한 아파트의 기준은 정해지지 않았다.
 - 공유하는 주소에는 재무정보를 넣지 않는다.
 
-<a id="cand-C6b_NoRoadview" name="cand-C6b_NoRoadview"></a>
+<a id="wf-C6b_NoRoadview" name="wf-C6b_NoRoadview"></a>
 
 #### C6b 아파트 정보 탭: 로드뷰가 없을 때
 
-[![C6b 아파트 정보 탭: 로드뷰가 없을 때](wireframes/small/cand_C6b_NoRoadview.png)](wireframes/cand_C6b_NoRoadview.png)
+[![C6b 아파트 정보 탭: 로드뷰가 없을 때](wireframes/small/C6b_NoRoadview.png)](wireframes/C6b_NoRoadview.png)
 
 | 항목 | 내용 |
 | --- | --- |
 | 단계 | 3차 |
 | 화면 크기 | 모바일 390 × 844 |
 | 요구사항 (Could) | FR-MAP-10 |
-| 그림 파일 | [wireframes/cand_C6b_NoRoadview.png](wireframes/cand_C6b_NoRoadview.png) (2배 크기) |
+| 그림 파일 | [wireframes/C6b_NoRoadview.png](wireframes/C6b_NoRoadview.png) (2배 크기) |
 
 **언제 보이는가**
 
@@ -3867,6 +3840,403 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 **규칙과 근거** (캔버스 메모)
 
 - 그 위치에 로드뷰가 없으면 같은 자리에 기본 이미지를 보여 준다. 아래 내용은 C6과 같다.
+
+<a id="wf-C8_Glossary" name="wf-C8_Glossary"></a>
+
+#### C8 용어 설명
+
+[![C8 용어 설명](wireframes/small/C8_Glossary.png)](wireframes/C8_Glossary.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 3차 |
+| 화면 크기 | 모바일 390 × 844 |
+| 요구사항 (Could) | FR-COMMON-06 |
+| 그림 파일 | [wireframes/C8_Glossary.png](wireframes/C8_Glossary.png) (2배 크기) |
+
+**언제 보이는가**
+
+금융 용어 옆의 ? 를 눌렀을 때. 그림은 대출상품 카드의 '대출 비율'이다.
+
+**화면 구성** (위에서 아래로)
+
+1. '집값의 70%까지' 옆에 작은 ? 버튼
+2. 그 아래 검은 말풍선: '대출 비율', '집값 가운데 대출로 낼 수 있는 비율입니다. 70%면 3억 원짜리 집에 2억 1,000만 원까지 빌릴 수 있습니다.'
+
+**동작**
+
+- 바깥을 누르면 닫힌다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 용어 옆의 ? 를 누르면 짧은 설명이 뜬다.
+- 넣을 용어: 대출 비율, 대상 주택 가격 상한, 원리금균등 상환, 자기자금, 허용 상승률, 공급면적과 전용면적.
+
+## 15. 웹 화면 (W)
+
+가로 1200픽셀 이상의 배치 10장이다. W1 ~ W6은 1280 × 800, 지도인 W7 ~ W10은 1440 × 900으로 그렸다.
+
+| 화면 | 배치 |
+| --- | --- |
+| 시작 (W1) | 왼쪽에 문구와 버튼, 오른쪽에 지도 미리 보기 |
+| 입력 (W2 ~ W4) | 왼쪽에 단계 목록과 지금까지 넣은 값, 오른쪽에 질문과 입력란 |
+| 회원 (W5, W6) | 회색 바탕 가운데에 카드 하나 |
+| 지도 (W7 ~ W10) | 헤더에 검색창, 그 아래 조건 줄, 왼쪽에 목록 패널, 그 옆에 아파트 패널, 나머지가 지도 |
+
+- 지도의 패널은 **왼쪽**으로 정했다 (2026-10-11). 목록 패널, 아파트 패널, 지도의 순서다. 오른쪽 패널로 그렸던 P-05 ⑩은 뺐다.
+- 목록과 아파트 정보가 나란히 보여서, 목록을 보면서 다른 아파트로 바로 넘어갈 수 있다.
+- 지도 화면은 실제 부동산 서비스의 배치를 참고해 실제 화면에 가깝게 자세히 그렸다.
+
+### 15.1 그림 (10장)
+
+<a id="wf-W1_Start" name="wf-W1_Start"></a>
+
+#### W1 웹: 시작
+
+[![W1 웹: 시작](wireframes/W1_Start.png)](wireframes/W1_Start.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1280 × 800 |
+| 요구사항 (Must) | FR-COMMON-01, 02 |
+| 요구사항 (Should) | FR-COMMON-12 / NFR-15 |
+| 그림 파일 | [wireframes/W1_Start.png](wireframes/W1_Start.png) |
+
+**언제 보이는가**
+
+넓은 화면의 시작 화면.
+
+**화면 구성** (위에서 아래로)
+
+1. 헤더: 왼쪽 서비스 이름, 오른쪽 '로그인'과 '회원가입'(같은 글자 버튼)
+2. 왼쪽 단: 작은 글씨 '광주시 아파트 · 최근 1년 실거래가 기준', 큰 소개 문구, '로그인 없이 시작하기' 버튼, 세 단계 설명이 가로로 나란히
+3. 오른쪽 단: 둥근 테두리의 지도 미리 보기. 표시 네 개와 범례
+4. 맨 아래 가로로 긴 안내 문구
+
+**동작**
+
+- 버튼의 동작은 모바일과 같다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 왼쪽에 문구와 버튼, 오른쪽에 지도 미리 보기를 둔다. 부동산 사이트의 첫 화면처럼 지도를 먼저 보여 준다.
+- 로그인과 회원가입은 헤더 오른쪽에 둔다.
+
+<a id="wf-W2_Profile" name="wf-W2_Profile"></a>
+
+#### W2 웹: 재무정보
+
+[![W2 웹: 재무정보](wireframes/W2_Profile.png)](wireframes/W2_Profile.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1280 × 800 |
+| 요구사항 (Must) | FR-PROFILE-01 / NFR-25 |
+| 요구사항 (Should) | FR-PROFILE-08, 13 / FR-COMMON-09 / NFR-15 |
+| 그림 파일 | [wireframes/W2_Profile.png](wireframes/W2_Profile.png) |
+
+**언제 보이는가**
+
+넓은 화면의 재무정보 첫 질문.
+
+**화면 구성** (위에서 아래로)
+
+1. 왼쪽 회색 단: '네 단계면 끝납니다', 세로로 늘어선 단계 네 개(재무정보에 '주민등록번호 앞 7자리 입력 중'), 맨 아래 안내 문구
+2. 오른쪽 단: 큰 제목 '주민등록번호 앞 7자리를 알려 주세요', 입력란(970315 - 1, 오른쪽에 만 29세)
+3. 입력란 아래 '‹ 이전', '확인' 버튼, 'Enter 키로도 넘어갑니다.'
+
+**동작**
+
+- 모바일의 진행 막대가 왼쪽 단의 단계 목록으로 바뀐 것이다.
+- 키패드가 없으므로 버튼이 입력란 바로 아래에 있다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 재무정보의 첫 질문. 나이를 직접 받지 않고 주민등록번호 앞 6자리와 뒤 첫째 자리를 받아 만 나이를 계산한다.
+- '확인'을 누르면 연 소득, 보유자산의 순서로 묻는다. 그때는 위에 계산된 만 나이만 남는다.
+- 왼쪽에 단계와 지금까지 넣은 값을 세로로 보여 준다. 모바일의 진행 바가 이 자리로 옮겨 온 것이다.
+
+<a id="wf-W3_Loan" name="wf-W3_Loan"></a>
+
+#### W3 웹: 대출상품
+
+[![W3 웹: 대출상품](wireframes/W3_Loan.png)](wireframes/W3_Loan.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1280 × 800 |
+| 요구사항 (Must) | FR-LOAN-01, 02, 03, 06, 07, 11, 13 |
+| 요구사항 (Should) | NFR-15 |
+| 그림 파일 | [wireframes/W3_Loan.png](wireframes/W3_Loan.png) |
+
+**언제 보이는가**
+
+넓은 화면의 대출상품. 첫째 상품과 30년을 고른 상태다.
+
+**화면 구성** (위에서 아래로)
+
+1. 왼쪽 단계 목록: 재무정보에 ✓ 와 넣은 값, 대출상품이 지금 단계
+2. 오른쪽: 선택지 세 개가 가로로 나란히 펼쳐져 있다. 첫째 카드의 테두리가 굵다.
+3. 카드 아래 한 줄: 왼쪽에 상환 기간 선택지, 오른쪽에 결과 상자(1억 1,667만 원, 56만 원)
+4. '‹ 이전'과 '다음' 버튼
+
+**동작**
+
+- 넓은 화면에서는 카드를 접지 않아 조건을 한눈에 견줄 수 있다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 넓은 화면에서는 선택지 세 개를 가로로 나란히 놓고 모두 펼쳐 둔다. 조건을 한눈에 견줄 수 있다.
+- 상환 기간과 결과는 카드 아래 한 줄에 둔다.
+
+<a id="wf-W4_Plan" name="wf-W4_Plan"></a>
+
+#### W4 웹: 저축 계획
+
+[![W4 웹: 저축 계획](wireframes/W4_Plan.png)](wireframes/W4_Plan.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1280 × 800 |
+| 요구사항 (Must) | FR-PLAN-01, 02, 04, 05, 08 |
+| 요구사항 (Should) | NFR-15 |
+| 그림 파일 | [wireframes/W4_Plan.png](wireframes/W4_Plan.png) |
+
+**언제 보이는가**
+
+넓은 화면의 저축 계획. 값을 모두 넣은 상태다.
+
+**화면 구성** (위에서 아래로)
+
+1. 왼쪽 단계 목록: 재무정보와 대출상품에 ✓ 와 넣은 값
+2. 오른쪽 가운데: 월 저축 가능액 입력란, 목표 기간 선택지, '‹ 이전'과 '지도에서 보기'
+3. 오른쪽 끝: 회색 결과 상자 '5년 뒤 자기자금 1억 1,000만 원'과 계산 내역
+
+**동작**
+
+- 왼쪽에서 값을 바꾸면 오른쪽 결과가 바로 바뀐다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 왼쪽에서 값을 바꾸면 오른쪽 결과가 바로 바뀐다.
+- 왼쪽 단계 목록에는 앞에서 넣은 값이 요약되어 남는다.
+
+<a id="wf-W5_Login" name="wf-W5_Login"></a>
+
+#### W5 웹: 로그인
+
+[![W5 웹: 로그인](wireframes/W5_Login.png)](wireframes/W5_Login.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1280 × 800 |
+| 요구사항 (Should) | FR-USER-06, 20 / NFR-15 |
+| 요구사항 (Could) | FR-USER-07, 18 |
+| 그림 파일 | [wireframes/W5_Login.png](wireframes/W5_Login.png) |
+
+**언제 보이는가**
+
+넓은 화면의 로그인.
+
+**화면 구성** (위에서 아래로)
+
+1. 회색 바탕 가운데에 흰 카드 하나
+2. 카드 안: 제목, 아이디와 비밀번호 입력란, 아이디 기억하기(3차), '로그인' 버튼, '회원가입 | 로그인 없이 계속하기', 아이디 찾기를 제공하지 않는다는 한 줄
+
+**동작**
+
+- 내용과 동작은 모바일과 같다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 가운데에 카드 하나. 내용은 모바일과 같다.
+
+<a id="wf-W6_Signup" name="wf-W6_Signup"></a>
+
+#### W6 웹: 회원가입
+
+[![W6 웹: 회원가입](wireframes/W6_Signup.png)](wireframes/W6_Signup.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1280 × 800 |
+| 요구사항 (Should) | FR-USER-01, 03, 04, 19 / NFR-15 |
+| 그림 파일 | [wireframes/W6_Signup.png](wireframes/W6_Signup.png) |
+
+**언제 보이는가**
+
+넓은 화면의 회원가입. 비밀번호를 입력하는 중이다.
+
+**화면 구성** (위에서 아래로)
+
+1. 회색 바탕 가운데에 흰 카드 하나
+2. 카드 안: 제목 '비밀번호를 정해 주세요', 아이디(home2026), 비밀번호 입력란, 규칙 세 줄, 꺼진 '확인' 버튼, 로그인으로 가는 글자 버튼
+
+**동작**
+
+- 모바일과 같이 한 번에 하나씩 묻는다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 모바일과 같이 아이디, 비밀번호, 비밀번호 확인을 차례로 묻는다. 가입을 마치면 바로 로그인된 상태로 재무정보 화면에 간다.
+
+<a id="wf-W7_MapList" name="wf-W7_MapList"></a>
+
+#### W7 웹: 지도와 목록
+
+[![W7 웹: 지도와 목록](wireframes/W7_MapList.png)](wireframes/W7_MapList.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1440 × 900 |
+| 요구사항 (Must) | FR-MAP-01, 02, 11, 15 / FR-APT-02, 05 / FR-COMMON-02 |
+| 요구사항 (Should) | FR-MAP-06, 08, 19, 21, 22, 24, 25, 26, 29, 30 / FR-APT-03, 06, 09, 10, 13, 14, 15 / FR-DATA-05 / NFR-15 |
+| 그림 파일 | [wireframes/W7_MapList.png](wireframes/W7_MapList.png) |
+
+**언제 보이는가**
+
+넓은 화면의 지도. 실제 화면에 가깝게 자세히 그렸다.
+
+**화면 구성** (위에서 아래로)
+
+1. 헤더: 서비스 이름, 둥근 검색창 '아파트 이름으로 검색 (광주시 전체)', 오른쪽 '로그인'과 '회원가입'
+2. 조건 줄: 구 선택, 동 선택, 면적·가격·준공 연도, 자금 부족 표시 스위치, 오른쪽 끝에 ㎡/평 전환과 '실거래 [기준일] 기준', 안내 아이콘
+3. 왼쪽 패널 맨 위 회색 상자: '내 조건으로 목표할 수 있는 가격 3억 6,667만 원까지', 조건 한 줄, '수정'
+4. 패널의 목록 머리: '서구 치평동 아파트 23곳', 정렬, 접기(«). 그 아래 네 칸 탭: 전체 23, 지금 가능 5, 기간 내 가능 4, 자금 부족 14
+5. 카드: 이름과 배지, 면적·준공 연도·세대수·거래 건수, 실거래 평균과 여유 또는 부족
+6. 오른쪽 지도: 도로, 공원, 동 이름 위에 표시 열 개. 왼쪽 아래 범례, 오른쪽 아래 단위·현재 위치·확대·축소·축척
+
+**동작**
+
+- 지도를 움직이면 왼쪽 목록이 따라 바뀐다.
+- 탭을 누르면 그 구분의 카드만 보인다.
+- 카드나 표시를 누르면 아파트 패널이 붙는다(W8).
+
+**규칙과 근거** (캔버스 메모)
+
+- 헤더: 로고, 아파트 이름 검색, 로그인과 회원가입.
+- 조건 줄: 구와 동 선택, 면적·가격·준공 연도, 자금 부족 표시, 오른쪽에 ㎡/평 전환과 실거래 기준일.
+- 왼쪽 패널: 맨 위에 내 조건(목표 가능 가격과 수정), 그 아래 구분별 개수 탭과 아파트 카드. 카드에 면적, 준공 연도, 세대수, 거래 건수, 실거래 평균, 여유 또는 부족.
+- 지도: 새 표시(위 공급면적, 가운데 실거래 평균, 아래 구분과 여유·부족), 왼쪽 아래 범례, 오른쪽 아래 단위·현재 위치·확대·축소·축척.
+- 패널은 왼쪽이다. 목록 패널, 아파트 패널, 지도의 순서로 놓는다.
+
+<a id="wf-W8_MapApt" name="wf-W8_MapApt"></a>
+
+#### W8 웹: 아파트를 고름 (시나리오)
+
+[![W8 웹: 아파트를 고름 (시나리오)](wireframes/W8_MapApt.png)](wireframes/W8_MapApt.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1440 × 900 |
+| 요구사항 (Must) | FR-MAP-03, 14, 16 / FR-RESULT-01, 02, 03, 04, 05, 06 |
+| 요구사항 (Should) | FR-RESULT-09 / NFR-15 |
+| 그림 파일 | [wireframes/W8_MapApt.png](wireframes/W8_MapApt.png) |
+
+**언제 보이는가**
+
+넓은 화면에서 아파트를 골랐을 때. 시나리오 탭이다.
+
+**화면 구성** (위에서 아래로)
+
+1. 목록 패널은 그대로 있고 고른 카드에 굵은 테두리
+2. 목록 오른쪽에 아파트 패널이 붙는다: 주소 한 줄과 이전·다음·닫기, 이름과 배지, 면적 칩, 탭
+3. 시나리오 내용: 결과 상자, 값 아홉 줄, 조건 바꿔 보기
+4. 지도는 남은 폭을 쓰고, 고른 표시가 그 가운데에 굵은 테두리로 보인다.
+
+**동작**
+
+- 목록의 다른 카드를 누르면 아파트 패널의 내용이 바뀐다.
+- 닫기를 누르면 패널이 사라지고 지도가 넓어진다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 카드나 지도의 표시를 누르면 목록 오른쪽에 아파트 패널이 붙는다. 목록은 그대로 남아 다른 아파트로 바로 옮겨 갈 수 있다.
+- 고른 카드와 지도의 표시에 굵은 테두리. 고른 아파트는 남은 지도 영역의 가운데에 온다.
+- 패널 안에서 스크롤한다. 아래에 결과 저장과 안내 문구가 이어진다.
+
+<a id="wf-W9_MapWide" name="wf-W9_MapWide"></a>
+
+#### W9 웹: 패널을 접음
+
+[![W9 웹: 패널을 접음](wireframes/W9_MapWide.png)](wireframes/W9_MapWide.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (웹 배치) |
+| 화면 크기 | 웹 1440 × 900 |
+| 요구사항 (Must) | FR-MAP-11 |
+| 요구사항 (Should) | NFR-15 |
+| 그림 파일 | [wireframes/W9_MapWide.png](wireframes/W9_MapWide.png) |
+
+**언제 보이는가**
+
+목록 패널의 « 를 눌러 접었을 때.
+
+**화면 구성** (위에서 아래로)
+
+1. 패널이 사라지고 지도가 화면 폭을 다 쓴다.
+2. 왼쪽 가장자리에 세로 손잡이 '목록 23곳 »'
+
+**동작**
+
+- 손잡이를 누르면 패널이 다시 펴진다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 목록의 « 를 누르면 패널이 접히고 지도가 화면을 다 쓴다. 왼쪽 가장자리의 손잡이로 다시 편다.
+
+<a id="wf-W10_MapInfo" name="wf-W10_MapInfo"></a>
+
+#### W10 웹: 아파트를 고름 (아파트 정보)
+
+[![W10 웹: 아파트를 고름 (아파트 정보)](wireframes/W10_MapInfo.png)](wireframes/W10_MapInfo.png)
+
+| 항목 | 내용 |
+| --- | --- |
+| 단계 | 2차 (로드뷰, 주변 시설, 비슷한 아파트, 공유하기는 3차) |
+| 화면 크기 | 웹 1440 × 900 |
+| 요구사항 (Should) | FR-APT-13, 14, 15, 16 / NFR-15 |
+| 요구사항 (Could) | FR-MAP-09, 10, 23 / FR-APT-17, 18 |
+| 그림 파일 | [wireframes/W10_MapInfo.png](wireframes/W10_MapInfo.png) |
+
+**언제 보이는가**
+
+넓은 화면에서 아파트를 고르고 아파트 정보 탭을 봤을 때.
+
+**화면 구성** (위에서 아래로)
+
+1. 아파트 패널 맨 위에 로드뷰 자리(없으면 기본 이미지, 3차)
+2. 주소 줄, 이름과 배지, 면적 칩, 탭
+3. 기본 정보 여섯 줄
+4. '주변 시설'(3차) 네 칸, '비슷한 아파트'(3차) 카드, '주소 복사해서 공유하기'(3차)
+
+**동작**
+
+- 순서는 모바일의 C6과 같다.
+
+**규칙과 근거** (캔버스 메모)
+
+- 아파트 패널의 맨 위에 로드뷰. 로드뷰가 없으면 기본 이미지.
+- 그 아래에 기본 정보, 주변 시설, 비슷한 아파트, 공유하기의 순서.
+
+---
+
+> **2부. 보류** (16장, 1장). 자료가 정해지지 않아 본 와이어프레임에 넣지 않았다.
+
+## 16. 보류: 구별 변동 그래프 (C7)
+
+3차 기능인 구별 집값 변동 그래프(FR-PLAN-06, 10)의 그림이다. 변동률을 어떤 자료로 구할지(N-06)와 그래프를 어떻게 그릴지(N-07)가 정해지지 않아 값이 비어 있다. 두 가지가 정해지면 다시 그려 본 와이어프레임에 넣는다.
+
+### 16.1 그림 (1장)
 
 <a id="cand-C7_Trend" name="cand-C7_Trend"></a>
 
@@ -3903,437 +4273,47 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 - 오를 때와 내릴 때를 함께 보여 주고 참고용임을 알린다.
 - 시나리오 탭의 계산 결과 아래에 붙는다.
 
-<a id="cand-C8_Glossary" name="cand-C8_Glossary"></a>
-
-#### C8 용어 설명
-
-[![C8 용어 설명](wireframes/small/cand_C8_Glossary.png)](wireframes/cand_C8_Glossary.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 3차 |
-| 화면 크기 | 모바일 390 × 844 |
-| 요구사항 (Could) | FR-COMMON-06 |
-| 그림 파일 | [wireframes/cand_C8_Glossary.png](wireframes/cand_C8_Glossary.png) (2배 크기) |
-
-**언제 보이는가**
-
-금융 용어 옆의 ? 를 눌렀을 때. 그림은 대출상품 카드의 '대출 비율'이다.
-
-**화면 구성** (위에서 아래로)
-
-1. '집값의 70%까지' 옆에 작은 ? 버튼
-2. 그 아래 검은 말풍선: '대출 비율', '집값 가운데 대출로 낼 수 있는 비율입니다. 70%면 3억 원짜리 집에 2억 1,000만 원까지 빌릴 수 있습니다.'
-
-**동작**
-
-- 바깥을 누르면 닫힌다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 용어 옆의 ? 를 누르면 짧은 설명이 뜬다.
-- 넣을 용어 (제안): 대출 비율, 대상 주택 가격 상한, 원리금균등 상환, 자기자금, 허용 상승률, 공급면적과 전용면적.
-
-## 15. W. 웹 화면
-
-가로 1200픽셀 이상의 배치 10장이다. W1 ~ W6은 1280 × 800, 지도인 W7 ~ W10은 1440 × 900으로 그렸다.
-
-| 화면 | 배치 |
-| --- | --- |
-| 시작 (W1) | 왼쪽에 문구와 버튼, 오른쪽에 지도 미리 보기 |
-| 입력 (W2 ~ W4) | 왼쪽에 단계 목록과 지금까지 넣은 값, 오른쪽에 질문과 입력란 |
-| 회원 (W5, W6) | 회색 바탕 가운데에 카드 하나 |
-| 지도 (W7 ~ W10) | 헤더에 검색창, 그 아래 조건 줄, 왼쪽에 목록 패널, 그 옆에 아파트 패널, 나머지가 지도 |
-
-- 지도의 패널은 왼쪽이다. 지금 명세서와 본 와이어프레임의 P-05 ⑩은 오른쪽 패널이다. 둘 중 하나를 골라야 하고, 왼쪽을 고르면 명세서를 고친다.
-- 지도 화면은 실제 부동산 서비스의 배치를 참고해 실제 화면에 가깝게 자세히 그렸다.
-
-### 15.1 그림 (10장)
-
-<a id="cand-W1_Start" name="cand-W1_Start"></a>
-
-#### W1 웹: 시작
-
-[![W1 웹: 시작](wireframes/cand_W1_Start.png)](wireframes/cand_W1_Start.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Must) | FR-COMMON-01, 02 |
-| 요구사항 (Should) | FR-COMMON-12 / NFR-15 |
-| 그림 파일 | [wireframes/cand_W1_Start.png](wireframes/cand_W1_Start.png) |
-
-**언제 보이는가**
-
-넓은 화면의 시작 화면.
-
-**화면 구성** (위에서 아래로)
-
-1. 헤더: 왼쪽 서비스 이름, 오른쪽 '로그인'과 '회원가입'(같은 글자 버튼)
-2. 왼쪽 단: 작은 글씨 '광주시 아파트 · 최근 1년 실거래가 기준', 큰 소개 문구, '로그인 없이 시작하기' 버튼, 세 단계 설명이 가로로 나란히
-3. 오른쪽 단: 둥근 테두리의 지도 미리 보기. 표시 네 개와 범례
-4. 맨 아래 가로로 긴 안내 문구
-
-**동작**
-
-- 버튼의 동작은 모바일과 같다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 왼쪽에 문구와 버튼, 오른쪽에 지도 미리 보기를 둔다. 부동산 사이트의 첫 화면처럼 지도를 먼저 보여 준다.
-- 로그인과 회원가입은 헤더 오른쪽에 둔다.
-
-<a id="cand-W2_Profile" name="cand-W2_Profile"></a>
-
-#### W2 웹: 재무정보
-
-[![W2 웹: 재무정보](wireframes/cand_W2_Profile.png)](wireframes/cand_W2_Profile.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Must) | FR-PROFILE-01 / NFR-25 |
-| 요구사항 (Should) | FR-PROFILE-08, 13 / FR-COMMON-09 / NFR-15 |
-| 그림 파일 | [wireframes/cand_W2_Profile.png](wireframes/cand_W2_Profile.png) |
-
-**언제 보이는가**
-
-넓은 화면의 재무정보 첫 질문.
-
-**화면 구성** (위에서 아래로)
-
-1. 왼쪽 회색 단: '네 단계면 끝납니다', 세로로 늘어선 단계 네 개(재무정보에 '주민등록번호 앞 7자리 입력 중'), 맨 아래 안내 문구
-2. 오른쪽 단: 큰 제목 '주민등록번호 앞 7자리를 알려 주세요', 입력란(970315 - 1, 오른쪽에 만 29세)
-3. 입력란 아래 '‹ 이전', '확인' 버튼, 'Enter 키로도 넘어갑니다.'
-
-**동작**
-
-- 모바일의 진행 막대가 왼쪽 단의 단계 목록으로 바뀐 것이다.
-- 키패드가 없으므로 버튼이 입력란 바로 아래에 있다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 재무정보의 첫 질문. 나이를 직접 받지 않고 주민등록번호 앞 6자리와 뒤 첫째 자리를 받아 만 나이를 계산한다.
-- '확인'을 누르면 연 소득, 보유자산의 순서로 묻는다. 그때는 위에 계산된 만 나이만 남는다.
-- 왼쪽에 단계와 지금까지 넣은 값을 세로로 보여 준다. 모바일의 진행 바가 이 자리로 옮겨 온 것이다.
-
-<a id="cand-W3_Loan" name="cand-W3_Loan"></a>
-
-#### W3 웹: 대출상품
-
-[![W3 웹: 대출상품](wireframes/cand_W3_Loan.png)](wireframes/cand_W3_Loan.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Must) | FR-LOAN-01, 02, 03, 06, 07, 11, 13 |
-| 요구사항 (Should) | NFR-15 |
-| 그림 파일 | [wireframes/cand_W3_Loan.png](wireframes/cand_W3_Loan.png) |
-
-**언제 보이는가**
-
-넓은 화면의 대출상품. 첫째 상품과 30년을 고른 상태다.
-
-**화면 구성** (위에서 아래로)
-
-1. 왼쪽 단계 목록: 재무정보에 ✓ 와 넣은 값, 대출상품이 지금 단계
-2. 오른쪽: 선택지 세 개가 가로로 나란히 펼쳐져 있다. 첫째 카드의 테두리가 굵다.
-3. 카드 아래 한 줄: 왼쪽에 상환 기간 선택지, 오른쪽에 결과 상자(1억 1,667만 원, 56만 원)
-4. '‹ 이전'과 '다음' 버튼
-
-**동작**
-
-- 넓은 화면에서는 카드를 접지 않아 조건을 한눈에 견줄 수 있다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 넓은 화면에서는 선택지 세 개를 가로로 나란히 놓고 모두 펼쳐 둔다. 조건을 한눈에 견줄 수 있다.
-- 상환 기간과 결과는 카드 아래 한 줄에 둔다.
-
-<a id="cand-W4_Plan" name="cand-W4_Plan"></a>
-
-#### W4 웹: 저축 계획
-
-[![W4 웹: 저축 계획](wireframes/cand_W4_Plan.png)](wireframes/cand_W4_Plan.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Must) | FR-PLAN-01, 02, 04, 05, 08 |
-| 요구사항 (Should) | NFR-15 |
-| 그림 파일 | [wireframes/cand_W4_Plan.png](wireframes/cand_W4_Plan.png) |
-
-**언제 보이는가**
-
-넓은 화면의 저축 계획. 값을 모두 넣은 상태다.
-
-**화면 구성** (위에서 아래로)
-
-1. 왼쪽 단계 목록: 재무정보와 대출상품에 ✓ 와 넣은 값
-2. 오른쪽 가운데: 월 저축 가능액 입력란, 목표 기간 선택지, '‹ 이전'과 '지도에서 보기'
-3. 오른쪽 끝: 회색 결과 상자 '5년 뒤 자기자금 1억 1,000만 원'과 계산 내역
-
-**동작**
-
-- 왼쪽에서 값을 바꾸면 오른쪽 결과가 바로 바뀐다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 왼쪽에서 값을 바꾸면 오른쪽 결과가 바로 바뀐다.
-- 왼쪽 단계 목록에는 앞에서 넣은 값이 요약되어 남는다.
-
-<a id="cand-W5_Login" name="cand-W5_Login"></a>
-
-#### W5 웹: 로그인
-
-[![W5 웹: 로그인](wireframes/cand_W5_Login.png)](wireframes/cand_W5_Login.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Should) | FR-USER-06, 20 / NFR-15 |
-| 요구사항 (Could) | FR-USER-07, 18 |
-| 그림 파일 | [wireframes/cand_W5_Login.png](wireframes/cand_W5_Login.png) |
-
-**언제 보이는가**
-
-넓은 화면의 로그인.
-
-**화면 구성** (위에서 아래로)
-
-1. 회색 바탕 가운데에 흰 카드 하나
-2. 카드 안: 제목, 아이디와 비밀번호 입력란, 아이디 기억하기(3차), '로그인' 버튼, '회원가입 | 로그인 없이 계속하기', 아이디 찾기를 제공하지 않는다는 한 줄
-
-**동작**
-
-- 내용과 동작은 모바일과 같다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 가운데에 카드 하나. 내용은 모바일과 같다.
-
-<a id="cand-W6_Signup" name="cand-W6_Signup"></a>
-
-#### W6 웹: 회원가입
-
-[![W6 웹: 회원가입](wireframes/cand_W6_Signup.png)](wireframes/cand_W6_Signup.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1280 × 800 |
-| 요구사항 (Should) | FR-USER-01, 03, 04, 19 / NFR-15 |
-| 그림 파일 | [wireframes/cand_W6_Signup.png](wireframes/cand_W6_Signup.png) |
-
-**언제 보이는가**
-
-넓은 화면의 회원가입. 비밀번호를 입력하는 중이다.
-
-**화면 구성** (위에서 아래로)
-
-1. 회색 바탕 가운데에 흰 카드 하나
-2. 카드 안: 제목 '비밀번호를 정해 주세요', 아이디(home2026), 비밀번호 입력란, 규칙 세 줄, 꺼진 '확인' 버튼, 로그인으로 가는 글자 버튼
-
-**동작**
-
-- 모바일과 같이 한 번에 하나씩 묻는다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 모바일과 같이 아이디, 비밀번호, 비밀번호 확인을 차례로 묻는다. 가입을 마치면 바로 로그인된 상태로 재무정보 화면에 간다.
-
-<a id="cand-W7_MapList" name="cand-W7_MapList"></a>
-
-#### W7 웹: 지도와 목록
-
-[![W7 웹: 지도와 목록](wireframes/cand_W7_MapList.png)](wireframes/cand_W7_MapList.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1440 × 900 |
-| 요구사항 (Must) | FR-MAP-01, 02, 11, 15 / FR-APT-02, 05 / FR-COMMON-02 |
-| 요구사항 (Should) | FR-MAP-06, 08, 19, 21, 22, 24, 25, 26, 29, 30 / FR-APT-03, 06, 09, 10, 13, 14, 15 / FR-DATA-05 / NFR-15 |
-| 그림 파일 | [wireframes/cand_W7_MapList.png](wireframes/cand_W7_MapList.png) |
-
-**언제 보이는가**
-
-넓은 화면의 지도. 실제 화면에 가깝게 자세히 그렸다.
-
-**화면 구성** (위에서 아래로)
-
-1. 헤더: 서비스 이름, 둥근 검색창 '아파트 이름으로 검색 (광주시 전체)', 오른쪽 '로그인'과 '회원가입'
-2. 조건 줄: 구 선택, 동 선택, 면적·가격·준공 연도, 자금 부족 표시 스위치, 오른쪽 끝에 ㎡/평 전환과 '실거래 [기준일] 기준', 안내 아이콘
-3. 왼쪽 패널 맨 위 회색 상자: '내 조건으로 목표할 수 있는 가격 3억 6,667만 원까지', 조건 한 줄, '수정'
-4. 패널의 목록 머리: '서구 치평동 아파트 23곳', 정렬, 접기(«). 그 아래 네 칸 탭: 전체 23, 지금 가능 5, 기간 내 가능 4, 자금 부족 14
-5. 카드: 이름과 배지, 면적·준공 연도·세대수·거래 건수, 실거래 평균과 여유 또는 부족
-6. 오른쪽 지도: 도로, 공원, 동 이름 위에 표시 열 개. 왼쪽 아래 범례, 오른쪽 아래 단위·현재 위치·확대·축소·축척
-
-**동작**
-
-- 지도를 움직이면 왼쪽 목록이 따라 바뀐다.
-- 탭을 누르면 그 구분의 카드만 보인다.
-- 카드나 표시를 누르면 아파트 패널이 붙는다(W8).
-
-**규칙과 근거** (캔버스 메모)
-
-- 헤더: 로고, 아파트 이름 검색, 로그인과 회원가입.
-- 조건 줄: 구와 동 선택, 면적·가격·준공 연도, 자금 부족 표시, 오른쪽에 ㎡/평 전환과 실거래 기준일.
-- 왼쪽 패널: 맨 위에 내 조건(목표 가능 가격과 수정), 그 아래 구분별 개수 탭과 아파트 카드. 카드에 면적, 준공 연도, 세대수, 거래 건수, 실거래 평균, 여유 또는 부족.
-- 지도: 새 표시(위 공급면적, 가운데 실거래 평균, 아래 구분과 여유·부족), 왼쪽 아래 범례, 오른쪽 아래 단위·현재 위치·확대·축소·축척.
-- 패널은 왼쪽이다. 지금 명세서는 오른쪽이라 이 안을 고르면 명세서를 고친다.
-
-<a id="cand-W8_MapApt" name="cand-W8_MapApt"></a>
-
-#### W8 웹: 아파트를 고름 (시나리오)
-
-[![W8 웹: 아파트를 고름 (시나리오)](wireframes/cand_W8_MapApt.png)](wireframes/cand_W8_MapApt.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1440 × 900 |
-| 요구사항 (Must) | FR-MAP-03, 14, 16 / FR-RESULT-01, 02, 03, 04, 05, 06 |
-| 요구사항 (Should) | FR-RESULT-09 / NFR-15 |
-| 그림 파일 | [wireframes/cand_W8_MapApt.png](wireframes/cand_W8_MapApt.png) |
-
-**언제 보이는가**
-
-넓은 화면에서 아파트를 골랐을 때. 시나리오 탭이다.
-
-**화면 구성** (위에서 아래로)
-
-1. 목록 패널은 그대로 있고 고른 카드에 굵은 테두리
-2. 목록 오른쪽에 아파트 패널이 붙는다: 주소 한 줄과 이전·다음·닫기, 이름과 배지, 면적 칩, 탭
-3. 시나리오 내용: 결과 상자, 값 아홉 줄, 조건 바꿔 보기
-4. 지도는 남은 폭을 쓰고, 고른 표시가 그 가운데에 굵은 테두리로 보인다.
-
-**동작**
-
-- 목록의 다른 카드를 누르면 아파트 패널의 내용이 바뀐다.
-- 닫기를 누르면 패널이 사라지고 지도가 넓어진다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 카드나 지도의 표시를 누르면 목록 오른쪽에 아파트 패널이 붙는다. 목록은 그대로 남아 다른 아파트로 바로 옮겨 갈 수 있다.
-- 고른 카드와 지도의 표시에 굵은 테두리. 고른 아파트는 남은 지도 영역의 가운데에 온다.
-- 패널 안에서 스크롤한다. 아래에 결과 저장과 안내 문구가 이어진다.
-
-<a id="cand-W9_MapWide" name="cand-W9_MapWide"></a>
-
-#### W9 웹: 패널을 접음
-
-[![W9 웹: 패널을 접음](wireframes/cand_W9_MapWide.png)](wireframes/cand_W9_MapWide.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (웹 배치) |
-| 화면 크기 | 웹 1440 × 900 |
-| 요구사항 (Must) | FR-MAP-11 |
-| 요구사항 (Should) | NFR-15 |
-| 그림 파일 | [wireframes/cand_W9_MapWide.png](wireframes/cand_W9_MapWide.png) |
-
-**언제 보이는가**
-
-목록 패널의 « 를 눌러 접었을 때.
-
-**화면 구성** (위에서 아래로)
-
-1. 패널이 사라지고 지도가 화면 폭을 다 쓴다.
-2. 왼쪽 가장자리에 세로 손잡이 '목록 23곳 »'
-
-**동작**
-
-- 손잡이를 누르면 패널이 다시 펴진다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 목록의 « 를 누르면 패널이 접히고 지도가 화면을 다 쓴다. 왼쪽 가장자리의 손잡이로 다시 편다. (제안)
-
-<a id="cand-W10_MapInfo" name="cand-W10_MapInfo"></a>
-
-#### W10 웹: 아파트를 고름 (아파트 정보)
-
-[![W10 웹: 아파트를 고름 (아파트 정보)](wireframes/cand_W10_MapInfo.png)](wireframes/cand_W10_MapInfo.png)
-
-| 항목 | 내용 |
-| --- | --- |
-| 단계 | 2차 (로드뷰, 주변 시설, 비슷한 아파트, 공유하기는 3차) |
-| 화면 크기 | 웹 1440 × 900 |
-| 요구사항 (Should) | FR-APT-13, 14, 15, 16 / NFR-15 |
-| 요구사항 (Could) | FR-MAP-09, 10, 23 / FR-APT-17, 18 |
-| 그림 파일 | [wireframes/cand_W10_MapInfo.png](wireframes/cand_W10_MapInfo.png) |
-
-**언제 보이는가**
-
-넓은 화면에서 아파트를 고르고 아파트 정보 탭을 봤을 때.
-
-**화면 구성** (위에서 아래로)
-
-1. 아파트 패널 맨 위에 로드뷰 자리(없으면 기본 이미지, 3차)
-2. 주소 줄, 이름과 배지, 면적 칩, 탭
-3. 기본 정보 여섯 줄
-4. '주변 시설'(3차) 네 칸, '비슷한 아파트'(3차) 카드, '주소 복사해서 공유하기'(3차)
-
-**동작**
-
-- 순서는 모바일의 C6과 같다.
-
-**규칙과 근거** (캔버스 메모)
-
-- 아파트 패널의 맨 위에 로드뷰. 로드뷰가 없으면 기본 이미지.
-- 그 아래에 기본 정보, 주변 시설, 비슷한 아파트, 공유하기의 순서.
-
 ---
 
-## 16. 확인이 필요한 것
+## 17. 정한 것과 남은 것
 
-### 16.1 정할 것
+### 17.1 정한 것 (2026-10-11)
+
+| 번호 | 질문 | 결정 |
+| --- | --- | --- |
+| S-1 | 후보 A (1차 상태 8장) | 모두 본 와이어프레임에 넣었다 (12장). |
+| S-2 | 후보 B (2차 상태 6장) | 모두 넣었다 (13장). |
+| S-3 | 후보 C (3차 화면 10장) | C7을 뺀 9장을 넣었다 (14장). C7은 보류했다 (16장). |
+| S-4 | 3차 화면의 번호와 들어가는 길 | P-09 저장한 결과, P-10 비밀번호 변경, P-11 회원 탈퇴. 헤더의 계정 메뉴로 들어간다 ([C0](#wf-C0_AccountMenu)). |
+| S-5 | 입력과 회원 화면의 PC 배치 (W1 ~ W6) | 넣었다 (15장). |
+| S-6 | PC 지도의 패널 방향 | 왼쪽 ([W7](#wf-W7_MapList) ~ [W10](#wf-W10_MapInfo)). 오른쪽 패널로 그린 P-05 ⑩은 뺐다. |
+| S-7 | 아파트를 열었을 때 처음 보이는 탭 | 아파트 정보 ([P-06 ⑦](#wf-P06_AptInfo80)) |
+| S-8 | 지도의 아파트 표시 | 셋째 줄에 구분과 여유·부족 금액을 적는다. 처음 단위는 ㎡다 ([P-05 ①](#wf-Main), 2.4). |
+| S-9 | 휴대폰 화면에서 실거래 수집 기준일을 보여 주는 곳 | 안내 아이콘을 눌렀을 때 나오는 문구의 끝 ([B5](#wf-B5_InfoTip)). PC에서는 조건 줄에도 적는다 ([W7](#wf-W7_MapList)). |
+
+명세서에 없어서 제안으로 그렸던 아래 항목도 그대로 쓰기로 했다.
+
+| 그림 | 내용 |
+| --- | --- |
+| [P-05 ⑯](#wf-P05_Loading) | 지도를 옮긴 직후에는 이전 표시를 흐리게 남겨 두고 새 결과가 오면 바꾼다. |
+| [A5](#wf-A5_LackOff) | 자금 부족 표시 스위치의 상태는 탭을 닫기 전까지 유지한다. |
+| [C5](#wf-C5_Withdraw) | 회원 탈퇴는 비밀번호를 넣어야 진행된다. |
+| [C8](#wf-C8_Glossary) | 용어 설명을 붙일 용어는 여섯 개다: 대출 비율, 대상 주택 가격 상한, 원리금균등 상환, 자기자금, 허용 상승률, 공급면적과 전용면적. |
+| [W9](#wf-W9_MapWide) | 목록 패널을 접으면 지도가 화면을 다 쓴다. |
+
+### 17.2 남은 것
 
 | 번호 | 질문 | 관련 그림 |
 | --- | --- | --- |
-| 1 | 검토 후보 34장 가운데 무엇을 본 와이어프레임에 넣는가 | 12 ~ 15장 |
-| 2 | 웹 지도에서 패널을 왼쪽에 둘지 오른쪽에 둘지 | [P-05 ⑩](#wf-P05_Web) (오른쪽), [W7](#cand-W7_MapList) ~ [W10](#cand-W10_MapInfo) (왼쪽) |
-| 3 | 아파트 표시의 셋째 줄(구분과 여유·부족 금액)을 넣을지, 처음에 보여 주는 면적 단위를 ㎡로 할지 | [P-05 ①](#wf-Main), 2.4 |
-| 4 | 3차 화면(저장한 결과 목록, 비밀번호 변경, 회원 탈퇴)의 화면 번호와 입구 | [C0](#cand-C0_AccountMenu), [C1](#cand-C1_SavedList), [C4](#cand-C4_Password), [C5](#cand-C5_Withdraw) |
-| 5 | 구 표시, 동 표시, 아파트 표시가 바뀌는 확대 수준 | [P-05 ⑪](#wf-P05_City), [P-05 ③](#wf-P05_Wide) |
-| 6 | 목록에서 아파트를 열었을 때 처음 보이는 탭 (아파트 정보 또는 시나리오) | [P-06 ⑦](#wf-P06_AptInfo80) |
-| 7 | 모바일 화면에서 실거래 수집 기준일(FR-DATA-05)을 어디에 보여 줄지. 지금은 웹 후보의 조건 줄에만 있다. | [W7](#cand-W7_MapList) |
-| 8 | 변동 그래프의 자료와 그리는 방식 (N-06, N-07) | [C7](#cand-C7_Trend) |
-| 9 | 광주시 경계 좌표의 출처 | [P-05 ⑪](#wf-P05_City) |
-| 10 | 대출 상품 두 개의 실제 조건 (R-01, R-02). 그림의 상품명과 숫자는 예시다. | [P-03 ①](#wf-P03_1_Pick), [P-03 ⑥](#wf-P03_06_Terms) |
+| 1 | 구 표시, 동 표시, 아파트 표시가 바뀌는 확대 수준. 실제 지도를 띄워 보면서 정한다. | [P-05 ⑪](#wf-P05_City), [P-05 ③](#wf-P05_Wide) |
+| 2 | 변동 그래프의 자료와 그리는 방식 (N-06, N-07) | [C7](#cand-C7_Trend) |
+| 3 | 광주시 경계 좌표의 출처 | [P-05 ⑪](#wf-P05_City) |
+| 4 | 대출 상품 두 개의 실제 조건 (R-01, R-02). 그림의 상품명과 숫자는 예시다. | [P-03 ①](#wf-P03_1_Pick), [P-03 ⑥](#wf-P03_06_Terms) |
+| 5 | 비슷한 아파트의 기준 (3차) | [C6](#wf-C6_InfoExtra) |
 
-### 16.2 명세서에 없어 제안으로 그린 것
+### 17.3 그림이 없는 요구사항
 
-캔버스 메모에 "제안"이라고 적은 항목이다. 그대로 갈지 확인이 필요하다.
-
-| 그림 | 내용 |
-| --- | --- |
-| [P-05 ⑯](#wf-P05_Loading) | 지도를 옮긴 직후. 이전 표시는 흐리게 남겨 두고 새 결과가 오면 바꾼다. (제안) |
-| [A5](#cand-A5_LackOff) | 켜고 끈 상태는 탭을 닫기 전까지 유지한다. (제안) |
-| [C0](#cand-C0_AccountMenu) | 3차 화면 세 개로 가는 입구가 필요해서 넣은 제안이다. 명세서에는 입구가 정해져 있지 않다. |
-| [C1](#cand-C1_SavedList) | 지금 화면 목록(P-01 \~ P-08)에 없는 새 화면이다. P-09로 넣는 것을 제안한다. |
-| [C5](#cand-C5_Withdraw) | 비밀번호를 넣어야 '탈퇴하기'가 켜진다. (제안: 명세서에는 확인 방법이 없다.) |
-| [C8](#cand-C8_Glossary) | 넣을 용어 (제안): 대출 비율, 대상 주택 가격 상한, 원리금균등 상환, 자기자금, 허용 상승률, 공급면적과 전용면적. |
-| [W9](#cand-W9_MapWide) | 목록의 « 를 누르면 패널이 접히고 지도가 화면을 다 쓴다. 왼쪽 가장자리의 손잡이로 다시 편다. (제안) |
-
-### 16.3 정해지지 않았다고 적어 둔 것
-
-| 그림 | 내용 |
-| --- | --- |
-| [P-05 ③](#wf-P05_Wide) | 미정: 동 표시와 아파트 표시가 바뀌는 확대 수준. |
-| [P-06 ⑦](#wf-P06_AptInfo80) | 미정: 목록에서 열었을 때 처음 보이는 탭. |
-| [C6](#cand-C6_InfoExtra) | 비슷한 아파트의 기준은 정해지지 않았다. |
-| [C7](#cand-C7_Trend) | 변동률을 어떤 자료로 구할지(N-06), 그래프를 어떻게 그릴지(N-07)가 정해지지 않아 값은 비워 두었다. |
-
-### 16.4 그림이 없는 요구사항
-
-요구사항 159개 가운데 132개가 그림의 메모에 번호로 걸려 있다 (본 와이어프레임 116개, 검토 후보에만 16개).
+요구사항 159개 가운데 132개가 그림의 메모에 번호로 걸려 있다 (본 와이어프레임 130개, 보류한 그림에만 2개).
 
 화면 기능인데 그림이 없는 것
 
@@ -4345,166 +4325,152 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 
 데이터 수집(FR-DATA) 12개와 성능, 보안, 정확성, 구조, 테스트에 관한 비기능 요구사항(NFR) 12개는 화면에 드러나지 않아 그림이 없다: FR-DATA-01, 02, 03, 04, 06, 07, 08, 09, 10, 11, 12, 13 / NFR-03, 04, 05, 06, 08, 09, 10, 12, 18, 20, 21, 22.
 
-검토 후보의 메모에만 번호가 걸린 요구사항
+보류한 그림의 메모에만 번호가 걸린 요구사항
 
 | 번호 | 분류 | 요구사항 | 그림 | 비고 |
 | --- | --- | --- | --- | --- |
-| FR-USER-11 | Could | 사용자는 회원 탈퇴를 할 수 있어야 한다. | [C0](#cand-C0_AccountMenu), [C5](#cand-C5_Withdraw) |  |
-| FR-USER-12 | Could | 시스템은 회원 탈퇴 시 그 사용자의 재무정보와 저장한 결과를 함께 삭제해야 한다. | [C5](#cand-C5_Withdraw) |  |
-| FR-USER-13 | Could | 사용자는 로그인한 상태에서 비밀번호를 변경할 수 있어야 한다. | [C0](#cand-C0_AccountMenu), [C4](#cand-C4_Password) |  |
-| FR-USER-15 | Should | 시스템은 사용자가 자신의 정보만 조회하고 수정할 수 있게 해야 한다. | [C1](#cand-C1_SavedList) | 화면이 아니라 서버의 권한 검사로 지킨다. |
 | FR-PLAN-06 | Could | 시스템은 선택한 지역의 최근 평균 변동률을 참고 정보로 표시해야 한다. | [C7](#cand-C7_Trend) |  |
 | FR-PLAN-10 | Could | 시스템은 구별 집값 변동 그래프와, 그 변동률을 적용했을 때의 부족자금과 여유자금을 참고용으로 표시해야 한다. 오를 때와 내릴 때를 함께 보여 주고 참고용임을 알린다. | [C7](#cand-C7_Trend) |  |
-| FR-APT-01 | Must | 시스템은 아파트별 최근 1년 실거래 평균가를 제공해야 한다. | [A9](#cand-A9_InfoFull) | 평균가는 본 와이어프레임의 목록과 아파트 창에도 나온다. 메모에 번호만 적지 않았다. |
-| FR-APT-17 | Could | 시스템은 선택한 아파트와 지역, 가격, 구분이 비슷한 아파트를 보여 주어야 한다. | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |  |
-| FR-APT-18 | Could | 사용자는 선택한 아파트의 주소를 복사해 공유할 수 있어야 한다. 공유하는 주소에는 재무정보를 넣지 않는다. | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |  |
-| FR-MAP-09 | Could | 시스템은 아파트 정보 탭을 전체로 올렸을 때 헤더 바로 아래 맨 위에 그 위치의 로드뷰를 보여 주어야 한다. | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |  |
-| FR-MAP-10 | Could | 시스템은 로드뷰가 없으면 기본 이미지를 보여 주어야 한다. | [C6](#cand-C6_InfoExtra), [C6b](#cand-C6b_NoRoadview), [W10](#cand-W10_MapInfo) |  |
-| FR-MAP-23 | Could | 시스템은 선택한 아파트의 주변 시설(지하철역, 학교, 대형마트, 병원)의 수와 가장 가까운 곳까지의 거리를 보여 주어야 한다. | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |  |
-| FR-RESULT-08 | Could | 사용자는 저장한 결과 목록을 다시 열어 볼 수 있어야 한다. | [C0](#cand-C0_AccountMenu), [C1](#cand-C1_SavedList), [C3](#cand-C3_SavedOpen) |  |
-| FR-COMMON-06 | Could | 시스템은 금융 용어 옆에 짧은 설명을 제공해야 한다. | [C8](#cand-C8_Glossary) |  |
-| FR-DATA-05 | Should | 시스템은 데이터 수집 기준일을 저장하고 화면에 표시해야 한다. | [W7](#cand-W7_MapList) | 모바일 화면에는 기준일을 보여 줄 자리가 없다 (16.1의 7번). |
-| NFR-17 | Could | 시스템은 지도와 결과의 구분을 색만으로 하지 않고 글자나 모양을 함께 써야 한다. 색의 의미는 화면에 따로 설명한다. | [B4](#cand-B4_LegendOpen) | 글자와 모양으로 구분하는 것은 본 와이어프레임에도 적용했다. 펼친 범례는 P-05 ⑩에도 있다. |
 
 ---
 
 ## 부록 A. 요구사항 번호로 그림 찾기
 
-그림의 메모에 적힌 번호를 거꾸로 모았다. 번호를 누르면 그 그림의 설명으로 간다. 대출 없이 계산의 그림은 "대출 없이 · 지도"처럼 적었고, A1 ~ W10은 검토 후보다.
+그림의 메모에 적힌 번호를 거꾸로 모았다. 번호를 누르면 그 그림의 설명으로 간다. 대출 없이 계산의 그림은 "대출 없이 · 지도"처럼 적었고, A1 ~ W10은 12 ~ 15장의 그림이고 C7은 보류한 그림이다.
 
 | 번호 | 분류 | 그림 |
 | --- | --- | --- |
-| FR-USER-01 | Should | [P-08 ①](#wf-P08a_Id), [P-08 ⑥](#wf-P08f_Ready), [P-08 ⑦](#wf-P08g_Welcome), [W6](#cand-W6_Signup) |
-| FR-USER-19 | Should | [P-08 ①](#wf-P08a_Id), [P-08 ②](#wf-P08b_IdRule), [W6](#cand-W6_Signup) |
+| FR-USER-01 | Should | [P-08 ①](#wf-P08a_Id), [P-08 ⑥](#wf-P08f_Ready), [P-08 ⑦](#wf-P08g_Welcome), [W6](#wf-W6_Signup) |
+| FR-USER-19 | Should | [P-08 ①](#wf-P08a_Id), [P-08 ②](#wf-P08b_IdRule), [W6](#wf-W6_Signup) |
 | FR-USER-02 | Should | [P-08 ③](#wf-P08c_IdDup) |
-| FR-USER-03 | Should | [P-08 ④](#wf-P08d_Pw), [C4](#cand-C4_Password), [W6](#cand-W6_Signup) |
-| FR-USER-04 | Should | [P-08 ⑤](#wf-P08e_PwMismatch), [P-08 ⑥](#wf-P08f_Ready), [C4](#cand-C4_Password), [W6](#cand-W6_Signup) |
+| FR-USER-03 | Should | [P-08 ④](#wf-P08d_Pw), [C4](#wf-C4_Password), [W6](#wf-W6_Signup) |
+| FR-USER-04 | Should | [P-08 ⑤](#wf-P08e_PwMismatch), [P-08 ⑥](#wf-P08f_Ready), [C4](#wf-C4_Password), [W6](#wf-W6_Signup) |
 | FR-USER-05 | Could | [P-08 ⑥](#wf-P08f_Ready) |
-| FR-USER-06 | Should | [P-07 ①](#wf-P07a_Login), [W5](#cand-W5_Login) |
-| FR-USER-07 | Could | [P-07 ②](#wf-P07b_Fail), [W5](#cand-W5_Login) |
+| FR-USER-06 | Should | [P-07 ①](#wf-P07a_Login), [W5](#wf-W5_Login) |
+| FR-USER-07 | Could | [P-07 ②](#wf-P07b_Fail), [W5](#wf-W5_Login) |
 | FR-USER-08 | Should | [P-01 ⑤](#wf-P01_5_Expired) |
-| FR-USER-09 | Should | [P-01 ②](#wf-P01_2_Saved), [P-01 ③](#wf-P01_3_NoSaved), [B6](#cand-B6_LoggedIn), [C0](#cand-C0_AccountMenu) |
-| FR-USER-10 | Should | [P-07 ③](#wf-P07c_NeedLogin), [C2](#cand-C2_Saved) |
-| FR-USER-20 | Should | [P-01 ①](#wf-P01_1_Start), [P-07 ①](#wf-P07a_Login), [W5](#cand-W5_Login) |
-| FR-USER-18 | Could | [P-07 ①](#wf-P07a_Login), [W5](#cand-W5_Login) |
-| FR-USER-11 | Could | [C0](#cand-C0_AccountMenu), [C5](#cand-C5_Withdraw) |
-| FR-USER-12 | Could | [C5](#cand-C5_Withdraw) |
-| FR-USER-13 | Could | [C0](#cand-C0_AccountMenu), [C4](#cand-C4_Password) |
-| FR-USER-14 | Should | [P-08 ④](#wf-P08d_Pw), [C4](#cand-C4_Password) |
-| FR-USER-15 | Should | [C1](#cand-C1_SavedList) |
+| FR-USER-09 | Should | [P-01 ②](#wf-P01_2_Saved), [P-01 ③](#wf-P01_3_NoSaved), [B6](#wf-B6_LoggedIn), [C0](#wf-C0_AccountMenu) |
+| FR-USER-10 | Should | [P-07 ③](#wf-P07c_NeedLogin), [C2](#wf-C2_Saved) |
+| FR-USER-20 | Should | [P-01 ①](#wf-P01_1_Start), [P-07 ①](#wf-P07a_Login), [W5](#wf-W5_Login) |
+| FR-USER-18 | Could | [P-07 ①](#wf-P07a_Login), [W5](#wf-W5_Login) |
+| FR-USER-11 | Could | [C0](#wf-C0_AccountMenu), [C5](#wf-C5_Withdraw) |
+| FR-USER-12 | Could | [C5](#wf-C5_Withdraw) |
+| FR-USER-13 | Could | [C0](#wf-C0_AccountMenu), [C4](#wf-C4_Password) |
+| FR-USER-14 | Should | [P-08 ④](#wf-P08d_Pw), [C4](#wf-C4_Password) |
+| FR-USER-15 | Should | [C1](#wf-C1_SavedList) |
 | FR-USER-16 | Should | [P-08 ①](#wf-P08a_Id), [P-08 ⑥](#wf-P08f_Ready) |
-| FR-PROFILE-01 | Must | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ③](#wf-P02_03_IncEmpty), [P-02 ⑤](#wf-P02_05_AstEmpty), [P-02 ⑥](#wf-P02_06_AstFilled), [W2](#cand-W2_Profile) |
+| FR-PROFILE-01 | Must | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ③](#wf-P02_03_IncEmpty), [P-02 ⑤](#wf-P02_05_AstEmpty), [P-02 ⑥](#wf-P02_06_AstFilled), [W2](#wf-W2_Profile) |
 | FR-PROFILE-20 | Must | [P-02 ③](#wf-P02_03_IncEmpty), [P-02 ④](#wf-P02_04_IncFilled), [P-02 ⑤](#wf-P02_05_AstEmpty), [P-02 ⑥](#wf-P02_06_AstFilled), [P-02 ⑨](#wf-P02_09_ErrDecimal), [P-04 ①](#wf-P04_01_SavEmpty) |
 | FR-PROFILE-02 | Must | [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ⑥](#wf-P02_06_AstFilled), [P-02 ⑧](#wf-P02_08_ErrNegative), [P-02 ⑨](#wf-P02_09_ErrDecimal), [P-02 ⑩](#wf-P02_10_ErrText), [P-04 ⑨](#wf-P04_09_Error) |
 | FR-PROFILE-03 | Must | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ⑦](#wf-P02_07_Confirm), [P-02 ⑧](#wf-P02_08_ErrNegative), [P-02 ⑨](#wf-P02_09_ErrDecimal), [P-02 ⑩](#wf-P02_10_ErrText), [P-04 ⑨](#wf-P04_09_Error) |
-| FR-PROFILE-04 | Must | [P-01 ②](#wf-P01_2_Saved), [P-01 ③](#wf-P01_3_NoSaved), [P-02 ⑦](#wf-P02_07_Confirm), [P-02 ⑭](#wf-P02_14_SaveFail), [대출 없이 · 저장한 정보](#wf-NL_2_Saved), [A3](#cand-A3_Recalced) |
+| FR-PROFILE-04 | Must | [P-01 ②](#wf-P01_2_Saved), [P-01 ③](#wf-P01_3_NoSaved), [P-02 ⑦](#wf-P02_07_Confirm), [P-02 ⑭](#wf-P02_14_SaveFail), [대출 없이 · 저장한 정보](#wf-NL_2_Saved), [A3](#wf-A3_Recalced) |
 | FR-PROFILE-05 | Must | [P-01 ②](#wf-P01_2_Saved), [P-02 ⑦](#wf-P02_07_Confirm) |
 | FR-PROFILE-09 | Must | [P-02 ⑬](#wf-P02_13_ServerReject) |
 | FR-PROFILE-11 | Must | [P-01 ⑤](#wf-P01_5_Expired), [P-02 ③](#wf-P02_03_IncEmpty), [P-02 ⑦](#wf-P02_07_Confirm) |
 | FR-PROFILE-12 | Must | [P-02 ⑦](#wf-P02_07_Confirm) |
 | FR-PROFILE-10 | Should | [P-01 ②](#wf-P01_2_Saved), [P-02 ⑦](#wf-P02_07_Confirm) |
-| FR-PROFILE-13 | Should | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ③](#wf-P02_03_IncEmpty), [P-02 ⑤](#wf-P02_05_AstEmpty), [W2](#cand-W2_Profile) |
+| FR-PROFILE-13 | Should | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ③](#wf-P02_03_IncEmpty), [P-02 ⑤](#wf-P02_05_AstEmpty), [W2](#wf-W2_Profile) |
 | FR-PROFILE-14 | Should | [P-02 ⑧](#wf-P02_08_ErrNegative), [P-02 ⑨](#wf-P02_09_ErrDecimal), [P-02 ⑩](#wf-P02_10_ErrText), [P-02 ⑪](#wf-P02_11_AgeRange), [P-02 ⑫](#wf-P02_12_AmountMax), [P-04 ⑨](#wf-P04_09_Error), [P-04 ⑪](#wf-P04_11_AmountMax) |
-| FR-PROFILE-08 | Should | [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ⑪](#wf-P02_11_AgeRange), [W2](#cand-W2_Profile) |
+| FR-PROFILE-08 | Should | [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ⑪](#wf-P02_11_AgeRange), [W2](#wf-W2_Profile) |
 | FR-PROFILE-21 | Should | [P-02 ④](#wf-P02_04_IncFilled), [P-02 ⑥](#wf-P02_06_AstFilled), [P-02 ⑫](#wf-P02_12_AmountMax), [P-04 ②](#wf-P04_02_SavFilled), [P-04 ⑪](#wf-P04_11_AmountMax) |
 | FR-PROFILE-22 | Should | [P-02 ④](#wf-P02_04_IncFilled), [P-04 ②](#wf-P04_02_SavFilled) |
 | FR-PROFILE-15 | Could | [P-04 ⑤](#wf-P04_05_Summary), [대출 없이 · 입력 요약](#wf-NL_1_Summary) |
-| FR-LOAN-01 | Must | [P-03 ①](#wf-P03_1_Pick), [W3](#cand-W3_Loan) |
-| FR-LOAN-02 | Must | [P-03 ①](#wf-P03_1_Pick), [P-03 ⑥](#wf-P03_06_Terms), [W3](#cand-W3_Loan) |
-| FR-LOAN-03 | Must | [P-03 ①](#wf-P03_1_Pick), [P-03 ②](#wf-P03_2_PickedA), [P-03 ④](#wf-P03_4_PickedB), [P-03 ⑤](#wf-P03_05_NoLoan), [W3](#cand-W3_Loan) |
-| FR-LOAN-11 | Must | [P-03 ②](#wf-P03_2_PickedA), [P-03 ③](#wf-P03_3_TermPicked), [P-03 ④](#wf-P03_4_PickedB), [W3](#cand-W3_Loan) |
-| FR-LOAN-13 | Must | [P-03 ①](#wf-P03_1_Pick), [P-03 ③](#wf-P03_3_TermPicked), [P-03 ④](#wf-P03_4_PickedB), [P-03 ⑤](#wf-P03_05_NoLoan), [W3](#cand-W3_Loan) |
+| FR-LOAN-01 | Must | [P-03 ①](#wf-P03_1_Pick), [W3](#wf-W3_Loan) |
+| FR-LOAN-02 | Must | [P-03 ①](#wf-P03_1_Pick), [P-03 ⑥](#wf-P03_06_Terms), [W3](#wf-W3_Loan) |
+| FR-LOAN-03 | Must | [P-03 ①](#wf-P03_1_Pick), [P-03 ②](#wf-P03_2_PickedA), [P-03 ④](#wf-P03_4_PickedB), [P-03 ⑤](#wf-P03_05_NoLoan), [W3](#wf-W3_Loan) |
+| FR-LOAN-11 | Must | [P-03 ②](#wf-P03_2_PickedA), [P-03 ③](#wf-P03_3_TermPicked), [P-03 ④](#wf-P03_4_PickedB), [W3](#wf-W3_Loan) |
+| FR-LOAN-13 | Must | [P-03 ①](#wf-P03_1_Pick), [P-03 ③](#wf-P03_3_TermPicked), [P-03 ④](#wf-P03_4_PickedB), [P-03 ⑤](#wf-P03_05_NoLoan), [W3](#wf-W3_Loan) |
 | FR-LOAN-15 | Must | [P-03 ⑤](#wf-P03_05_NoLoan), [P-03 ⑧](#wf-P03_08_LoadFail), [P-03 ⑩](#wf-P03_10_ZeroAsset), [대출 없이 · 입력 요약](#wf-NL_1_Summary), [대출 없이 · 지도](#wf-NL_3_Map), [대출 없이 · 시나리오](#wf-NL_5_Scenario) |
-| FR-LOAN-06 | Must | [P-03 ②](#wf-P03_2_PickedA), [P-03 ④](#wf-P03_4_PickedB), [P-03 ⑩](#wf-P03_10_ZeroAsset), [P-06 ⑧](#wf-P06_ScenarioFull), [W3](#cand-W3_Loan) |
+| FR-LOAN-06 | Must | [P-03 ②](#wf-P03_2_PickedA), [P-03 ④](#wf-P03_4_PickedB), [P-03 ⑩](#wf-P03_10_ZeroAsset), [P-06 ⑧](#wf-P06_ScenarioFull), [W3](#wf-W3_Loan) |
 | FR-LOAN-12 | Must | [P-03 ②](#wf-P03_2_PickedA) |
-| FR-LOAN-07 | Must | [P-03 ③](#wf-P03_3_TermPicked), [P-06 ⑧](#wf-P06_ScenarioFull), [W3](#cand-W3_Loan) |
+| FR-LOAN-07 | Must | [P-03 ③](#wf-P03_3_TermPicked), [P-06 ⑧](#wf-P06_ScenarioFull), [W3](#wf-W3_Loan) |
 | FR-LOAN-09 | Should | [P-03 ①](#wf-P03_1_Pick), [P-03 ⑥](#wf-P03_06_Terms) |
 | FR-LOAN-14 | Should | [P-06 ⑦](#wf-P06_AptInfo80), [P-06 ⑲](#wf-P06_CapOver) |
-| FR-PLAN-01 | Must | [P-04 ①](#wf-P04_01_SavEmpty), [P-04 ②](#wf-P04_02_SavFilled), [P-04 ⑧](#wf-P04_08_Zero), [W4](#cand-W4_Plan) |
-| FR-PLAN-02 | Must | [P-04 ③](#wf-P04_03_TermEmpty), [P-04 ④](#wf-P04_04_TermPicked), [W4](#cand-W4_Plan) |
-| FR-PLAN-04 | Must | [P-04 ④](#wf-P04_04_TermPicked), [W4](#cand-W4_Plan) |
-| FR-PLAN-05 | Must | [P-04 ④](#wf-P04_04_TermPicked), [W4](#cand-W4_Plan) |
-| FR-PLAN-08 | Must | [P-04 ④](#wf-P04_04_TermPicked), [W4](#cand-W4_Plan) |
-| FR-PLAN-09 | Must | [P-04 ⑦](#wf-P04_07_Now), [P-06 ⑳](#wf-P06_ScenarioLack), [A1](#cand-Main) |
+| FR-PLAN-01 | Must | [P-04 ①](#wf-P04_01_SavEmpty), [P-04 ②](#wf-P04_02_SavFilled), [P-04 ⑧](#wf-P04_08_Zero), [W4](#wf-W4_Plan) |
+| FR-PLAN-02 | Must | [P-04 ③](#wf-P04_03_TermEmpty), [P-04 ④](#wf-P04_04_TermPicked), [W4](#wf-W4_Plan) |
+| FR-PLAN-04 | Must | [P-04 ④](#wf-P04_04_TermPicked), [W4](#wf-W4_Plan) |
+| FR-PLAN-05 | Must | [P-04 ④](#wf-P04_04_TermPicked), [W4](#wf-W4_Plan) |
+| FR-PLAN-08 | Must | [P-04 ④](#wf-P04_04_TermPicked), [W4](#wf-W4_Plan) |
+| FR-PLAN-09 | Must | [P-04 ⑦](#wf-P04_07_Now), [P-06 ⑳](#wf-P06_ScenarioLack), [A1](#wf-A1_GoalNow) |
 | FR-PLAN-06 | Could | [C7](#cand-C7_Trend) |
 | FR-PLAN-10 | Could | [C7](#cand-C7_Trend) |
-| FR-APT-01 | Must | [A9](#cand-A9_InfoFull) |
-| FR-APT-02 | Must | [P-05 ①](#wf-Main), [P-05 ⑬](#wf-P05_Region), [W7](#cand-W7_MapList) |
+| FR-APT-01 | Must | [A9](#wf-A9_InfoFull) |
+| FR-APT-02 | Must | [P-05 ①](#wf-Main), [P-05 ⑬](#wf-P05_Region), [W7](#wf-W7_MapList) |
 | FR-APT-04 | Must | [P-06 ⑤](#wf-P06_List80) |
-| FR-APT-05 | Must | [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [B3](#cand-B3_AreaNext), [W7](#cand-W7_MapList) |
-| FR-APT-07 | Must | [P-05 ⑨](#wf-P05_Empty), [P-05 ⑮](#wf-P05_SearchNone), [A6](#cand-A6_NoTarget), [A7](#cand-A7_NoNow) |
-| FR-APT-12 | Must | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [B3](#cand-B3_AreaNext) |
-| FR-APT-03 | Should | [P-05 ①](#wf-Main), [P-05 ②](#wf-P05_Filter), [W7](#cand-W7_MapList) |
-| FR-APT-09 | Should | [P-05 ①](#wf-Main), [P-05 ②](#wf-P05_Filter), [W7](#cand-W7_MapList) |
-| FR-APT-10 | Should | [P-05 ①](#wf-Main), [P-05 ②](#wf-P05_Filter), [W7](#cand-W7_MapList) |
-| FR-APT-06 | Should | [P-06 ⑤](#wf-P06_List80), [B1](#cand-B1_SortOpen), [B2](#cand-B2_SortPrice), [W7](#cand-W7_MapList) |
-| FR-APT-13 | Should | [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [A9](#cand-A9_InfoFull), [W7](#cand-W7_MapList), [W10](#cand-W10_MapInfo) |
-| FR-APT-14 | Should | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [W7](#cand-W7_MapList), [W10](#cand-W10_MapInfo) |
-| FR-APT-15 | Should | [P-06 ⑦](#wf-P06_AptInfo80), [A9](#cand-A9_InfoFull), [W7](#cand-W7_MapList), [W10](#cand-W10_MapInfo) |
-| FR-APT-16 | Should | [P-06 ⑦](#wf-P06_AptInfo80), [A9](#cand-A9_InfoFull), [W10](#cand-W10_MapInfo) |
-| FR-APT-17 | Could | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |
-| FR-APT-18 | Could | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |
-| FR-MAP-01 | Must | [P-05 ①](#wf-Main), [W7](#cand-W7_MapList) |
-| FR-MAP-11 | Must | [P-05 ①](#wf-Main), [P-05 ⑩](#wf-P05_Web), [W7](#cand-W7_MapList), [W9](#cand-W9_MapWide) |
-| FR-MAP-02 | Must | [P-05 ①](#wf-Main), [대출 없이 · 지도](#wf-NL_3_Map), [W7](#cand-W7_MapList) |
-| FR-MAP-03 | Must | [P-06 ⑥](#wf-P06_Apt30), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [W8](#cand-W8_MapApt) |
+| FR-APT-05 | Must | [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [B3](#wf-B3_AreaNext), [W7](#wf-W7_MapList) |
+| FR-APT-07 | Must | [P-05 ⑨](#wf-P05_Empty), [P-05 ⑮](#wf-P05_SearchNone), [A6](#wf-A6_NoTarget), [A7](#wf-A7_NoNow) |
+| FR-APT-12 | Must | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [B3](#wf-B3_AreaNext) |
+| FR-APT-03 | Should | [P-05 ①](#wf-Main), [P-05 ②](#wf-P05_Filter), [W7](#wf-W7_MapList) |
+| FR-APT-09 | Should | [P-05 ①](#wf-Main), [P-05 ②](#wf-P05_Filter), [W7](#wf-W7_MapList) |
+| FR-APT-10 | Should | [P-05 ①](#wf-Main), [P-05 ②](#wf-P05_Filter), [W7](#wf-W7_MapList) |
+| FR-APT-06 | Should | [P-06 ⑤](#wf-P06_List80), [B1](#wf-B1_SortOpen), [B2](#wf-B2_SortPrice), [W7](#wf-W7_MapList) |
+| FR-APT-13 | Should | [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [A9](#wf-A9_InfoFull), [W7](#wf-W7_MapList), [W10](#wf-W10_MapInfo) |
+| FR-APT-14 | Should | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [W7](#wf-W7_MapList), [W10](#wf-W10_MapInfo) |
+| FR-APT-15 | Should | [P-06 ⑦](#wf-P06_AptInfo80), [A9](#wf-A9_InfoFull), [W7](#wf-W7_MapList), [W10](#wf-W10_MapInfo) |
+| FR-APT-16 | Should | [P-06 ⑦](#wf-P06_AptInfo80), [A9](#wf-A9_InfoFull), [W10](#wf-W10_MapInfo) |
+| FR-APT-17 | Could | [C6](#wf-C6_InfoExtra), [W10](#wf-W10_MapInfo) |
+| FR-APT-18 | Could | [C6](#wf-C6_InfoExtra), [W10](#wf-W10_MapInfo) |
+| FR-MAP-01 | Must | [P-05 ①](#wf-Main), [W7](#wf-W7_MapList) |
+| FR-MAP-11 | Must | [P-05 ①](#wf-Main), [W7](#wf-W7_MapList), [W9](#wf-W9_MapWide) |
+| FR-MAP-02 | Must | [P-05 ①](#wf-Main), [대출 없이 · 지도](#wf-NL_3_Map), [W7](#wf-W7_MapList) |
+| FR-MAP-03 | Must | [P-06 ⑥](#wf-P06_Apt30), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [W8](#wf-W8_MapApt) |
 | FR-MAP-04 | Must | [P-05 ①](#wf-Main) |
 | FR-MAP-07 | Must | [P-06 ⑤](#wf-P06_List80), [P-06 ⑱](#wf-P06_NoCoord) |
-| FR-MAP-13 | Must | [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [A9](#cand-A9_InfoFull) |
-| FR-MAP-14 | Must | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [W8](#cand-W8_MapApt) |
-| FR-MAP-15 | Must | [P-05 ①](#wf-Main), [A5](#cand-A5_LackOff), [W7](#cand-W7_MapList) |
-| FR-MAP-16 | Must | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [B2](#cand-B2_SortPrice), [W8](#cand-W8_MapApt) |
+| FR-MAP-13 | Must | [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [A9](#wf-A9_InfoFull) |
+| FR-MAP-14 | Must | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [W8](#wf-W8_MapApt) |
+| FR-MAP-15 | Must | [P-05 ①](#wf-Main), [A5](#wf-A5_LackOff), [W7](#wf-W7_MapList) |
+| FR-MAP-16 | Must | [P-06 ⑥](#wf-P06_Apt30), [P-06 ⑦](#wf-P06_AptInfo80), [B2](#wf-B2_SortPrice), [W8](#wf-W8_MapApt) |
 | FR-MAP-05 | Should | [P-06 ⑤](#wf-P06_List80) |
-| FR-MAP-06 | Should | [P-05 ①](#wf-Main), [B4](#cand-B4_LegendOpen), [W7](#cand-W7_MapList) |
-| FR-MAP-08 | Should | [P-05 ①](#wf-Main), [P-05 ⑭](#wf-P05_Search), [P-05 ⑮](#wf-P05_SearchNone), [W7](#cand-W7_MapList) |
+| FR-MAP-06 | Should | [P-05 ①](#wf-Main), [B4](#wf-B4_LegendOpen), [W7](#wf-W7_MapList) |
+| FR-MAP-08 | Should | [P-05 ①](#wf-Main), [P-05 ⑭](#wf-P05_Search), [P-05 ⑮](#wf-P05_SearchNone), [W7](#wf-W7_MapList) |
 | FR-MAP-12 | Should | [P-05 ⑰](#wf-P05_MapFail) |
 | FR-MAP-18 | Should | [P-06 ⑥](#wf-P06_Apt30) |
-| FR-MAP-19 | Should | [P-05 ①](#wf-Main), [W7](#cand-W7_MapList) |
+| FR-MAP-19 | Should | [P-05 ①](#wf-Main), [W7](#wf-W7_MapList) |
 | FR-MAP-20 | Should | [P-05 ③](#wf-P05_Wide) |
-| FR-MAP-21 | Should | [P-05 ③](#wf-P05_Wide), [P-06 ④](#wf-P06_Dong30), [A7](#cand-A7_NoNow), [W7](#cand-W7_MapList) |
-| FR-MAP-22 | Should | [P-05 ③](#wf-P05_Wide), [P-05 ⑯](#wf-P05_Loading), [W7](#cand-W7_MapList) |
-| FR-MAP-24 | Should | [P-05 ①](#wf-Main), [P-05 ⑪](#wf-P05_City), [P-05 ㉑](#wf-P05_GpsDenied), [W7](#cand-W7_MapList) |
-| FR-MAP-25 | Should | [P-05 ①](#wf-Main), [P-05 ⑪](#wf-P05_City), [W7](#cand-W7_MapList) |
-| FR-MAP-26 | Should | [P-05 ①](#wf-Main), [P-05 ⑪](#wf-P05_City), [W7](#cand-W7_MapList) |
+| FR-MAP-21 | Should | [P-05 ③](#wf-P05_Wide), [P-06 ④](#wf-P06_Dong30), [A7](#wf-A7_NoNow), [W7](#wf-W7_MapList) |
+| FR-MAP-22 | Should | [P-05 ③](#wf-P05_Wide), [P-05 ⑯](#wf-P05_Loading), [W7](#wf-W7_MapList) |
+| FR-MAP-24 | Should | [P-05 ①](#wf-Main), [P-05 ⑪](#wf-P05_City), [P-05 ㉑](#wf-P05_GpsDenied), [W7](#wf-W7_MapList) |
+| FR-MAP-25 | Should | [P-05 ①](#wf-Main), [P-05 ⑪](#wf-P05_City), [W7](#wf-W7_MapList) |
+| FR-MAP-26 | Should | [P-05 ①](#wf-Main), [P-05 ⑪](#wf-P05_City), [W7](#wf-W7_MapList) |
 | FR-MAP-28 | Should | [P-05 ⑪](#wf-P05_City) |
-| FR-MAP-29 | Should | [P-05 ①](#wf-Main), [P-05 ⑬](#wf-P05_Region), [W7](#cand-W7_MapList) |
-| FR-MAP-30 | Should | [P-05 ①](#wf-Main), [대출 없이 · 지도](#wf-NL_3_Map), [W7](#cand-W7_MapList) |
+| FR-MAP-29 | Should | [P-05 ①](#wf-Main), [P-05 ⑬](#wf-P05_Region), [W7](#wf-W7_MapList) |
+| FR-MAP-30 | Should | [P-05 ①](#wf-Main), [대출 없이 · 지도](#wf-NL_3_Map), [W7](#wf-W7_MapList) |
 | FR-MAP-31 | Should | [P-05 ⑪](#wf-P05_City) |
-| FR-MAP-09 | Could | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |
-| FR-MAP-10 | Could | [C6](#cand-C6_InfoExtra), [C6b](#cand-C6b_NoRoadview), [W10](#cand-W10_MapInfo) |
-| FR-MAP-23 | Could | [C6](#cand-C6_InfoExtra), [W10](#cand-W10_MapInfo) |
-| FR-RESULT-01 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [W8](#cand-W8_MapApt) |
-| FR-RESULT-02 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [W8](#cand-W8_MapApt) |
-| FR-RESULT-03 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [W8](#cand-W8_MapApt) |
-| FR-RESULT-04 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [W8](#cand-W8_MapApt) |
-| FR-RESULT-05 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [W8](#cand-W8_MapApt) |
-| FR-RESULT-06 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [A2](#cand-A2_Recalc), [A3](#cand-A3_Recalced), [W8](#cand-W8_MapApt) |
+| FR-MAP-09 | Could | [C6](#wf-C6_InfoExtra), [W10](#wf-W10_MapInfo) |
+| FR-MAP-10 | Could | [C6](#wf-C6_InfoExtra), [C6b](#wf-C6b_NoRoadview), [W10](#wf-W10_MapInfo) |
+| FR-MAP-23 | Could | [C6](#wf-C6_InfoExtra), [W10](#wf-W10_MapInfo) |
+| FR-RESULT-01 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [W8](#wf-W8_MapApt) |
+| FR-RESULT-02 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [W8](#wf-W8_MapApt) |
+| FR-RESULT-03 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [W8](#wf-W8_MapApt) |
+| FR-RESULT-04 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [W8](#wf-W8_MapApt) |
+| FR-RESULT-05 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [W8](#wf-W8_MapApt) |
+| FR-RESULT-06 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [A2](#wf-A2_Recalc), [A3](#wf-A3_Recalced), [W8](#wf-W8_MapApt) |
 | FR-RESULT-10 | Must | [P-05 ⑫](#wf-P05_NoInput) |
-| FR-RESULT-09 | Should | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [W8](#cand-W8_MapApt) |
-| FR-RESULT-07 | Could | [P-06 ⑧](#wf-P06_ScenarioFull), [C2](#cand-C2_Saved) |
-| FR-RESULT-08 | Could | [C0](#cand-C0_AccountMenu), [C1](#cand-C1_SavedList), [C3](#cand-C3_SavedOpen) |
-| FR-COMMON-01 | Must | [P-01 ①](#wf-P01_1_Start), [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [W1](#cand-W1_Start) |
-| FR-COMMON-02 | Must | [P-01 ①](#wf-P01_1_Start), [P-05 ①](#wf-Main), [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [P-06 ⑧](#wf-P06_ScenarioFull), [P-05 ⑩](#wf-P05_Web), [B5](#cand-B5_InfoTip), [W1](#cand-W1_Start), [W7](#cand-W7_MapList) |
+| FR-RESULT-09 | Should | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [W8](#wf-W8_MapApt) |
+| FR-RESULT-07 | Could | [P-06 ⑧](#wf-P06_ScenarioFull), [C2](#wf-C2_Saved) |
+| FR-RESULT-08 | Could | [C0](#wf-C0_AccountMenu), [C1](#wf-C1_SavedList), [C3](#wf-C3_SavedOpen) |
+| FR-COMMON-01 | Must | [P-01 ①](#wf-P01_1_Start), [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [W1](#wf-W1_Start) |
+| FR-COMMON-02 | Must | [P-01 ①](#wf-P01_1_Start), [P-05 ①](#wf-Main), [P-06 ④](#wf-P06_Dong30), [P-06 ⑤](#wf-P06_List80), [P-06 ⑧](#wf-P06_ScenarioFull), [B5](#wf-B5_InfoTip), [W1](#wf-W1_Start), [W7](#wf-W7_MapList) |
 | FR-COMMON-03 | Must | [P-01 ①](#wf-P01_1_Start) |
 | FR-COMMON-04 | Must | [P-01 ①](#wf-P01_1_Start), [P-05 ①](#wf-Main), [P-07 ①](#wf-P07a_Login) |
 | FR-COMMON-05 | Must | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ⑦](#wf-P02_07_Confirm), [P-03 ①](#wf-P03_1_Pick), [P-04 ①](#wf-P04_01_SavEmpty) |
 | FR-COMMON-08 | Must | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 시나리오](#wf-NL_5_Scenario) |
-| FR-COMMON-07 | Should | [P-01 ④](#wf-P01_4_LoadFail), [P-02 ⑭](#wf-P02_14_SaveFail), [P-03 ⑧](#wf-P03_08_LoadFail), [P-03 ⑨](#wf-P03_09_CalcFail), [P-04 ⑩](#wf-P04_10_MapFail), [P-05 ⑨](#wf-P05_Empty), [P-07 ④](#wf-P07e_NetFail), [A4](#cand-A4_RecalcFail) |
-| FR-COMMON-09 | Should | [P-02 ①](#wf-P02_01_AgeEmpty), [P-03 ①](#wf-P03_1_Pick), [P-04 ①](#wf-P04_01_SavEmpty), [W2](#cand-W2_Profile) |
-| FR-COMMON-10 | Should | [P-03 ⑦](#wf-P03_07_Loading), [P-04 ⑥](#wf-P04_06_Busy), [P-05 ⑯](#wf-P05_Loading), [A2](#cand-A2_Recalc) |
+| FR-COMMON-07 | Should | [P-01 ④](#wf-P01_4_LoadFail), [P-02 ⑭](#wf-P02_14_SaveFail), [P-03 ⑧](#wf-P03_08_LoadFail), [P-03 ⑨](#wf-P03_09_CalcFail), [P-04 ⑩](#wf-P04_10_MapFail), [P-05 ⑨](#wf-P05_Empty), [P-07 ④](#wf-P07e_NetFail), [A4](#wf-A4_RecalcFail) |
+| FR-COMMON-09 | Should | [P-02 ①](#wf-P02_01_AgeEmpty), [P-03 ①](#wf-P03_1_Pick), [P-04 ①](#wf-P04_01_SavEmpty), [W2](#wf-W2_Profile) |
+| FR-COMMON-10 | Should | [P-03 ⑦](#wf-P03_07_Loading), [P-04 ⑥](#wf-P04_06_Busy), [P-05 ⑯](#wf-P05_Loading), [A2](#wf-A2_Recalc) |
 | FR-COMMON-11 | Should | [P-02 ④](#wf-P02_04_IncFilled), [P-04 ②](#wf-P04_02_SavFilled) |
-| FR-COMMON-12 | Should | [P-01 ①](#wf-P01_1_Start), [W1](#cand-W1_Start) |
-| FR-COMMON-06 | Could | [C8](#cand-C8_Glossary) |
-| FR-DATA-05 | Should | [W7](#cand-W7_MapList) |
+| FR-COMMON-12 | Should | [P-01 ①](#wf-P01_1_Start), [W1](#wf-W1_Start) |
+| FR-COMMON-06 | Could | [C8](#wf-C8_Glossary) |
+| FR-DATA-05 | Should | [B5](#wf-B5_InfoTip), [W7](#wf-W7_MapList) |
 | NFR-01 | Should | [P-04 ⑥](#wf-P04_06_Busy) |
-| NFR-11 | Should | [P-01 ④](#wf-P01_4_LoadFail), [P-03 ⑧](#wf-P03_08_LoadFail), [P-04 ⑩](#wf-P04_10_MapFail), [P-07 ④](#wf-P07e_NetFail), [A4](#cand-A4_RecalcFail) |
+| NFR-11 | Should | [P-01 ④](#wf-P01_4_LoadFail), [P-03 ⑧](#wf-P03_08_LoadFail), [P-04 ⑩](#wf-P04_10_MapFail), [P-07 ④](#wf-P07e_NetFail), [A4](#wf-A4_RecalcFail) |
 | NFR-23 | Must | [P-05 ⑪](#wf-P05_City), [P-05 ㉑](#wf-P05_GpsDenied) |
-| NFR-25 | Must | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ③](#wf-P02_03_IncEmpty), [W2](#cand-W2_Profile) |
+| NFR-25 | Must | [P-02 ①](#wf-P02_01_AgeEmpty), [P-02 ②](#wf-P02_02_AgeFilled), [P-02 ③](#wf-P02_03_IncEmpty), [W2](#wf-W2_Profile) |
 | NFR-02 | Must | [P-02 ⑬](#wf-P02_13_ServerReject), [P-04 ⑨](#wf-P04_09_Error), [P-08 ②](#wf-P08b_IdRule) |
 | NFR-13 | Must | [P-03 ⑨](#wf-P03_09_CalcFail) |
 | NFR-19 | Should | [P-02 ⑬](#wf-P02_13_ServerReject) |
-| NFR-15 | Should | [P-05 ⑩](#wf-P05_Web), [W1](#cand-W1_Start), [W2](#cand-W2_Profile), [W3](#cand-W3_Loan), [W4](#cand-W4_Plan), [W5](#cand-W5_Login), [W6](#cand-W6_Signup), [W7](#cand-W7_MapList), [W8](#cand-W8_MapApt), [W9](#cand-W9_MapWide), [W10](#cand-W10_MapInfo) |
-| NFR-17 | Could | [B4](#cand-B4_LegendOpen) |
+| NFR-15 | Should | [W1](#wf-W1_Start), [W2](#wf-W2_Profile), [W3](#wf-W3_Loan), [W4](#wf-W4_Plan), [W5](#wf-W5_Login), [W6](#wf-W6_Signup), [W7](#wf-W7_MapList), [W8](#wf-W8_MapApt), [W9](#wf-W9_MapWide), [W10](#wf-W10_MapInfo) |
+| NFR-17 | Could | [B4](#wf-B4_LegendOpen) |
 | NFR-24 | Should | [P-05 ①](#wf-Main) |
 
 계산 규칙
@@ -4519,8 +4485,8 @@ P-04의 ① ~ ④와 ⑥은 대출을 쓰지 않으므로 바뀌지 않는다.
 | C-06 | 최대 예상 대출금액 (아파트 선택 전) | [P-03 ②](#wf-P03_2_PickedA), [P-03 ⑩](#wf-P03_10_ZeroAsset), [P-06 ⑧](#wf-P06_ScenarioFull) |
 | C-07 | 예상 월 상환액 | [P-03 ③](#wf-P03_3_TermPicked), [P-06 ⑧](#wf-P06_ScenarioFull) |
 | C-08 | 목표 가능 가격 | [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 지도](#wf-NL_3_Map) |
-| C-09 | 3단계 구분 | [P-04 ⑦](#wf-P04_07_Now), [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 지도](#wf-NL_3_Map), [A1](#cand-Main) |
+| C-09 | 3단계 구분 | [P-04 ⑦](#wf-P04_07_Now), [P-06 ⑧](#wf-P06_ScenarioFull), [대출 없이 · 지도](#wf-NL_3_Map), [A1](#wf-A1_GoalNow) |
 | C-10 | 부족자금 | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [대출 없이 · 시나리오](#wf-NL_5_Scenario) |
-| C-11 | 필요 월 저축액 | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [A1](#cand-Main) |
-| C-12 | 허용 상승률 | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [A1](#cand-Main) |
+| C-11 | 필요 월 저축액 | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [A1](#wf-A1_GoalNow) |
+| C-12 | 허용 상승률 | [P-06 ⑧](#wf-P06_ScenarioFull), [P-06 ⑳](#wf-P06_ScenarioLack), [대출 없이 · 시나리오](#wf-NL_5_Scenario), [A1](#wf-A1_GoalNow) |
 | C-13 | 대출 없이 계산 | [P-03 ⑤](#wf-P03_05_NoLoan), [대출 없이 · 지도](#wf-NL_3_Map), [대출 없이 · 아파트 30%](#wf-NL_4_Apt30), [대출 없이 · 시나리오](#wf-NL_5_Scenario) |

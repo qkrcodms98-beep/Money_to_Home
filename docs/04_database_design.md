@@ -4,7 +4,7 @@
 | --- | --- |
 | 문서 상태 | 공식 초안 (v0.3). 아키텍처에서 정한 두 가지(DB 접근 방법, 로그인 상태를 두는 곳)를 반영하고 생성 스크립트를 `db/schema.sql`로 옮겼다. 표와 관계도는 v0.2에서 바뀌지 않았다. |
 | 작성일 | 2026-10-11 |
-| 기준 문서 | `docs/02_requirements.md` (v1.9), `docs/03_ui_design.md` (v1.4), `docs/06_architecture.md` (v0.2) |
+| 기준 문서 | `docs/02_requirements.md` (v1.10), `docs/03_ui_design.md` (v1.5), `docs/06_architecture.md` (v0.2) |
 | DB | MariaDB 11.4. 개발 도구는 HeidiSQL |
 | 생성 스크립트 | `db/schema.sql`. MariaDB 11.4에서 실행해 확인했다. |
 | 표 | 8개, 칸 93개. 1차 5개, 2차 2개, 3차 1개 |

@@ -40,7 +40,7 @@
 | 10/06 | [프로젝트 기획서](docs/01_project_overview.md) | 주제, 배경, 목표, 범위 |
 | 10/07 | [요구사항 명세서](docs/02_requirements.md) | 기능 요구사항 159개, MoSCoW 우선순위, User Story, Task 분해 |
 | 10/08 | [화면 설계서](docs/03_ui_design.md) | 화면 목록, 공통 구조, 입력 화면과 지도 화면의 동작, 면적 표기, 와이어프레임 링크 |
-| 10/11 | [와이어프레임 설명서](docs/03_ui_design_wireframe.md) | 와이어프레임 111장의 그림과 한 장마다의 설명 (본 와이어프레임 77장, 검토 후보 34장) |
+| 10/11 | [와이어프레임 설명서](docs/03_ui_design_wireframe.md) | 와이어프레임 110장의 그림과 한 장마다의 설명 (본 와이어프레임 109장, 보류 1장) |
 | 10/11 | [DB 설계서](docs/04_database_design.md) | 공식 초안. 표 8개와 관계도(ERD), 칸 정의, 테이블 생성 스크립트([db/schema.sql](db/schema.sql)) |
 | 10/11 | [API 명세서](docs/05_api_spec.md) | 초안. REST API 후보 26개, 공통 규칙, 화면과 API의 대응. 구조에 관한 열 가지는 정함 |
 | 10/11 | [아키텍처 문서](docs/06_architecture.md) | 초안. 전체 구성, 기술 스택, 폴더 구조, 만드는 순서, 검토 결과 |

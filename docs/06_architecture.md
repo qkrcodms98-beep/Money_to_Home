@@ -4,7 +4,7 @@
 | --- | --- |
 | 문서 상태 | 초안 (v0.2). 팀장이 T-1 ~ T-6을 권장안으로 정했다 (2026-10-11). T-7과 T-8은 확인이 남았다. |
 | 작성일 | 2026-10-11 |
-| 기준 문서 | `docs/02_requirements.md` (v1.9), `docs/03_ui_design.md` (v1.4), `docs/04_database_design.md` (v0.3), `docs/05_api_spec.md` (v0.2) |
+| 기준 문서 | `docs/02_requirements.md` (v1.10), `docs/03_ui_design.md` (v1.5), `docs/04_database_design.md` (v0.3), `docs/05_api_spec.md` (v0.2) |
 | 다루는 것 | 전체 구성, 기술 스택, 폴더 구조, 서버와 화면의 구조, 자료 준비, 설정, 로그인, 실행 방법, 검토 결과 |
 | 주의 | 아직 코드를 만들지 않았다. 이 문서의 구조는 계획이며, 만들면서 확인할 것을 10.2에 따로 적었다. |
 
