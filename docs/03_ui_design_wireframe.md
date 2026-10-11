@@ -4,7 +4,7 @@
 | --- | --- |
 | 문서 상태 | v1.0 |
 | 작성일 | 2026-10-11 |
-| 기준 문서 | `docs/02_requirements.md` (v1.7), `docs/03_ui_design.md` (v1.2) |
+| 기준 문서 | `docs/02_requirements.md` (v1.8), `docs/03_ui_design.md` (v1.3) |
 | 범위 | 지금까지 그린 와이어프레임 111장 전부. 본 와이어프레임 77장과 검토 후보 34장 |
 | 그림 | `docs/wireframes/`의 PNG 111개. 캔버스의 화면을 그대로 찍은 것이다. 문서에 넣은 모바일 그림은 `docs/wireframes/small/`의 줄인 그림이다. |
 

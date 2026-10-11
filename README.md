@@ -40,6 +40,7 @@
 | 10/07 | [요구사항 명세서](docs/02_requirements.md) | 기능 요구사항 159개, MoSCoW 우선순위, User Story, Task 분해 |
 | 10/08 | [화면 설계서](docs/03_ui_design.md) | 화면 목록, 공통 구조, 입력 화면과 지도 화면의 동작, 면적 표기, 와이어프레임 링크 |
 | 10/11 | [와이어프레임 설명서](docs/03_ui_design_wireframe.md) | 와이어프레임 111장의 그림과 한 장마다의 설명 (본 와이어프레임 77장, 검토 후보 34장) |
+| 10/11 | [DB 설계서](docs/04_database_design.md) | 공식 초안. 표 8개와 관계도(ERD), 칸 정의, 테이블 생성 스크립트([04_schema.sql](docs/04_schema.sql)) |
 
 ## 기술 스택
 
@@ -47,7 +48,7 @@
 | --- | --- |
 | Frontend | HTML, CSS, JavaScript |
 | Backend | Python, FastAPI |
-| Database | MySQL |
+| Database | MariaDB 11.4 (MySQL 호환) |
 | Data | Pandas, 국토교통부 아파트 매매 실거래가 API |
 | Map | 카카오맵 API |
 
@@ -63,15 +64,20 @@
 ## 폴더 구조
 
 ```
-├─ docs/        프로젝트 문서
-├─ backend/     FastAPI 서버 (예정)
-├─ frontend/    웹 화면 (예정)
-└─ data/        데이터 수집·가공 스크립트 (예정)
+├─ docs/            프로젝트 문서, 와이어프레임 그림, 테이블 생성 스크립트
+├─ backend/         FastAPI 서버 (예정)
+├─ frontend/        웹 화면 (예정)
+├─ data/            데이터 수집·가공 스크립트 (예정)
+├─ .env.example     키 이름만 적은 견본. 복사해서 .env로 씁니다.
+└─ .gitignore
 ```
 
 ## 실행 방법
 
-개발을 시작한 뒤 작성합니다.
+서버와 화면의 실행 방법은 개발을 시작한 뒤 작성합니다. 지금은 아래 두 가지를 준비합니다.
+
+1. `.env.example`을 복사해 `.env`로 이름을 바꾸고 값을 채웁니다. `.env`는 저장소에 올리지 않습니다.
+2. MariaDB 11.4에서 `docs/04_schema.sql`을 실행해 표를 만듭니다. HeidiSQL에서는 [파일] > [SQL 파일 불러오기]로 열고 F9를 누릅니다.
 
 ## 협업 규칙
 
