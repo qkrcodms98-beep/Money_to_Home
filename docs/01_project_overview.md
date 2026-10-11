@@ -1,8 +1,8 @@
 # 머니 to 홈 프로젝트 기획서
 
-> 작성일: 2026-10-06 (수정: 2026-10-11, 요구사항 명세서 v1.8과 화면 설계서 v1.3에 맞춤)
+> 작성일: 2026-10-06 (수정: 2026-10-11, 요구사항 명세서 v1.9와 화면 설계서 v1.4에 맞춤)
 > 구분: 2주, 4인 세미프로젝트 MVP 기획서
-> 세부 기준: `docs/02_requirements.md`(요구사항), `docs/03_ui_design.md`(화면 구조), `docs/03_ui_design_wireframe.md`(와이어프레임 111장과 설명), `docs/04_database_design.md`(DB 설계)
+> 세부 기준: `docs/02_requirements.md`(요구사항), `docs/03_ui_design.md`(화면 구조), `docs/03_ui_design_wireframe.md`(와이어프레임 111장과 설명), `docs/04_database_design.md`(DB 설계), `docs/05_api_spec.md`(API), `docs/06_architecture.md`(전체 구조)
 
 ---
 
@@ -382,4 +382,4 @@ Task 110개의 목록은 `02_requirements.md`의 7장에 있다.
 - 카카오맵의 키 발급, 허용 주소 등록, 호출 한도
 - 공급면적 자료에서 출처를 모르는 "기존값"의 확인 (DB 설계서 9.2의 D-2)
 - DB 설계서 9.2의 남은 결정, 요구사항 명세서 8장의 남은 결정 (N-06, N-07)
-- 아직 쓰지 않은 설계 문서: API 명세서, 아키텍처 문서
+- 발표할 곳과 수업에서 정해 준 기술의 확인 (`06_architecture.md` 11.2)
