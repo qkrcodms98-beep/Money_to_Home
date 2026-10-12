@@ -8,7 +8,7 @@
 
 - 서버: Python 3.12, FastAPI, PyMySQL (SQL을 직접 쓴다)
 - DB: MariaDB 11.4
-- 화면: HTML, CSS, JavaScript. 프레임워크를 쓰지 않는다.
+- 화면: HTML, CSS, JavaScript. Bootstrap, Sass, React 같은 라이브러리와 프레임워크를 쓰지 않는다. 모양은 `css/common.css`와 화면별 CSS로 만든다.
 - 지도: 카카오맵 JavaScript SDK
 
 ## 먼저 읽을 문서
@@ -22,7 +22,8 @@
 | 화면의 동작과 문구 | `docs/03_ui_design.md`, `docs/03_ui_design_wireframe.md` |
 | 표와 칸 | `docs/04_database_design.md`, `db/schema.sql` |
 | API의 주소, 요청, 응답 | `docs/05_api_spec.md` |
-| 폴더 구조, 담당 파일 | `docs/06_architecture.md` |
+| 폴더 구조 | `docs/06_architecture.md` |
+| 누가 무엇을 어떤 순서로 하는가 | `docs/roles.md` |
 | Git 사용법 | `docs/git_rule.md` |
 
 ## 반드시 지킬 것
@@ -46,12 +47,15 @@
 
 | 담당 | 파일 |
 | --- | --- |
-| 김해원 (입력 화면, 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js` |
-| 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html` |
-| 김목산 (데이터와 탐색) | `backend/routers/apartments.py`, 아파트와 거래의 `models`와 `schemas`, `data/`의 스크립트, 목록 화면의 JavaScript |
-| 안세환 (지도와 아래 창) | `frontend/map.html`, 지도와 아래 창의 JavaScript와 CSS |
+| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js` |
+| 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/scenario.js`, `css/scenario.css` |
+| 김목산 (자료와 탐색) | `backend/routers/apartments.py`, 아파트와 거래의 `models`와 `schemas`, `data/collect_trades.py`, `data/load_trades.py`, `frontend/js/list.js`, `css/list.css` |
+| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `data/geocode.py`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
 
-`backend/main.py`에는 새 router를 등록하는 한 줄만 더한다.
+네 명 모두 화면, 서버, DB를 다 쓴다. 기능 하나를 화면부터 DB까지 한 사람이 맡는다. 순서는 `docs/roles.md`에 있다.
+
+- `backend/main.py`에는 새 router를 등록하는 한 줄만 더한다.
+- `frontend/map.html`은 안세환이 틀과 빈 자리를 만든다. 목록(김목산)과 시나리오 탭(박채은)은 각자의 JavaScript와 CSS 파일에서 만든다.
 
 ## 코드를 쓰는 방법
 

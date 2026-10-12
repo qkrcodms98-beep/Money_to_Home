@@ -69,7 +69,7 @@
 
 | 구분 | 기술 | 쓰는 곳 | 상태 |
 | --- | --- | --- | --- |
-| 화면 | HTML, CSS, JavaScript. 프레임워크는 쓰지 않는다. | 화면 전체 | 확정 |
+| 화면 | HTML, CSS, JavaScript. Bootstrap, Sass, React 같은 라이브러리와 프레임워크는 쓰지 않는다. | 화면 전체 | 확정 (2026-10-12) |
 | 지도 | 카카오맵 JavaScript SDK | 지도 화면 | 확정 |
 | 서버 | Python 3.12, FastAPI, Uvicorn | API, 화면 파일 제공 | 확정 |
 | 값 검사 | Pydantic (FastAPI에 들어 있다) | 요청의 모양과 범위 검사 | 확정 |
@@ -110,7 +110,8 @@ Money_to_Home/
 │  │  ├─ loans.py              A-01 상품 목록, A-03 대출 계산
 │  │  ├─ plans.py              A-04 저축 계산
 │  │  ├─ profile.py            A-08 ~ A-11 재무정보 저장
-│  │  ├─ apartments.py         A-02 구와 동, A-05 아파트 찾기, A-06 아파트 한 곳, A-12 구·동별 개수, A-13 기준일
+│  │  ├─ apartments.py         A-02 구와 동, A-05 아파트 찾기, A-12 구·동별 개수, A-13 기준일
+│  │  ├─ apartment_detail.py   A-06 아파트 한 곳
 │  │  ├─ scenario.py           A-07 시나리오
 │  │  └─ auth.py               A-14 ~ A-18 회원 (2차, 예정)
 │  └─ services/
@@ -355,14 +356,14 @@ uvicorn backend.main:app --reload --port 8000
 
 ### 9.3 누가 어느 파일을 맡는가 (제안)
 
-담당은 2026-10-12 회의에서 정했다.
+담당은 2026-10-12에 정했다. 네 명 모두 화면, 서버, DB를 다 쓴다. 할 일의 순서는 `docs/roles.md`에 있다.
 
 | 담당 | 화면 | 서버 | 그 밖 |
 | --- | --- | --- | --- |
-| 김해원 (팀장). 입력 화면, 공통, 문서 | `index.html`, `profile.html`, `plan.html`, `common.css`, 공통 JavaScript 다섯 개 | `main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py` | `requirements.txt`, `CLAUDE.md`, 문서, PR 검토와 통합 점검 |
-| 박채은. 대출과 계산 | `loan.html` | `services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py` | 대출 상품 조사, `db/seed_loan_products.sql`, `tests/test_calc.py` |
-| 김목산. 데이터와 탐색 | 목록 (`list.js`) | `routers/apartments.py`, 아파트와 거래의 `models`, `schemas` | `data/`의 스크립트, 좌표 변환 |
-| 안세환. 지도와 아래 창 | `map.html`, 지도와 아래 창의 JavaScript, 아파트 정보 탭, 시나리오 화면 | 없음 | 카카오맵 |
+| 김해원 (팀장). 입력과 공통 | `index.html`, `profile.html`, `plan.html`, `common.css`, 공통 JavaScript 다섯 개 | `main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py` | `requirements.txt`, `CLAUDE.md`, 문서, PR 검토와 통합 점검 |
+| 박채은. 대출과 계산 | `loan.html`, 시나리오 탭 (`scenario.js`) | `services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py` | 대출 상품 조사, `db/seed_loan_products.sql`, `tests/test_calc.py` |
+| 김목산. 자료와 탐색 | 목록, 카드, 조건과 정렬 (`list.js`) | `routers/apartments.py`, 아파트와 거래의 `models`, `schemas` | `data/collect_trades.py`, `data/load_trades.py` |
+| 안세환. 지도와 아파트 창 | `map.html`, 지도, 아파트 표시, 아래 창, 아파트 정보 탭 | `routers/apartment_detail.py` | `data/geocode.py`, 카카오맵 |
 
 - 자기 파일만 고친다. 남의 파일을 고쳐야 하면 담당에게 먼저 말한다.
 - `main.py`에는 새 router를 등록하는 한 줄만 더한다.
