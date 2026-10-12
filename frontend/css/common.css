@@ -1,0 +1,134 @@
+/* 모든 화면이 함께 쓰는 모양.
+
+   버튼, 입력란, 카드, 배지 같은 기본 부품은 Bootstrap 5의 것을 쓴다.
+   이 파일에는 세 가지만 둔다.
+     1. 색과 크기의 이름 (:root)
+     2. Bootstrap의 색을 우리 색으로 바꾸는 부분
+     3. Bootstrap에 없는 우리만의 부품 (헤더, 구분 표시, 아래 버튼)
+
+   화면마다의 모양은 css 폴더에 그 화면 이름으로 파일을 따로 만든다. 예: profile.css
+   색은 아래 :root의 이름으로만 쓴다. 화면 파일에 색 값을 직접 적지 않는다.
+   ※ 색은 아직 임시 값이다. 확정되면 이 파일의 :root만 고친다. */
+
+:root {
+  --color-primary: #1f6feb;
+  --color-primary-dark: #1a5fcc;
+  --color-on-primary: #ffffff;
+
+  /* 구분. 색만으로 구분하지 않는다. 글자와 모양(채움, 실선, 점선)을 함께 쓴다. */
+  --color-now: #1a7f37;
+  --color-within: #1f6feb;
+  --color-lack: #cf222e;
+
+  --header-height: 56px;
+  --touch-size: 44px; /* 누르는 영역은 가로세로 44픽셀 이상 */
+  --page-width: 480px;
+
+  /* Bootstrap의 대표 색을 우리 색으로 */
+  --bs-primary: var(--color-primary);
+  --bs-primary-rgb: 31, 111, 235;
+  --bs-link-color: var(--color-primary);
+  --bs-link-hover-color: var(--color-primary-dark);
+  --bs-font-sans-serif: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+}
+
+/* Bootstrap 버튼의 색 */
+.btn-primary {
+  --bs-btn-bg: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary-dark);
+  --bs-btn-hover-border-color: var(--color-primary-dark);
+  --bs-btn-active-bg: var(--color-primary-dark);
+  --bs-btn-active-border-color: var(--color-primary-dark);
+  --bs-btn-disabled-bg: var(--bs-secondary-bg);
+  --bs-btn-disabled-border-color: var(--bs-border-color);
+  --bs-btn-disabled-color: var(--bs-secondary-color);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary);
+  --bs-btn-hover-border-color: var(--color-primary);
+  --bs-btn-active-bg: var(--color-primary);
+  --bs-btn-active-border-color: var(--color-primary);
+}
+
+/* 누르는 영역을 44픽셀 이상으로 */
+.btn,
+.form-control,
+.form-select {
+  min-height: var(--touch-size);
+}
+
+/* 입력란 아래의 설명 줄. 오류 문구(.invalid-feedback)도 같은 자리에 넣어 화면이 밀리지 않게 한다. */
+.form-text,
+.invalid-feedback {
+  min-height: 1.5em;
+}
+
+/* 헤더 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 1rem;
+  background: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.header__home {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-size);
+  color: var(--bs-body-color);
+  font-weight: 700;
+  font-size: 1.125rem;
+  text-decoration: none;
+}
+
+/* 입력 화면의 본문 폭 */
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* 화면 아래에 붙는 버튼 */
+.bottom-action {
+  position: sticky;
+  bottom: 0;
+  padding: 1rem 0;
+  background: var(--bs-body-bg);
+}
+
+/* 구분 표시. 지금 가능은 채움, 기간 내 가능은 실선, 자금 부족은 점선 */
+.category {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 1.5px solid;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.category--now {
+  border-color: var(--color-now);
+  background: var(--color-now);
+  color: #ffffff;
+}
+
+.category--within {
+  border-color: var(--color-within);
+  color: var(--color-within);
+}
+
+.category--lack {
+  border-style: dashed;
+  border-color: var(--color-lack);
+  color: var(--color-lack);
+}
