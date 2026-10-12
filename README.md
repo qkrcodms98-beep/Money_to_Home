@@ -59,29 +59,53 @@
 
 | 이름 | 역할 | GitHub |
 | --- | --- | --- |
-| 김해원 | 팀장 | [KHW1003](https://github.com/KHW1003) |
-| 김목산 | 미정 | [kimmoksan](https://github.com/kimmoksan) |
-| 박채은 | 미정 | [chaeeun](https://github.com/chaeeun) |
-| 안세환 | 미정 | [sehwan-An](https://github.com/sehwan-An) |
+| 김해원 | 팀장. 입력 화면(재무정보, 저축 계획), 공통, 문서, 통합 | [KHW1003](https://github.com/KHW1003) |
+| 김목산 | 데이터와 탐색 | [kimmoksan](https://github.com/kimmoksan) |
+| 박채은 | 대출과 계산 | [chaeeun](https://github.com/chaeeun) |
+| 안세환 | 지도와 아래 창 | [sehwan-An](https://github.com/sehwan-An) |
 
 ## 폴더 구조
 
 ```
 ├─ docs/            프로젝트 문서, 와이어프레임 그림
-├─ db/              테이블 생성 스크립트
-├─ backend/         FastAPI 서버 (예정)
-├─ frontend/        웹 화면 (예정)
-├─ data/            데이터 수집·가공 스크립트 (예정)
+├─ db/              테이블 생성 스크립트, 대출 상품 예시 자료
+├─ backend/         FastAPI 서버
+│  ├─ main.py       앱을 만들고 API와 화면을 연결
+│  ├─ models/       DB의 표를 읽고 쓰는 함수
+│  ├─ schemas/      요청과 응답의 모양, 값의 범위
+│  ├─ routers/      API
+│  └─ services/     계산 모듈
+├─ frontend/        웹 화면 (HTML, CSS, JavaScript)
+├─ tests/           자동 테스트
+├─ data/            실거래 자료와 수집·가공 스크립트
+├─ requirements.txt 설치할 라이브러리와 버전
+├─ CLAUDE.md        AI 도구에 주는 프로젝트 규칙
 ├─ .env.example     키 이름만 적은 견본. 복사해서 .env로 씁니다.
 └─ .gitignore
 ```
 
 ## 실행 방법
 
-서버와 화면의 실행 방법은 개발을 시작한 뒤 작성합니다. 지금은 아래 두 가지를 준비합니다.
+처음 하는 사람은 [개발 환경 맞추기](docs/setup_guide.md)를 순서대로 따라 합니다. 요약하면 아래와 같습니다.
 
 1. `.env.example`을 복사해 `.env`로 이름을 바꾸고 값을 채웁니다. `.env`는 저장소에 올리지 않습니다.
-2. MariaDB 11.4에서 `db/schema.sql`을 실행해 표를 만듭니다. HeidiSQL에서는 [파일] > [SQL 파일 불러오기]로 열고 F9를 누릅니다.
+2. MariaDB 11.4에서 `db/schema.sql`과 `db/seed_loan_products.sql`을 차례로 실행합니다. HeidiSQL에서는 [파일] > [SQL 파일 불러오기]로 열고 F9를 누릅니다.
+3. 가상 환경을 만들고 라이브러리를 설치합니다.
+
+```
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+4. 서버를 켭니다.
+
+```
+uvicorn backend.main:app --reload --port 8000
+```
+
+5. 브라우저에서 `http://localhost:8000`을 엽니다. API 목록은 `http://localhost:8000/docs`, 상태 확인은 `http://localhost:8000/api/health`입니다.
+6. 자동 테스트는 `pytest`로 돌립니다.
 
 ## 협업 규칙
 

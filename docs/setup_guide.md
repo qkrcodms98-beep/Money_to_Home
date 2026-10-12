@@ -17,6 +17,7 @@
 4. DB 만들기
 5. `.env` 파일 만들기
 6. 마지막 확인
+7. 라이브러리 설치와 서버 실행
 
 ---
 
@@ -28,7 +29,7 @@
 | 터미널 | 글자로 명령을 내리는 창. 이 문서에서는 VS Code 안의 터미널을 쓴다. |
 | 명령 | 터미널에 한 줄 적고 Enter를 누르는 것 |
 | 저장소 | 프로젝트 파일이 모여 있는 곳. GitHub에 있는 것을 내 PC로 내려받는다. |
-| 브랜치 | 저장소의 작업 갈래. 지금은 `docs/project-overview`를 쓴다. |
+| 브랜치 | 저장소의 작업 갈래. 기준은 `develop`이다. |
 | DB | 자료를 표로 보관하는 프로그램. MariaDB를 쓴다. |
 
 ---
@@ -134,13 +135,11 @@ cd Money_to_Home
 ```
 
 ```
-git checkout docs/project-overview
+git checkout develop
 ```
 
 2. 처음이면 GitHub 로그인 창이 뜬다. 자기 GitHub 계정으로 로그인한다. "권한이 없다"고 나오면 팀장에게 저장소 초대를 부탁한다.
 3. VS Code 메뉴에서 **파일 > 폴더 열기**를 누르고 `C:\projects\Money_to_Home`을 고른다.
-
-마지막 명령의 브랜치 이름은 문서가 `develop`에 합쳐지면 `develop`으로 바뀐다. 팀장이 알려 준다.
 
 **확인**: VS Code 왼쪽에 아래 폴더와 파일이 보인다.
 
@@ -236,12 +235,85 @@ git status
 
 ---
 
-## 7. 다음에 추가될 단계
+## 7. 라이브러리 설치와 서버 실행
 
-프로젝트의 뼈대 코드가 올라오면 아래 두 단계가 더 생긴다. 그때 이 문서를 고쳐서 알린다.
+VS Code의 터미널에서 한다. 터미널의 경로가 `C:\projects\Money_to_Home`인지 먼저 본다.
 
-- 라이브러리 설치: `pip install -r requirements.txt`
-- 서버 실행: 브라우저에서 `http://localhost:8000`을 열어 화면이 뜨는지 확인
+### 7.1 최신 내용 받기
+
+```
+git checkout develop
+```
+
+```
+git pull
+```
+
+왼쪽에 `backend`, `frontend`, `tests` 폴더가 보이면 맞다.
+
+### 7.2 가상 환경 만들기 (처음 한 번)
+
+가상 환경은 이 프로젝트만 쓰는 Python 방이다. PC에 깔린 다른 Python이나 다른 수업의 라이브러리와 섞이지 않는다.
+
+```
+python -m venv .venv
+```
+
+프로젝트 폴더에 `.venv` 폴더가 생긴다. 이 폴더는 Git에 올라가지 않는다.
+
+### 7.3 가상 환경 켜기 (터미널을 열 때마다)
+
+```
+.venv\Scripts\activate
+```
+
+터미널 줄의 맨 앞에 `(.venv)`가 붙으면 켜진 것이다. **이 표시가 없으면 아래 명령을 실행하지 않는다.**
+
+"이 시스템에서 스크립트를 실행할 수 없으므로"라는 빨간 글자가 나오면, 터미널 오른쪽 위의 `+` 옆 화살표를 눌러 **Command Prompt**를 고르고 다시 한다.
+
+### 7.4 라이브러리 설치 (처음 한 번, 그리고 `requirements.txt`가 바뀌었을 때)
+
+```
+pip install -r requirements.txt
+```
+
+2 ~ 3분 걸린다. 마지막에 `Successfully installed`가 나오면 맞다.
+
+### 7.5 대출 상품 예시 자료 넣기 (처음 한 번)
+
+HeidiSQL에서 **파일 > SQL 파일 불러오기**로 `C:\projects\Money_to_Home\db\seed_loan_products.sql`을 열고 **F9**를 누른다. `loan_products` 표에 두 줄이 생긴다. 숫자는 개발용 예시다.
+
+### 7.6 서버 켜기
+
+```
+uvicorn backend.main:app --reload --port 8000
+```
+
+`Application startup complete.`가 나오면 켜진 것이다. 이 터미널은 서버가 쓰고 있으므로 그대로 둔다. 끄려면 `Ctrl` + `C`를 누른다.
+
+**확인**: 브라우저에서 아래 세 주소를 연다.
+
+| 주소 | 보여야 하는 것 |
+| --- | --- |
+| http://localhost:8000 | 시작 화면 |
+| http://localhost:8000/api/health | `{"status":"ok","db":"ok"}` |
+| http://localhost:8000/docs | API 목록 |
+
+`"db":"error"`가 나오면 `.env`의 `DB_USER`와 `DB_PASSWORD`를 다시 본다. 고친 뒤에는 서버를 껐다 켠다.
+
+### 7.7 자동 테스트 돌리기
+
+서버를 켠 터미널 말고 새 터미널을 열어 7.3을 한 뒤 실행한다.
+
+```
+pytest
+```
+
+`passed`가 나오고 `failed`가 없으면 맞다.
+
+### 다음부터는
+
+터미널을 열 때마다 7.3(가상 환경 켜기)과 7.6(서버 켜기)만 하면 된다.
 
 ---
 
@@ -249,6 +321,9 @@ git status
 
 | 증상 | 원인과 해결 |
 | --- | --- |
+| `pip install`이나 서버 실행 중에 "애플리케이션 제어 정책에서 이 파일을 차단했습니다"가 나온다. | Windows의 보안 기능이 새 파일을 처음 볼 때 막은 것이다. 같은 명령을 한두 번 다시 실행하면 된다. 계속 막히면 팀장에게 알린다. |
+| `uvicorn`을 찾을 수 없다고 나온다. | 가상 환경이 꺼져 있다. 7.3을 다시 한다. |
+| 8000번 포트를 쓸 수 없다고 나온다. | 서버가 이미 켜져 있다. 다른 터미널에서 `Ctrl` + `C`로 끈다. |
 | `python`을 찾을 수 없다고 나온다. | 설치할 때 "Add python.exe to PATH"를 체크하지 않았다. Python을 지우고 다시 설치한다. |
 | `git clone`에서 권한 오류가 난다. | 저장소에 초대되지 않았다. 팀장에게 GitHub 아이디를 알려 준다. |
 | HeidiSQL이 접속되지 않는다. | 비밀번호가 틀렸거나 MariaDB가 꺼져 있다. PC를 다시 켠 뒤 해 본다. 수업 때 쓰던 접속 정보가 저장되어 있으면 그것으로 접속한다. |
