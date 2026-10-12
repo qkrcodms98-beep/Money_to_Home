@@ -59,10 +59,12 @@
 
 | 이름 | 역할 | GitHub |
 | --- | --- | --- |
-| 김해원 | 팀장. 입력 화면(재무정보, 저축 계획), 공통, 문서, 통합 | [KHW1003](https://github.com/KHW1003) |
-| 김목산 | 데이터와 탐색 | [kimmoksan](https://github.com/kimmoksan) |
-| 박채은 | 대출과 계산 | [chaeeun](https://github.com/chaeeun) |
-| 안세환 | 지도와 아래 창 | [sehwan-An](https://github.com/sehwan-An) |
+| 김해원 | 팀장. 입력과 공통 (재무정보, 저축 계획, 문서, 통합) | [KHW1003](https://github.com/KHW1003) |
+| 김목산 | 자료와 탐색 (실거래 자료 적재, 아파트 찾기, 목록) | [kimmoksan](https://github.com/kimmoksan) |
+| 박채은 | 대출과 계산 (계산 모듈, 대출상품, 시나리오) | [chaeeun](https://github.com/chaeeun) |
+| 안세환 | 지도와 아파트 창 (좌표 변환, 지도, 아래 창, 아파트 정보) | [sehwan-An](https://github.com/sehwan-An) |
+
+네 명 모두 화면, 서버, DB를 다 씁니다. 할 일의 순서는 [역할 분담](docs/roles.md)에 있습니다.
 
 ## 폴더 구조
 
