@@ -85,7 +85,7 @@ git push -u origin chore/setup-이름
 
 1. 브라우저에서 https://github.com/semiproejct/Money_to_Home 을 연다.
 2. 위쪽에 뜨는 노란 띠의 **Compare & pull request**를 누른다.
-3. **base를 `docs/project-overview`로 바꾼다.** 기본값이 `main`이라 꼭 바꿔야 한다. 왼쪽의 `base:` 단추를 눌러 고른다.
+3. **base를 `develop`으로 바꾼다.** 기본값이 `main`이라 꼭 바꿔야 한다. 왼쪽의 `base:` 단추를 눌러 고른다.
 4. 아래의 **Create pull request**를 누른다.
 
 ### 8. 팀장이 합친다
@@ -95,7 +95,7 @@ git push -u origin chore/setup-이름
 ### 9. 원래 브랜치로 돌아온다
 
 ```
-git checkout docs/project-overview
+git checkout develop
 ```
 
 ```
@@ -121,7 +121,7 @@ git pull
 | `Permission denied`, `403` | 저장소에 쓰기 권한이 없다. 팀장에게 GitHub 아이디를 알려 주고, 초대 메일에서 수락을 누른다. |
 | `fatal: not a git repository` | 프로젝트 폴더 밖이다. `cd C:\projects\Money_to_Home`을 적는다. |
 | `already exists` (1번에서) | 같은 이름의 브랜치가 이미 있다. `git checkout chore/setup-이름`으로 들어간다. |
-| 노란 띠가 안 보인다 (7번에서) | **Pull requests** 탭 > **New pull request**를 누르고, base는 `docs/project-overview`, compare는 자기 브랜치로 고른다. |
+| 노란 띠가 안 보인다 (7번에서) | **Pull requests** 탭 > **New pull request**를 누르고, base는 `develop`, compare는 자기 브랜치로 고른다. |
 | base를 `main`으로 열었다 | PR 화면의 제목 옆 **Edit**를 눌러 base를 바꾼다. |
 
 ### 이름 알려 주기
@@ -144,7 +144,7 @@ git config --global user.email "GitHub에 가입한 메일"
 | --- | --- | --- |
 | 브랜치 이름 | `chore/setup-이름` | `feature/기능이름`. 예: `feature/loan-calc` |
 | 커밋 메시지 | `chore: 개발 환경 설정 확인` | `feat: 대출 계산 함수 추가` |
-| PR의 base | `docs/project-overview` | `develop` |
+| PR의 base | `develop` | `develop` |
 
 지킬 것 네 가지
 

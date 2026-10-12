@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>머니 to 홈</title>
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+  <!-- P-01 시작 화면. 문구와 배치는 docs/03_ui_design_wireframe.md의 P-01을 따라 다듬는다. -->
+  <header id="header"></header>
+
+  <main class="page">
+    <h1>내 자산·저축·대출로 목표할 수 있는 집을 지도에서 찾아보세요</h1>
+
+    <ol>
+      <li>재무정보를 입력합니다.</li>
+      <li>대출상품을 고르고 저축 계획을 세웁니다.</li>
+      <li>목표할 수 있는 광주시의 아파트를 지도에서 봅니다.</li>
+    </ol>
+
+    <p class="notice">
+      미래 집값을 예측하지 않습니다. 대출 금액은 상품의 공개 조건으로 계산한 추정치이며,
+      실제 대출 여부와 한도는 금융기관 심사로 결정됩니다.
+    </p>
+
+    <div class="bottom-action">
+      <a class="button button--primary" href="profile.html">로그인 없이 시작하기</a>
+    </div>
+  </main>
+
+  <!-- 공통 JavaScript. 모든 화면이 이 순서로 먼저 불러 쓴다. 그 아래에 화면의 파일을 둔다. -->
+  <script src="js/api.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/guard.js"></script>
+  <script src="js/layout.js"></script>
+</body>
+</html>

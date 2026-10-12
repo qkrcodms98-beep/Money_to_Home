@@ -1,0 +1,159 @@
+/* 모든 화면이 함께 쓰는 모양. 헤더, 버튼, 입력란, 색.
+   화면마다의 모양은 css 폴더에 그 화면 이름으로 파일을 따로 만든다. 예: profile.css
+   색과 크기는 아래 :root의 이름으로만 쓴다. 화면 파일에 색 값을 직접 적지 않는다. */
+
+:root {
+  --color-text: #1f2328;
+  --color-text-sub: #57606a;
+  --color-line: #d0d7de;
+  --color-bg: #ffffff;
+  --color-bg-sub: #f6f8fa;
+  --color-primary: #1f6feb;
+  --color-on-primary: #ffffff;
+  --color-error: #cf222e;
+
+  /* 구분. 색만으로 구분하지 않는다. 글자와 모양(채움, 실선, 점선)을 함께 쓴다. */
+  --color-now: #1a7f37;
+  --color-within: #1f6feb;
+  --color-lack: #cf222e;
+
+  --header-height: 56px;
+  --touch-size: 44px; /* 누르는 영역은 가로세로 44픽셀 이상 */
+  --page-width: 480px;
+  --gap: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* 헤더 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 var(--gap);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.header__home {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-size);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 18px;
+  text-decoration: none;
+}
+
+/* 본문 */
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: var(--gap);
+}
+
+/* 버튼 */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--touch-size);
+  padding: 12px var(--gap);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.button:disabled {
+  border-color: var(--color-line);
+  background: var(--color-bg-sub);
+  color: var(--color-text-sub);
+  cursor: not-allowed;
+}
+
+/* 입력란 */
+.field {
+  display: block;
+  margin-bottom: var(--gap);
+}
+
+.field__label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.field__input {
+  width: 100%;
+  min-height: var(--touch-size);
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.field__input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* 입력란 아래의 설명 줄. 오류 문구도 이 자리에 넣어 화면이 밀리지 않게 한다. */
+.field__help {
+  display: block;
+  min-height: 1.5em;
+  margin-top: 4px;
+  color: var(--color-text-sub);
+  font-size: 14px;
+}
+
+.field--error .field__input {
+  border-color: var(--color-error);
+}
+
+.field--error .field__help {
+  color: var(--color-error);
+}
+
+/* 안내 문구 */
+.notice {
+  padding: 12px var(--gap);
+  border-radius: 8px;
+  background: var(--color-bg-sub);
+  color: var(--color-text-sub);
+  font-size: 14px;
+}
+
+/* 화면 아래에 붙는 버튼 */
+.bottom-action {
+  position: sticky;
+  bottom: 0;
+  padding: var(--gap) 0;
+  background: var(--color-bg);
+}

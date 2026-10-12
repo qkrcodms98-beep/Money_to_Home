@@ -2,11 +2,11 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 상태 | 초안 (v0.2). 팀장이 T-1 ~ T-6을 권장안으로 정했다 (2026-10-11). T-7과 T-8은 확인이 남았다. |
+| 문서 상태 | 초안 (v0.3). 팀장이 T-1 ~ T-6을 권장안으로 정했다 (2026-10-11). 프로젝트 골격을 만들면서 폴더 구조를 강사님의 예시에 맞추고 담당을 적었다 (2026-10-12). T-7과 T-8은 확인이 남았다. |
 | 작성일 | 2026-10-11 |
 | 기준 문서 | `docs/02_requirements.md` (v1.10), `docs/03_ui_design.md` (v1.5), `docs/04_database_design.md` (v0.3), `docs/05_api_spec.md` (v0.2) |
 | 다루는 것 | 전체 구성, 기술 스택, 폴더 구조, 서버와 화면의 구조, 자료 준비, 설정, 로그인, 실행 방법, 검토 결과 |
-| 주의 | 아직 코드를 만들지 않았다. 이 문서의 구조는 계획이며, 만들면서 확인할 것을 10.2에 따로 적었다. |
+| 주의 | 골격(공통 파일, A-01, A-08 ~ A-11, A-26)만 만들었다. 나머지 구조는 계획이며, 만들면서 확인할 것을 10.2에 따로 적었다. |
 
 ## 목차
 
@@ -81,40 +81,48 @@
 | 설정 | python-dotenv, `.env` | 키와 DB 접속 정보 | 권장 |
 
 - 라이브러리의 버전은 `requirements.txt`에 적어 네 명이 같은 버전을 쓴다.
-- 팀장 PC에는 Python 3.12.10과 Pandas만 설치되어 있다. FastAPI, PyMySQL, pytest는 아직 없다. 개발을 시작할 때 `requirements.txt`로 한 번에 설치한다.
+- 라이브러리는 프로젝트 폴더의 가상 환경(`.venv`)에 설치한다. PC의 다른 Python과 섞이지 않는다.
 - 기획서와 명세서의 기술 목록에 있는 Matplotlib은 3차의 변동 그래프에서만 쓸 수 있다. 그리는 방법이 정해지지 않았다 (N-07).
 
 ---
 
 ## 3. 폴더 구조
 
-README의 네 폴더(`docs`, `backend`, `frontend`, `data`)에 `db`를 더하고 안을 채웠다. 아직 만들지 않은 파일의 이름은 제안이다.
+강사님의 예시 구조(`models`, `schemas`, `routers`, `services`, `tests`, `CLAUDE.md`)를 따른다. `(예정)`은 아직 만들지 않은 파일이고 이름은 제안이다.
 
 ```
-money-to-home/
+Money_to_Home/
 ├─ backend/                    서버
-│  ├─ main.py                  앱을 만들고 API와 화면 파일을 연결한다. 오류 응답을 한 모양으로 바꾼다.
+│  ├─ main.py                  앱을 만들고 API와 화면 파일을 연결한다.
 │  ├─ config.py                .env의 값을 읽는다.
-│  ├─ db.py                    DB 연결을 열고 닫는다.
-│  ├─ calc.py                  계산 규칙 C-01 ~ C-13. 계산은 이 파일에만 둔다.
-│  ├─ schemas.py               요청과 응답의 모양, 값의 범위
+│  ├─ database.py              DB 연결을 열고 닫는다.
 │  ├─ deps.py                  지금 사용자가 누구인지 알아내는 함수
-│  ├─ routers/
+│  ├─ errors.py                오류 응답을 한 모양으로 바꾼다.
+│  ├─ models/                  DB의 표를 읽고 쓰는 함수. 표마다 파일 하나
+│  │  ├─ loan_product.py       loan_products 표
+│  │  └─ profile.py            profiles 표
+│  ├─ schemas/                 요청과 응답의 모양, 값의 범위
+│  │  ├─ common.py             여러 API가 함께 쓰는 범위와 검사 함수
+│  │  ├─ loan.py               대출 상품
+│  │  └─ profile.py            재무정보 저장
+│  ├─ routers/                 API
+│  │  ├─ system.py             상태 확인, A-26 화면 설정
 │  │  ├─ loans.py              A-01 상품 목록, A-03 대출 계산
 │  │  ├─ plans.py              A-04 저축 계산
-│  │  ├─ apartments.py         A-02 구와 동, A-05 아파트 찾기, A-06 아파트 한 곳, A-07 시나리오, A-12 구·동별 개수, A-13 기준일
 │  │  ├─ profile.py            A-08 ~ A-11 재무정보 저장
-│  │  └─ auth.py               A-14 ~ A-18 회원 (2차)
-│  └─ tests/
-│     └─ test_calc.py          계산 자동 테스트
+│  │  ├─ apartments.py         A-02 구와 동, A-05 아파트 찾기, A-06 아파트 한 곳, A-12 구·동별 개수, A-13 기준일
+│  │  ├─ scenario.py           A-07 시나리오
+│  │  └─ auth.py               A-14 ~ A-18 회원 (2차, 예정)
+│  └─ services/
+│     └─ calc.py               계산 규칙 C-01 ~ C-13. 계산은 이 파일에만 둔다.
 ├─ frontend/                   화면
 │  ├─ index.html               P-01 시작
-│  ├─ profile.html             P-02 재무정보
-│  ├─ loan.html                P-03 대출상품
-│  ├─ plan.html                P-04 저축 계획
-│  ├─ map.html                 P-05 지도, P-06 아래 창
-│  ├─ login.html               P-07 로그인 (2차)
-│  ├─ signup.html              P-08 회원가입 (2차)
+│  ├─ profile.html             P-02 재무정보 (예정)
+│  ├─ loan.html                P-03 대출상품 (예정)
+│  ├─ plan.html                P-04 저축 계획 (예정)
+│  ├─ map.html                 P-05 지도, P-06 아래 창 (예정)
+│  ├─ login.html               P-07 로그인 (2차, 예정)
+│  ├─ signup.html              P-08 회원가입 (2차, 예정)
 │  ├─ css/
 │  │  ├─ common.css            헤더, 버튼, 입력란, 색
 │  │  └─ (화면마다 하나)
@@ -125,22 +133,30 @@ money-to-home/
 │     ├─ guard.js              입력이 빠졌으면 그 단계로 보내기
 │     ├─ layout.js             헤더 그리기
 │     └─ (화면마다 하나. 지도는 여러 개로 나눈다)
-├─ data/                       수집과 적재 스크립트
-│  ├─ raw/                     받은 원본 (실거래 CSV, 공급면적 CSV)
-│  ├─ load_trades.py           실거래 CSV를 정리해 DB에 넣는다.
-│  ├─ collect_trades.py        실거래가 API로 받는다. (2차)
-│  ├─ geocode.py               주소를 좌표로 바꾼다.
-│  ├─ load_households.py       세대수를 붙인다. (2차)
-│  ├─ seed_loan_products.sql   대출 상품 두 줄
-│  └─ collect_expos_area.py, build_supply_area.py    건축물대장으로 공급면적을 보완한다. (이미 있음)
+├─ tests/                      자동 테스트
+│  ├─ conftest.py              테스트 공통 준비. DB 없이 돌게 한다.
+│  ├─ test_app.py              서버의 틀, 오류 응답, 입력 검증
+│  └─ test_calc.py             계산 테스트
+├─ data/                       실거래 자료와 수집·적재 스크립트
+│  ├─ (CSV 9개)                실거래가, 공급면적 대조, 요약
+│  ├─ collect_expos_area.py, build_supply_area.py    건축물대장으로 공급면적을 보완한다.
+│  ├─ load_trades.py           실거래 CSV를 정리해 DB에 넣는다. (예정)
+│  ├─ geocode.py               주소를 좌표로 바꾼다. (예정)
+│  ├─ collect_trades.py        실거래가 API로 받는다. (2차, 예정)
+│  └─ load_households.py       세대수를 붙인다. (2차, 예정)
 ├─ db/
-│  └─ schema.sql               표 만들기 (이미 있음)
+│  ├─ schema.sql               표 만들기
+│  └─ seed_loan_products.sql   대출 상품 두 줄. 지금 숫자는 예시다.
 ├─ docs/                       문서
 ├─ .env.example                키 이름만 적은 견본
 ├─ .gitignore
 ├─ requirements.txt            설치할 라이브러리와 버전
+├─ pytest.ini                  테스트 설정
+├─ CLAUDE.md                   AI 도구에 주는 프로젝트 규칙
 └─ README.md
 ```
+
+`models`는 표를 클래스로 옮긴 것이 아니라 SQL을 담은 함수의 모음이다. SQL을 직접 쓰기로 했기 때문이다 (T-2).
 
 ---
 
@@ -150,9 +166,9 @@ money-to-home/
 
 | 층 | 파일 | 하는 일 | 규칙 |
 | --- | --- | --- | --- |
-| 받는 곳 | `routers/*.py`, `schemas.py` | 요청을 받고, 값을 검사하고, 응답을 만든다. | 계산식을 쓰지 않는다. 아래 두 층을 부르기만 한다. |
-| 계산 | `calc.py` | 숫자를 받아 숫자를 돌려준다. | DB를 모른다. 요청도 모른다. 그래서 DB 없이 테스트할 수 있다. |
-| 자료 | `db.py`와 각 router의 조회 함수 | DB에서 읽고 쓴다. | SQL에 값을 직접 붙이지 않고 매개변수로 넘긴다. |
+| 받는 곳 | `routers/`, `schemas/` | 요청을 받고, 값을 검사하고, 응답을 만든다. | 계산식을 쓰지 않는다. 아래 두 층을 부르기만 한다. |
+| 계산 | `services/calc.py` | 숫자를 받아 숫자를 돌려준다. | DB를 모른다. 요청도 모른다. 그래서 DB 없이 테스트할 수 있다. |
+| 자료 | `database.py`, `models/` | DB에서 읽고 쓴다. | SQL에 값을 직접 붙이지 않고 매개변수로 넘긴다. |
 
 ### 4.2 요청 하나가 지나가는 길
 
@@ -160,10 +176,10 @@ money-to-home/
 
 ```
 화면 ── POST /api/apartments/search ──→ routers/apartments.py
-                                          1. schemas.py로 값을 검사한다. 틀리면 422로 답한다.
+                                          1. schemas로 값을 검사한다. 틀리면 422로 답한다.
                                           2. DB에서 대출 상품 한 줄을 읽는다.
                                           3. DB에서 범위 안의 아파트와 면적별 평균가를 읽는다.
-                                          4. 면적마다 calc.py를 불러 대출금액, 구분, 부족자금을 계산한다.
+                                          4. 면적마다 services/calc.py를 불러 대출금액, 구분, 부족자금을 계산한다.
                                           5. 아파트의 구분을 정하고, 순서대로 줄 세우고, 개수를 센다.
 화면 ←── 응답 (JSON) ─────────────────── 6. 응답을 만든다.
 ```
@@ -193,11 +209,11 @@ money-to-home/
 
 | 규칙 | 지키는 방법 | 근거 |
 | --- | --- | --- |
-| 계산식은 한 곳에만 | `calc.py` 밖에 계산식을 쓰지 않는다. | NFR-13 |
+| 계산식은 한 곳에만 | `services/calc.py` 밖에 계산식을 쓰지 않는다. | NFR-13 |
 | 계산과 탐색은 요청의 값만 쓴다. | A-03 ~ A-07, A-12는 로그인 정보와 `profiles` 표를 읽지 않는다. | NFR-18 |
 | 요청 중에 외부 API를 부르지 않는다. | 서버 코드에 실거래가 API나 카카오 API 호출을 두지 않는다. | NFR-08 |
 | SQL에 값을 붙이지 않는다. | 매개변수로 넘긴다. | NFR-09 |
-| 오류는 한 모양으로 | `main.py`에 공통 처리기를 하나 둔다. 검증 오류, 없는 자료, 서버 오류를 모두 `{"detail", "field"}`로 바꾼다. | NFR-19 |
+| 오류는 한 모양으로 | `errors.py`에 공통 처리기를 하나 둔다. 검증 오류, 없는 자료, 서버 오류를 모두 `{"detail", "field"}`로 바꾼다. | NFR-19 |
 | 오류의 내부 정보를 내보내지 않는다. | 서버 오류의 문장은 고정한다. 자세한 내용은 서버의 기록에만 남긴다. | NFR-11 |
 
 ---
@@ -256,7 +272,7 @@ money-to-home/
 | 순서 | 스크립트 | 하는 일 | 쓰는 키 | 단계 |
 | --- | --- | --- | --- | --- |
 | 1 | `db/schema.sql` | 표 8개를 만든다. | | 1차 |
-| 2 | `data/seed_loan_products.sql` | 대출 상품 두 줄을 넣는다. 조사(R-01, R-02)가 끝나면 값을 바꾼다. | | 1차 |
+| 2 | `db/seed_loan_products.sql` | 대출 상품 두 줄을 넣는다. 조사(R-01, R-02)가 끝나면 값을 바꾼다. | | 1차 |
 | 3 | `data/load_trades.py` | 실거래 CSV를 읽어 아파트, 거래, 면적별 평균가, 공급면적을 넣는다. | | 1차 |
 | 4 | `data/geocode.py` | 아파트 주소를 좌표로 바꿔 넣는다. 실패한 곳은 기록한다. | 카카오 REST API 키 | 1차 |
 | 5 | `data/collect_trades.py` | 실거래가 API로 받아 3번과 같은 표에 넣는다. | 공공데이터 인증키 | 2차 |
@@ -324,9 +340,9 @@ money-to-home/
 
 1. Python 3.12와 MariaDB 11.4를 설치한다.
 2. 저장소를 내려받는다.
-3. `pip install -r requirements.txt`로 라이브러리를 설치한다.
+3. `python -m venv .venv`로 가상 환경을 만들어 켜고, `pip install -r requirements.txt`로 라이브러리를 설치한다.
 4. `.env.example`을 복사해 `.env`를 만들고 값을 채운다.
-5. HeidiSQL에서 `db/schema.sql`을 실행해 표를 만든다.
+5. HeidiSQL에서 `db/schema.sql`과 `db/seed_loan_products.sql`을 실행한다.
 6. 6장의 2 ~ 4번 스크립트로 자료를 넣는다.
 
 ### 9.2 실행
@@ -339,15 +355,17 @@ uvicorn backend.main:app --reload --port 8000
 
 ### 9.3 누가 어느 파일을 맡는가 (제안)
 
-기획서 9장의 네 역할에 파일을 붙였다. 담당자는 아직 정하지 않았다.
+담당은 2026-10-12 회의에서 정했다.
 
-| 역할 | 화면 | 서버 | 그 밖 |
+| 담당 | 화면 | 서버 | 그 밖 |
 | --- | --- | --- | --- |
-| 재무정보·저축 계획 | `profile.html`, `plan.html` | `routers/profile.py`, `routers/plans.py` | `store.js`, `guard.js` |
-| 대출 상품 | `loan.html` | `routers/loans.py` | 대출 상품 조사, `seed_loan_products.sql`, `calc.py`의 대출 함수 |
-| 부동산 데이터·탐색 | 목록 (`list.js`) | `routers/apartments.py`의 찾기와 구·동 | `data/`의 스크립트, `db.py` |
-| 지도·결과 | `map.html`, 지도와 아래 창, 시나리오 | `routers/apartments.py`의 시나리오 | 카카오맵 키 |
-| 공통 (먼저 만든다) | `common.css`, `api.js`, `format.js`, `layout.js`, `index.html` | `main.py`, `config.py`, `schemas.py`, `calc.py`의 틀과 테스트 | `requirements.txt` |
+| 김해원 (팀장). 입력 화면, 공통, 문서 | `index.html`, `profile.html`, `plan.html`, `common.css`, 공통 JavaScript 다섯 개 | `main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py` | `requirements.txt`, `CLAUDE.md`, 문서, PR 검토와 통합 점검 |
+| 박채은. 대출과 계산 | `loan.html` | `services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py` | 대출 상품 조사, `db/seed_loan_products.sql`, `tests/test_calc.py` |
+| 김목산. 데이터와 탐색 | 목록 (`list.js`) | `routers/apartments.py`, 아파트와 거래의 `models`, `schemas` | `data/`의 스크립트, 좌표 변환 |
+| 안세환. 지도와 아래 창 | `map.html`, 지도와 아래 창의 JavaScript, 아파트 정보 탭, 시나리오 화면 | 없음 | 카카오맵 |
+
+- 자기 파일만 고친다. 남의 파일을 고쳐야 하면 담당에게 먼저 말한다.
+- `main.py`에는 새 router를 등록하는 한 줄만 더한다.
 
 ### 9.4 만드는 순서
 
@@ -430,16 +448,16 @@ T-2와 T-3은 수업에서 정해 준 방법이 있으면 그것이 먼저다 (T
 | 요구사항 | 내용 | 지키는 곳 |
 | --- | --- | --- |
 | NFR-01, 06 | 검색 3초, 계산 1초 | 미리 계산한 평균가 표, 10.1의 7번 |
-| NFR-02 | 화면과 서버 양쪽에서 검증 | 화면의 입력 검사, `schemas.py` |
+| NFR-02 | 화면과 서버 양쪽에서 검증 | 화면의 입력 검사, `schemas/` |
 | NFR-03 | 계산 결과가 손계산과 일치 | `tests/test_calc.py` |
 | NFR-04 | 키를 `.env`에 | 7장, `config.py` |
 | NFR-05 | 크롬 최신 버전 | 화면 전체 |
 | NFR-08 | DB에 저장된 자료로 제공 | 6장, 4.4 |
-| NFR-09 | SQL 매개변수 | `db.py`, 4.4 |
+| NFR-09 | SQL 매개변수 | `models/`, 4.4 |
 | NFR-10 | 로그인하지 않은 요청 거부 | `deps.py`, 8.2 |
 | NFR-11 | 오류의 내부 정보를 숨김 | `main.py`의 공통 처리기 |
-| NFR-12 | 금액은 원 단위 정수 | `calc.py`, DB의 BIGINT, API의 금액 단위 |
-| NFR-13 | 계산식은 서버의 한 모듈 | `calc.py` |
+| NFR-12 | 금액은 원 단위 정수 | `services/calc.py`, DB의 BIGINT, API의 금액 단위 |
+| NFR-13 | 계산식은 서버의 한 모듈 | `services/calc.py` |
 | NFR-15 | 모바일 기본, 1200픽셀 이상의 PC | CSS의 미디어 쿼리 |
 | NFR-17, 24 | 색 외의 구분, 누르는 영역 44픽셀 | `common.css` |
 | NFR-18 | 계산과 탐색은 요청의 값만 | 4.4 |
