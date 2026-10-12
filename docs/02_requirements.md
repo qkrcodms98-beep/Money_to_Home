@@ -1343,7 +1343,7 @@ B.12에서 보류한 다섯 가지를 정했다.
 
 ### B.22 확정 목업 v3에서 정한 것 (v1.12, 2026-10-12)
 
-목업을 만들면서 팀장이 정했다. 화면의 모양은 Figma 파일 "머니to홈"의 섹션 "확정 목업 v3"이 기준이다.
+목업을 만들면서 팀장이 정했다. 화면의 모양은 [Figma 파일 "money-to-home-mockup"의 섹션 "확정 목업 v3"](https://www.figma.com/design/TSra3U9pIFYKxXvSNS4pu7/money-to-home-mockup?node-id=2034-2)이 기준이다.
 
 | 정한 것 | 내용 | 고친 곳 |
 | --- | --- | --- |
