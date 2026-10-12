@@ -8,7 +8,7 @@
 
 - 서버: Python 3.12, FastAPI, PyMySQL (SQL을 직접 쓴다)
 - DB: MariaDB 11.4
-- 화면: HTML, CSS, JavaScript. 프레임워크를 쓰지 않는다.
+- 화면: HTML, CSS, JavaScript, Bootstrap 5.3. React나 Vue 같은 JavaScript 프레임워크는 쓰지 않는다. Sass도 쓰지 않는다.
 - 지도: 카카오맵 JavaScript SDK
 
 ## 먼저 읽을 문서
@@ -71,7 +71,10 @@
 - 서버는 `api.get`, `api.post`, `api.put`으로만 부른다. `fetch`를 직접 쓰지 않는다.
 - 브라우저 저장소는 `store.get`, `store.set`으로만 읽고 쓴다. `sessionStorage`를 직접 쓰지 않는다.
 - 금액과 면적은 `format.won`, `format.area`로 보여 준다.
-- 색과 크기는 `css/common.css`의 `:root`에 있는 이름을 쓴다. 색 값을 화면 파일에 직접 적지 않는다.
+- 버튼, 입력란, 카드, 배지, 창 같은 기본 부품은 Bootstrap의 클래스를 쓴다 (`btn btn-primary`, `form-control`, `invalid-feedback`, `card`, `modal`). 같은 것을 새로 만들지 않는다.
+- Bootstrap에 없는 것(지도의 아파트 표시, 아래 창, 구분 표시)만 직접 만든다.
+- HTML의 `<head>`와 `<script>` 줄은 `frontend/index.html`의 것을 그대로 복사한다. Bootstrap을 먼저, `common.css`를 그 뒤에 둔다. Bootstrap의 버전을 바꾸지 않는다.
+- 색은 `css/common.css`의 `:root`에 있는 이름(`var(--color-primary)` 등)을 쓴다. 색 값을 화면 파일에 직접 적지 않는다. Bootstrap의 색 클래스(`text-danger`, `bg-success`)로 구분(지금 가능, 기간 내 가능, 자금 부족)을 나타내지 않는다. `category category--now`처럼 `common.css`의 것을 쓴다.
 - 모바일이 기본이다. 누르는 영역은 가로세로 44픽셀 이상으로 한다.
 
 ### 공통

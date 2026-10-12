@@ -49,7 +49,7 @@
 
 | 구분 | 기술 |
 | --- | --- |
-| Frontend | HTML, CSS, JavaScript |
+| Frontend | HTML, CSS, JavaScript, Bootstrap 5.3 |
 | Backend | Python, FastAPI |
 | Database | MariaDB 11.4 (MySQL 호환) |
 | Data | Pandas, 국토교통부 아파트 매매 실거래가 API |

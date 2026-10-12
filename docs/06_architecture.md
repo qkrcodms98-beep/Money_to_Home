@@ -69,7 +69,8 @@
 
 | 구분 | 기술 | 쓰는 곳 | 상태 |
 | --- | --- | --- | --- |
-| 화면 | HTML, CSS, JavaScript. 프레임워크는 쓰지 않는다. | 화면 전체 | 확정 |
+| 화면 | HTML, CSS, JavaScript. React 같은 JavaScript 프레임워크는 쓰지 않는다. | 화면 전체 | 확정 |
+| 화면의 부품 | Bootstrap 5.3 (CDN). 버튼, 입력란, 카드, 창에 쓴다. Sass는 쓰지 않는다. | 화면 전체 | 확정 (2026-10-12) |
 | 지도 | 카카오맵 JavaScript SDK | 지도 화면 | 확정 |
 | 서버 | Python 3.12, FastAPI, Uvicorn | API, 화면 파일 제공 | 확정 |
 | 값 검사 | Pydantic (FastAPI에 들어 있다) | 요청의 모양과 범위 검사 | 확정 |
@@ -124,7 +125,7 @@ Money_to_Home/
 │  ├─ login.html               P-07 로그인 (2차, 예정)
 │  ├─ signup.html              P-08 회원가입 (2차, 예정)
 │  ├─ css/
-│  │  ├─ common.css            헤더, 버튼, 입력란, 색
+│  │  ├─ common.css            색의 이름, Bootstrap의 색 바꾸기, 헤더와 구분 표시
 │  │  └─ (화면마다 하나)
 │  └─ js/
 │     ├─ api.js                API를 부르는 공통 함수, 오류 처리
