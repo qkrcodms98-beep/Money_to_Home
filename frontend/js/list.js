@@ -124,7 +124,11 @@ function listHead(result, options) {
   const where = options.where || {};
   const place = [where.gu, where.dong].filter(Boolean).join(' ');
   const count = `${format.comma(result.counts.total)}곳`;
-  head.append(listEl('h2', 'list__title', place ? `${place} · ${count}` : count));
+  // 자리가 모자라면 지역 이름만 말줄임(…)으로 줄이고 "· 22곳"은 남긴다
+  const title = listEl('h2', 'list__title');
+  if (place) title.append(listEl('span', 'list__place', place), listEl('span', 'list__count', ` · ${count}`));
+  else title.append(listEl('span', 'list__count', count));
+  head.append(title);
 
   // 안내 아이콘 ( ! ). 누르거나 마우스를 올리면 실거래 기록 안내가 뜬다 (FR-COMMON-02)
   const info = listEl('span', 'list__info-wrap');
