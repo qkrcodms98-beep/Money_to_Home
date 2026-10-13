@@ -38,11 +38,12 @@
 
 | 순서 | 할 일 | 종류 | 파일 |
 | --- | --- | --- | --- |
-| 1 | 목업. 색과 부품 모양 확정 | 화면 | `frontend/css/common.css` |
-| 2 | 재무정보 화면. 나이 계산, 금액 입력, 오류 문구 | 화면 | `frontend/profile.html` |
-| 3 | 저축 계산 API (A-04) | 서버 | `backend/routers/plans.py` |
-| 4 | 저축 계획 화면 | 화면 | `frontend/plan.html` |
-| 5 | 입력이 빠졌을 때 안내, 새로 고침 뒤 자리 복원 | 화면 | `frontend/js/guard.js`, `store.js` |
+| 1 | 목업. 색과 부품 모양 확정 (끝냄) | 화면 | `frontend/css/common.css` |
+| 2 | 재무정보 화면. 나이 계산, 금액 입력, 오류 문구 (끝냄) | 화면 | `frontend/profile.html` |
+| 3 | 저축 계산 API (A-04) (끝냄) | 서버 | `backend/routers/plans.py` |
+| 4 | 저축 계획 화면 (끝냄) | 화면 | `frontend/plan.html` |
+| 5 | 입력이 빠졌을 때 안내, 새로 고침 뒤 자리 복원 (끝냄) | 화면 | `frontend/js/guard.js`, `store.js` |
+| 6 | 지도를 진짜 자료에 연결, 구·동 선택, 넓게 볼 때의 동 표시 (끝냄. 안세환의 3번, 4번에서 넘겨받음) | 화면 | `frontend/js/map-view.js`, `js/region.js` |
 | 상시 | PR 검토, 문서, 통합 점검 | 관리 | |
 
 이미 만든 것: 서버의 틀, 재무정보 저장 API (A-08 ~ A-11), 시작 화면, 공통 JavaScript 다섯 개
@@ -54,8 +55,8 @@
 | 1 | 계산 모듈 함수 10개 | 서버 | `backend/services/calc.py` |
 | 2 | 계산 테스트. 손으로 계산한 사례 5건 이상 | 서버 | `tests/test_calc.py` |
 | 3 | 대출 상품 두 개의 실제 조건 조사 (끝냄, 2026-10-13) | DB | `db/seed_loan_products.sql` |
-| 4 | 대출 계산 API (A-03) | 서버 | `backend/routers/loans.py` |
-| 5 | 대출상품 화면. 상품 카드, 상환 기간, 대출 없이 계산 | 화면 | `frontend/loan.html` |
+| 4 | 대출 계산 API (A-03) (끝냄) | 서버 | `backend/routers/loans.py` |
+| 5 | 대출상품 화면. 상품 카드, 상환 기간, 대출 없이 계산 (끝냄) | 화면 | `frontend/loan.html` |
 | 6 | 시나리오 API (A-07) | 서버 | `backend/routers/scenario.py` |
 | 7 | 시나리오 탭 화면. 필요자금, 부족·여유, 다시 계산 | 화면 | `frontend/js/scenario.js` |
 
@@ -67,10 +68,10 @@
 | --- | --- | --- | --- |
 | 1 | 실거래가 API 시험 호출. 되면 수집 스크립트를 만들고, 안 되면 지금 CSV를 쓴다. | 서버 | `data/collect_trades.py` |
 | 2 | 적재 스크립트. CSV를 읽어 DB에 넣는다. | 서버, DB | `data/load_trades.py` |
-| 3 | 구와 동 목록 API (A-02) | 서버, DB | `backend/routers/apartments.py` |
-| 4 | 아파트 찾기 API (A-05). 계산 함수를 불러 구분을 매긴다. | 서버, DB | `backend/routers/apartments.py` |
-| 5 | 목록 화면. 카드, 개수, 빈 결과 | 화면 | `frontend/js/list.js` |
-| 6 | 조건(면적, 가격, 준공 연도)과 정렬 (2차) | 화면, 서버 | |
+| 3 | 구와 동 목록 API (A-02) (끝냄) | 서버, DB | `backend/routers/apartments.py` |
+| 4 | 아파트 찾기 API (A-05). 계산 함수를 불러 구분을 매긴다. (끝냄) | 서버, DB | `backend/routers/apartments.py` |
+| 5 | 목록 화면. 카드, 개수, 빈 결과 (카드는 끝냄. 지도의 아래 창에 붙이는 일이 남음) | 화면 | `frontend/js/list.js` |
+| 6 | 조건(면적, 가격, 준공 연도)과 정렬 (2차). 서버는 끝냄 (이름 검색 포함). 화면과 지도 영역으로 찾기가 남음 | 화면, 서버 | |
 
 이미 만든 것: 공급면적 CSV, 건축물대장 수집 스크립트
 
@@ -79,9 +80,9 @@
 | 순서 | 할 일 | 종류 | 파일 |
 | --- | --- | --- | --- |
 | 1 | 목업 (팀장과 함께) | 화면 | |
-| 2 | 좌표 변환 스크립트. 카카오 API로 주소를 좌표로 바꿔 DB에 넣는다. | 서버, DB | `data/geocode.py` |
-| 3 | 지도 띄우기, 내 조건 줄 | 화면 | `frontend/map.html`, `js/map-view.js` |
-| 4 | 아파트 표시 세 종류 (집 모양) | 화면 | `frontend/js/map-view.js` |
+| 2 | 좌표 변환 스크립트. 카카오 API로 주소를 좌표로 바꿔 DB에 넣는다. (끝냄. 1,055곳 모두 성공) | 서버, DB | `data/geocode.py`, `data/geocoded.csv` |
+| 3 | 지도 띄우기, 내 조건 줄 (끝냄) | 화면 | `frontend/map.html`, `js/map-view.js` |
+| 4 | 아파트 표시 (말풍선 A) (끝냄) | 화면 | `frontend/js/map-view.js` |
 | 5 | 아래 창 세 단계 (30%, 80%, 전체) | 화면 | `frontend/js/sheet.js` |
 | 6 | 아파트 한 곳 API (A-06) | 서버, DB | `backend/routers/apartment_detail.py` |
 | 7 | 아파트 정보 탭 | 화면 | `frontend/js/apartment.js` |

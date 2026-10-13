@@ -74,10 +74,10 @@
 
 | 담당 | 파일 |
 | --- | --- |
-| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 여덟 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js` |
-| 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `services/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/scenario.js`, `css/scenario.css` |
+| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 여덟 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py`, `schemas/plan.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `css/region.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js`, `js/region.js` |
+| 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `services/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/loan.js`, `css/loan.css`, `js/scenario.js`, `css/scenario.css` |
 | 김목산 (자료와 탐색) | `backend/routers/apartments.py`, `services/apartment.py`, `schemas/apartment.py`, `data/collect_trades.py`, `data/load_trades.py`, `frontend/js/list.js`, `css/list.css` |
-| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py`, `data/geocode.py`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
+| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py`, `data/geocode.py`, `data/geocoded.csv`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
 
 네 명 모두 화면, 서버, DB를 다 쓴다. 기능 하나를 화면부터 DB까지 한 사람이 맡는다. 순서는 `docs/roles.md`에 있다.
 
@@ -115,6 +115,9 @@
 - **모바일에는 헤더가 없다.** 서비스 이름(로고)도 두지 않는다. 지도 화면의 맨 위는 내 조건 줄(목표 가능 가격, 수정, 로그인)이고, 입력 화면은 위 52px을 흰 여백으로 둔다.
 - **지도의 아파트 표시는 말풍선이고, 모양은 A(그라데이션)로 확정했다.** 목업의 부품 "말풍선 (아파트 표시)"에서 `모양=A 그라데이션`인 것을 따른다. 위 띠에 면적, 그 아래에 실거래 평균가를 흰 글씨로 적고, 바탕은 위에서 아래로 진해지는 그라데이션이며, 꼬리는 왼쪽 아래에 있다. 누른 표시는 1.2배다. `모양=B 단색`은 비교용 시안이므로 쓰지 않는다. 면적과 실거래 평균가만 적는다. 여유·부족 금액은 표시에 적지 않고, 표시를 누르면 아래 창에서 보여 준다. 범례는 처음부터 펼쳐 둔다.
 - 구분의 색은 지금 가능이 파랑, 기간 내 가능이 라임, 자금 부족이 빨강이다 (팔레트 F 라임).
+- **지도를 넓게 보면 말풍선 대신 동마다 표시 하나로 묶는다.** 카카오맵의 확대 수준 6부터 동 표시, 5 이하는 말풍선이다. 동 표시는 연보라 동그라미에 동 이름과 숫자(그 동에서 목표할 수 있는 아파트 수 = 지금 가능 + 기간 내 가능)다. 누르면 그 동이 가운데로 오면서 확대된다.
+- **자금 부족 표시의 스위치는 처음에 꺼져 있다.** 켜야 자금이 부족한 아파트의 말풍선이 보인다. 목록에는 스위치와 상관없이 나온다.
+- 지도 화면이 보는 지역은 `store`의 `map` 묶음에 `gu`, `dong`으로 둔다. 구·동 선택 창은 `js/region.js`가 그린다. 지도 화면의 자세한 구조는 `docs/guides/handoff_map.md`에 있다.
 - 색과 크기는 `css/common.css`의 `:root`에 있는 이름을 쓴다. 색 값을 화면 파일에 직접 적지 않는다.
 - 모바일이 기본이다. 누르는 영역은 가로세로 44픽셀 이상으로 한다.
 - **모바일을 먼저 만든다. 웹(가로 1200픽셀 이상)은 나중에 같은 HTML에 미디어 쿼리로 더한다** (NFR-15). 그때 고치기 쉽게 아래를 지킨다.

@@ -285,7 +285,21 @@ pip install -r requirements.txt
 
 HeidiSQL에서 **파일 > SQL 파일 불러오기**로 `C:\projects\Money_to_Home\db\seed_loan_products.sql`을 열고 **F9**를 누른다. `loan_products` 표에 두 줄이 생긴다. 보금자리론과 카카오뱅크 주택담보대출의 실제 조건이다. 이 파일이 바뀌면 `git pull` 한 뒤에 한 번 더 실행한다. 여러 번 실행해도 된다.
 
-### 7.6 서버 켜기
+### 7.6 실거래 자료와 좌표 넣기
+
+가상 환경을 켠 터미널에서 차례로 실행한다. 외부 API를 부르지 않고 저장소에 든 파일에서 넣는다. 여러 번 실행해도 된다.
+
+```
+python data/load_trades.py data/collected
+python data/load_supply_area.py
+python data/geocode.py --from-file data/geocoded.csv
+```
+
+- 첫째 줄은 아파트와 거래, 면적대별 평균가를 넣는다. 끝에 "아파트 1,055곳"이 나온다.
+- 둘째 줄은 공급면적을 붙인다.
+- 셋째 줄은 좌표를 넣는다. "파일에서 넣음 1,055곳"이 나온다. 좌표가 없으면 지도에 아파트가 나오지 않는다.
+
+### 7.7 서버 켜기
 
 ```
 uvicorn backend.main:app --reload --port 8000
@@ -303,7 +317,7 @@ uvicorn backend.main:app --reload --port 8000
 
 `"db":"error"`가 나오면 `.env`의 `DB_USER`와 `DB_PASSWORD`를 다시 본다. 고친 뒤에는 서버를 껐다 켠다.
 
-### 7.7 자동 테스트 돌리기
+### 7.8 자동 테스트 돌리기
 
 서버를 켠 터미널 말고 새 터미널을 열어 7.3을 한 뒤 실행한다.
 

@@ -14,6 +14,7 @@
   --shadow-control: 0 2px 8px rgba(0, 0, 0, 0.16); /* 지도 버튼, 범례 */
   --shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.3); /* 목록 보기 */
   --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.22); /* 말풍선 B */
+  --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라 */
 
   /* 말풍선의 꼬리 끝(아파트의 자리)이 말풍선 왼쪽 위에서 떨어진 거리.
      꼬리(15 × 10)는 왼쪽에서 1px, 위에서 47px에 있고 끝은 그 가운데 아래다. */
@@ -209,6 +210,47 @@
   transform: translate(calc(var(--marker-tip-x) * -1), calc(var(--marker-tip-y) * -1));
   transform-origin: var(--marker-tip-x) var(--marker-tip-y);
   transition: transform 0.15s ease;
+}
+
+/* 넓게 볼 때의 동 표시 (P-05 ③). 동그라미 안에 동 이름과 큰 숫자. 가운데가 그 동의 자리다.
+   바탕은 연보라를 조금 비치게 칠한다 (2026-10-13에 정함). 글자는 흰색이다. */
+.dong-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: 1px solid var(--color-dong);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-dong) 78%, transparent);
+  color: var(--color-on-primary);
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dong-marker__name {
+  max-width: 60px;
+  overflow: hidden;
+  font-size: var(--text-badge);
+  font-weight: var(--font-medium);
+  line-height: 16px;
+  text-overflow: ellipsis;
+}
+
+.dong-marker__count {
+  font-size: var(--text-amount);
+  font-weight: var(--font-bold);
+  line-height: 24px;
+}
+
+/* 목표할 수 있는 곳이 없는 동은 점선 테두리에 더 옅은 바탕 */
+.dong-marker--empty {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--color-dong) 28%, transparent);
+  color: var(--color-dong);
 }
 
 /* 누른 표시는 1.2배 (화면 설계서 6.1) */
