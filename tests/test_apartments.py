@@ -65,3 +65,144 @@ def test_location_is_null_without_coordinates(client, apartments):
 
 def test_empty_db_gives_empty_list(client):
     assert client.get("/api/regions").json() == {"regions": []}
+
+
+# ------------------------------------------------------------------
+# A-05 아파트 찾기
+# ------------------------------------------------------------------
+def _priced(id, dong, name, bands, lat=None, lng=None):
+    """bands: [(면적대, 평균가), ...]"""
+    apt = models.Apartment(id=id, name=name, gu="서구", dong=dong, jibun=str(id), latitude=lat, longitude=lng)
+    for band, price in bands:
+        apt.prices.append(models.ApartmentPrice(
+            area_band=band, exclusive_area=f"{band}.9400", supply_area=f"{band + 27}.00", avg_price=price,
+            min_price=price, max_price=price, trade_count=5,
+            period_start=date(2025, 10, 1), period_end=date(2026, 9, 30),
+        ))
+    return apt
+
+
+@pytest.fixture
+def chipyeong(db, products):
+    """서구 치평동. 예시 조건(보유 5,000만, 월 100만, 5년, 첫째 상품 30년)으로 구분이 정해져 있다."""
+    db.add_all([
+        _priced(11, "치평동", "가아파트", [(114, 390_000_000), (84, 300_000_000)], "35.1490000", "126.8450000"),
+        _priced(12, "치평동", "나아파트", [(59, 150_000_000)]),  # 좌표 없음
+        _priced(13, "치평동", "다아파트", [(84, 450_000_000)], "35.1500000", "126.8500000"),
+        _priced(14, "치평동", "라아파트", [(84, 700_000_000)], "35.1510000", "126.8510000"),
+        _priced(15, "치평동", "마아파트", [(84, 360_000_000)], "35.1520000", "126.8520000"),
+        _priced(16, "광천동", "바아파트", [(84, 200_000_000)]),
+        _priced(17, "치평동", "사아파트", []),  # 평균가가 없다
+    ])
+    db.commit()
+
+
+EXAMPLE = {
+    "current_assets": 50_000_000, "monthly_saving": 1_000_000, "target_years": 5,
+    "loan_choice": "product", "loan_product_id": 1, "repayment_years": 30,
+}
+
+
+def _search(client, where=None, **changes):
+    body = {"conditions": {**EXAMPLE, **changes}, "where": where or {"gu": "서구", "dong": "치평동"}}
+    return client.post("/api/apartments/search", json=body)
+
+
+def test_target_price_and_own_funds(client, chipyeong):
+    body = _search(client).json()
+    assert body["target_price"] == 366_666_666
+    assert body["own_funds"] == 110_000_000
+
+
+def test_order_is_category_then_closeness_to_target(client, chipyeong):
+    body = _search(client).json()
+    # 지금 가능(나) → 기간 내 가능(마 3.6억이 가 3억보다 목표 3.67억에 가깝다) → 자금 부족(다 4.5억, 라 7억)
+    assert [a["id"] for a in body["apartments"]] == [12, 15, 11, 13, 14]
+    assert [a["category"] for a in body["apartments"]] == ["now", "within", "within", "lack", "lack"]
+
+
+def test_counts_are_per_apartment(client, chipyeong):
+    body = _search(client).json()
+    assert body["counts"] == {"now": 1, "within": 2, "lack": 2, "total": 5}
+    assert body["counts"]["total"] == len(body["apartments"])  # 평균가가 없는 사아파트는 빠진다
+
+
+def test_areas_cheapest_first_with_example_values(client, chipyeong):
+    ga = next(a for a in _search(client).json()["apartments"] if a["id"] == 11)
+    assert [area["area_band"] for area in ga["areas"]] == [84, 114]
+    first, second = ga["areas"]
+    assert first == {
+        "area_band": 84, "exclusive_area": 84.94, "supply_area": 111.0, "avg_price": 300_000_000, "trade_count": 5,
+        "category": "within", "shortage": -20_000_000, "loan_amount": 210_000_000, "over_price_cap": False,
+    }
+    assert (second["category"], second["shortage"], second["loan_amount"]) == ("lack", 7_000_000, 273_000_000)
+    assert ga["category"] == "within"  # 첫째 면적의 구분
+
+
+def test_apartment_without_coordinates_is_kept(client, chipyeong):
+    na = next(a for a in _search(client).json()["apartments"] if a["id"] == 12)
+    assert na["latitude"] is None and na["longitude"] is None
+    assert na["households"] is None
+
+
+def test_over_price_cap(client, chipyeong):
+    ra = next(a for a in _search(client).json()["apartments"] if a["id"] == 14)
+    assert ra["areas"][0]["over_price_cap"] is True  # 7억 > 첫째 상품 상한 6억
+    ra2 = next(a for a in _search(client, loan_product_id=2, repayment_years=30).json()["apartments"] if a["id"] == 14)
+    assert ra2["areas"][0]["over_price_cap"] is False  # 둘째 상품은 상한이 없다
+
+
+def test_now_has_no_within(client, chipyeong):
+    body = _search(client, target_years=0).json()
+    assert body["own_funds"] == 50_000_000
+    assert body["counts"]["within"] == 0
+    assert all(a["category"] != "within" for a in body["apartments"])
+
+
+def test_without_loan(client, chipyeong):
+    body = _search(client, loan_choice="none", loan_product_id=None, repayment_years=None).json()
+    assert body["target_price"] == body["own_funds"] == 110_000_000
+    assert all(area["loan_amount"] == 0 and area["over_price_cap"] is False
+               for a in body["apartments"] for area in a["areas"])
+
+
+def test_whole_gu_without_dong(client, chipyeong):
+    body = _search(client, where={"gu": "서구"}).json()
+    assert body["counts"]["total"] == 6  # 광천동 바아파트까지
+
+
+def test_unknown_dong_gives_empty_list(client, chipyeong):
+    res = _search(client, where={"gu": "서구", "dong": "없는동"})
+    assert res.status_code == 200
+    assert res.json()["apartments"] == []
+    assert res.json()["counts"] == {"now": 0, "within": 0, "lack": 0, "total": 0}
+
+
+@pytest.mark.parametrize("changes, field, detail", [
+    ({"loan_product_id": 999}, "loan_product_id", "대출 상품과 상환 기간을 골라 주세요."),
+    ({"repayment_years": 25}, "repayment_years", "상환 기간을 다시 골라 주세요."),
+    ({"target_years": 7}, "target_years", "목표 기간을 다시 골라 주세요."),
+    ({"current_assets": -1}, "current_assets", "0 이상의 숫자만 입력할 수 있습니다."),
+])
+def test_invalid_conditions(client, chipyeong, changes, field, detail):
+    res = _search(client, **changes)
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}
+
+
+@pytest.mark.parametrize("changes", [
+    {"loan_choice": "none"},                                   # 대출 없이인데 상품이 있다
+    {"loan_product_id": None},                                 # 상품인데 번호가 없다
+    {"repayment_years": None},                                 # 상품인데 기간이 없다
+    {"loan_choice": "none", "loan_product_id": None},          # 대출 없이인데 기간이 남았다
+])
+def test_loan_combination_is_rejected(client, chipyeong, changes):
+    res = _search(client, **changes)
+    assert res.status_code == 422
+    assert res.json() == {"detail": "대출 상품과 상환 기간을 골라 주세요.", "field": "loan_product_id"}
+
+
+def test_unknown_loan_choice_uses_spec_message(client, chipyeong):
+    res = _search(client, loan_choice="maybe")
+    assert res.status_code == 422
+    assert res.json() == {"detail": "대출 상품과 상환 기간을 골라 주세요.", "field": "loan_choice"}
