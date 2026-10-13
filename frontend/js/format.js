@@ -19,6 +19,16 @@ const format = {
     return sign + text;
   },
 
+  // 원 → "3.0억", "6.5천", "9천". 지도의 말풍선처럼 자리가 좁은 곳에 쓴다.
+  //   1억 원 이상은 억 단위로 소수 첫째 자리까지 (3억 → "3.0억", 3억 2,500만 → "3.3억")
+  //   1억 원 미만은 천만 단위로 (6,500만 → "6.5천", 9,000만 → "9천")
+  short(amount) {
+    const man = Math.round(Math.abs(amount) / 10000);
+    if (man >= 10000) return `${(man / 10000).toFixed(1)}억`;
+    const cheon = (man / 1000).toFixed(1);
+    return `${cheon.endsWith('.0') ? cheon.slice(0, -2) : cheon}천`;
+  },
+
   // 입력란의 만원 값 → 원. 서버에 보낼 때 쓴다.
   manToWon: (man) => man * 10000,
 

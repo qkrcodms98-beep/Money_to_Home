@@ -96,6 +96,11 @@
   box-sizing: border-box;
 }
 
+/* hidden을 준 요소는 display를 따로 줬어도 보이지 않는다. 단계마다 입력란을 숨기고 보일 때 쓴다. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   color: var(--color-text);
@@ -253,6 +258,17 @@ body {
   font-weight: var(--font-medium);
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* 버튼 위의 검은 알림. "입력한 정보를 저장하지 못했습니다." 같은 한 줄 안내 */
+.snackbar {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--text-help);
+  line-height: 20px;
 }
 
 /* 화면 아래에 붙는 버튼 영역 */
