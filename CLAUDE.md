@@ -6,7 +6,7 @@
 
 광주 5개 구 아파트의 내 집 마련 시뮬레이터. 보유자산, 저축 계획, 대출 상품으로 목표할 수 있는 아파트를 지도에 보여 준다. 4명이 2주 동안 만드는 수업 프로젝트다.
 
-- 서버: Python 3.12, FastAPI, PyMySQL (SQL을 직접 쓴다)
+- 서버: Python 3.12, FastAPI, SQLAlchemy 2 (접속은 PyMySQL)
 - DB: MariaDB 11.4
 - 화면: HTML, CSS, JavaScript. Bootstrap, Sass, React 같은 라이브러리와 프레임워크를 쓰지 않는다. 모양은 `css/common.css`와 화면별 CSS로 만든다.
 - 지도: 카카오맵 JavaScript SDK
@@ -48,7 +48,7 @@
 2. **계산식은 `backend/services/calc.py`에만 둔다.** router와 JavaScript에 계산식을 쓰지 않는다. 화면은 서버가 준 숫자를 보여 주기만 한다.
 3. **금액은 원 단위 정수다.** API의 요청과 응답, DB, 브라우저 저장소 모두 같다. 만원은 화면에서 보여 줄 때만 쓴다.
 4. **API의 모양은 `docs/05_api_spec.md`를 따른다.** 주소, 이름, 형식을 바꾸려면 명세서를 먼저 고치고 팀에 알린다.
-5. **SQL에 값을 붙이지 않는다.** `%s`와 매개변수로 넘긴다. f-string으로 값을 넣지 않는다.
+5. **DB는 SQLAlchemy로 다룬다.** `select(Model).where(...)`처럼 쓴다. SQL 문장을 글자로 이어 붙이지 않는다. 꼭 SQL을 직접 써야 하면 `text("... :name")`과 매개변수로 넘기고, f-string으로 값을 넣지 않는다.
 6. **오류 응답은 `{"detail": "...", "field": "..."}` 한 모양이다.** router에서는 `backend.errors.ApiError`를 낸다. 내부 정보(SQL, 경로)를 응답에 넣지 않는다.
 7. **키와 비밀번호를 코드에 적지 않는다.** `.env`에만 두고 `backend.config.settings`로 읽는다. `.env`의 값을 출력하거나 문서에 적지 않는다.
 8. **주민등록번호를 저장하거나 서버에 보내지 않는다.** 화면에서 만 나이를 계산하는 데만 쓴다. 실명, 연락처, 계좌번호, 주소, 위치도 모으지 않는다.
@@ -71,10 +71,10 @@
 
 | 담당 | 파일 |
 | --- | --- |
-| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js` |
-| 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/scenario.js`, `css/scenario.css` |
-| 김목산 (자료와 탐색) | `backend/routers/apartments.py`, 아파트와 거래의 `models`와 `schemas`, `data/collect_trades.py`, `data/load_trades.py`, `frontend/js/list.js`, `css/list.css` |
-| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `data/geocode.py`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
+| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 여덟 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js` |
+| 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `services/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/scenario.js`, `css/scenario.css` |
+| 김목산 (자료와 탐색) | `backend/routers/apartments.py`, `services/apartment.py`, `schemas/apartment.py`, `data/collect_trades.py`, `data/load_trades.py`, `frontend/js/list.js`, `css/list.css` |
+| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py`, `data/geocode.py`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
 
 네 명 모두 화면, 서버, DB를 다 쓴다. 기능 하나를 화면부터 DB까지 한 사람이 맡는다. 순서는 `docs/roles.md`에 있다.
 
@@ -85,10 +85,18 @@
 
 ### 서버
 
-- 층을 지킨다. `routers`는 요청을 받아 `schemas`로 검사하고, `models`와 `services`를 부르고, 응답을 만든다. `models`는 SQL만 안다. `services/calc.py`는 숫자만 안다 (DB와 요청을 모른다).
-- DB 연결은 `conn=Depends(get_db)`로 받는다. 직접 열지 않는다.
+- 층을 지킨다 (강사님의 구조).
+  - `models/` : DB의 표를 옮긴 클래스. 표 하나에 클래스 하나. **이미 여덟 개가 다 있다. 새로 만들지 않는다.**
+  - `schemas/` : 요청과 응답의 모양, 값의 범위 (Pydantic)
+  - `services/` : DB를 읽고 쓰는 함수와 계산. `select(...)`는 여기에만 쓴다.
+  - `routers/` : 주소를 받는 곳. `schemas`로 검사하고 `services`를 부르고 응답을 만든다. DB를 다루는 코드와 계산식을 쓰지 않는다.
+- `services/calc.py`는 숫자만 안다 (DB와 요청을 모른다). 대출 상품을 넘길 때는 `loan_product.for_calc(상품)`으로 바꿔 넘긴다.
+- 표는 `db/schema.sql`로 만든다. `Base.metadata.create_all()`을 서버 코드에서 부르지 않는다. 표나 칸을 바꾸려면 `db/schema.sql`과 DB 설계서를 먼저 고치고 `models/`를 맞춘다. `models/`는 팀장의 파일이므로 팀장에게 말한다.
+- DB 세션은 `db: Session = Depends(get_db)`로 받아 `services`의 함수에 넘긴다. 직접 열지 않는다. `services`에서 `commit`하지 않는다. 요청이 끝날 때 `get_db`가 저장한다. 저장한 직후의 값이 필요하면 `db.flush()`와 `db.refresh(객체)`를 쓴다.
+- 응답은 `models`의 객체를 그대로 돌려준다. `schemas`의 클래스에 `model_config = ConfigDict(from_attributes=True)`를 두면 알아서 바뀐다.
+- `data/` 폴더의 수집·적재 스크립트는 한 번 돌리는 것이라 SQL을 직접 쓴다 (`backend.database.connect`). 서버 코드에서는 `connect`를 쓰지 않는다.
 - 지금 사용자는 `user_id: int = Depends(get_current_user_id)`로 받는다. 번호를 코드에 적지 않는다.
-- 새 API를 만들 때는 이미 있는 `routers/profile.py`, `models/profile.py`, `schemas/profile.py`의 모양을 따른다.
+- 새 API를 만들 때는 이미 있는 `routers/profile.py`, `services/profile.py`, `schemas/profile.py`의 모양을 따른다. 테스트는 `tests/test_profile.py`를 따른다. 테스트는 MariaDB 없이 임시 DB로 돈다 (`tests/conftest.py`).
 - 입력 검증의 문구는 `docs/05_api_spec.md` 5장의 문장을 그대로 쓴다.
 - 계산의 버림, 반올림, 올림은 `docs/02_requirements.md` 부록 C를 따른다. 대출금액은 버림, 월 상환액은 반올림, 필요 월 저축액은 올림이다.
 

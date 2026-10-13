@@ -1,41 +1,67 @@
 """테스트 공통 준비.
 
-여기의 테스트는 DB 없이 돈다. DB 연결을 가짜로 바꿔 끼운다.
+여기의 테스트는 MariaDB 없이 돈다. 메모리 안에 임시 DB(SQLite)를 만들어 models의 표를 넣고,
+서버가 그 DB를 쓰게 바꿔 끼운다. 테스트 하나가 끝나면 통째로 사라진다.
 실행 (프로젝트 폴더에서): pytest
 """
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-from backend.database import get_db
+from backend import models
+from backend.database import Base, get_db
 from backend.main import app
 
 
-class FakeCursor:
-    """아무 줄도 돌려주지 않는 가짜 커서."""
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
-
-    def execute(self, sql, params=None):
-        return 0
-
-    def fetchone(self):
-        return None
-
-    def fetchall(self):
-        return []
-
-
-class FakeConnection:
-    def cursor(self):
-        return FakeCursor()
+@pytest.fixture
+def db():
+    """빈 임시 DB. 테스트 사용자(번호 1)만 들어 있다."""
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)()
+    session.add(models.User(id=1, login_id="testuser", password_hash="!"))
+    session.commit()
+    yield session
+    session.close()
+    engine.dispose()
 
 
 @pytest.fixture
-def client():
-    app.dependency_overrides[get_db] = lambda: FakeConnection()
+def products(db):
+    """대출 상품 두 줄. db/seed_loan_products.sql의 예시와 같은 값이다."""
+    rows = [
+        models.LoanProduct(
+            id=1, name="[예시] 첫째 상품", institution="한국주택금융공사", max_limit=360_000_000,
+            ltv_ratio="0.700", annual_rate_pct="4.000", repayment_years_options="10,15,20,30",
+            max_house_price=600_000_000, eligibility_summary="요약", eligibility_text="문구",
+            base_date=date(2026, 10, 1), source_url="https://www.hf.go.kr",
+        ),
+        models.LoanProduct(
+            id=2, name="[예시] 둘째 상품", institution="카카오뱅크", max_limit=500_000_000,
+            ltv_ratio="0.800", annual_rate_pct="4.500", repayment_years_options="10,20,30,40",
+            max_house_price=None, eligibility_summary="요약", eligibility_text="문구",
+            base_date=date(2026, 10, 1), source_url="https://www.kakaobank.com",
+        ),
+    ]
+    db.add_all(rows)
+    db.commit()
+    return rows
+
+
+@pytest.fixture
+def client(db):
+    def use_test_db():
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+    app.dependency_overrides[get_db] = use_test_db
     yield TestClient(app)
     app.dependency_overrides.clear()

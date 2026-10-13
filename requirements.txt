@@ -5,7 +5,8 @@
 fastapi==0.143.0
 uvicorn[standard]==0.54.0
 
-# DB (MariaDB 11.4)
+# DB (MariaDB 11.4). SQLAlchemy로 다루고, 접속은 PyMySQL이 한다.
+SQLAlchemy==2.1.4
 PyMySQL==1.2.3
 
 # 설정 (.env 읽기)

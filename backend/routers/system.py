@@ -6,9 +6,10 @@
 import logging
 
 from fastapi import APIRouter
+from sqlalchemy import text
 
 from backend.config import settings
-from backend.database import connect
+from backend.database import engine
 
 router = APIRouter(prefix="/api", tags=["공통"])
 logger = logging.getLogger("money_to_home")
@@ -17,12 +18,8 @@ logger = logging.getLogger("money_to_home")
 @router.get("/health")
 def health():
     try:
-        conn = connect()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-        finally:
-            conn.close()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
         db = "ok"
     except Exception:
         # 접속 정보가 응답에 섞이지 않게 자세한 내용은 서버 기록에만 남긴다.

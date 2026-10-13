@@ -5,17 +5,21 @@ A-03(대출 계산)의 요청과 응답은 담당자가 이 파일에 이어서 
 """
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoanProduct(BaseModel):
+    # models의 LoanProduct를 그대로 넘기면 이 모양으로 바뀐다.
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     institution: str
     max_limit: int  # 최대 한도. 원
     ltv_ratio: float  # 대출 비율. 70%면 0.7
     annual_rate_pct: float  # 대표 금리. 연 4.0%면 4.0
-    repayment_years_options: list[int]
+    # DB에는 "10,15,20,30"으로 들어 있다. models가 숫자의 목록으로 바꿔 준 값을 쓴다.
+    repayment_years_options: list[int] = Field(validation_alias="repayment_years_list")
     max_house_price: int | None  # 대상 주택 가격 상한. 없으면 null
     eligibility_summary: str
     eligibility_text: str
