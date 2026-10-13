@@ -281,9 +281,9 @@ pip install -r requirements.txt
 
 `requirements.txt`가 바뀌었다는 알림을 받으면 이 명령을 다시 실행한다. 이미 깔린 것은 건너뛰고 새것만 깐다. 서버를 켰을 때 `ModuleNotFoundError`가 나오면 이 명령을 안 한 것이다.
 
-### 7.5 대출 상품 예시 자료 넣기 (처음 한 번)
+### 7.5 대출 상품 자료 넣기
 
-HeidiSQL에서 **파일 > SQL 파일 불러오기**로 `C:\projects\Money_to_Home\db\seed_loan_products.sql`을 열고 **F9**를 누른다. `loan_products` 표에 두 줄이 생긴다. 숫자는 개발용 예시다.
+HeidiSQL에서 **파일 > SQL 파일 불러오기**로 `C:\projects\Money_to_Home\db\seed_loan_products.sql`을 열고 **F9**를 누른다. `loan_products` 표에 두 줄이 생긴다. 보금자리론과 카카오뱅크 주택담보대출의 실제 조건이다. 이 파일이 바뀌면 `git pull` 한 뒤에 한 번 더 실행한다. 여러 번 실행해도 된다.
 
 ### 7.6 서버 켜기
 

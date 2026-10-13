@@ -53,7 +53,7 @@
 | --- | --- | --- | --- |
 | 1 | 계산 모듈 함수 10개 | 서버 | `backend/services/calc.py` |
 | 2 | 계산 테스트. 손으로 계산한 사례 5건 이상 | 서버 | `tests/test_calc.py` |
-| 3 | 대출 상품 두 개의 실제 조건 조사 | DB | `db/seed_loan_products.sql` |
+| 3 | 대출 상품 두 개의 실제 조건 조사 (끝냄, 2026-10-13) | DB | `db/seed_loan_products.sql` |
 | 4 | 대출 계산 API (A-03) | 서버 | `backend/routers/loans.py` |
 | 5 | 대출상품 화면. 상품 카드, 상환 기간, 대출 없이 계산 | 화면 | `frontend/loan.html` |
 | 6 | 시나리오 API (A-07) | 서버 | `backend/routers/scenario.py` |
