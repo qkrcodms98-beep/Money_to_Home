@@ -100,7 +100,8 @@
   }
 
   function renderResult(values) {
-    const show = step === 'term' && isFresh(values);
+    // 값을 바꿔 다시 계산하는 동안에는 앞의 결과를 그대로 둔다. 새 값이 오면 그 자리에서 숫자만 바뀐다.
+    const show = step === 'term' && calculated !== null && values.monthly_saving !== null && values.target_years !== null;
     result.box.hidden = !show;
     result.note.hidden = !show;
     if (!show) return;
@@ -155,11 +156,9 @@
     try {
       const data = await api.post('/api/calc/plan', { current_assets: currentAssets, ...values });
       if (mine !== calcCount) return;
-      const first = calculated === null;
       calculated = { ...values, ...data };
       errorBar.hidden = true;
       render();
-      if (first) slideIn(result.box);
     } catch (error) {
       if (mine !== calcCount) return;
       if (error.status === 422 && error.field === 'monthly_saving') {

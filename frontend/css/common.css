@@ -321,9 +321,33 @@ body {
   }
 }
 
+/* 확인 단계로 바뀔 때 제목과 값들이 한 번 뛰어오른다. 화면이 바뀐 것을 알아보게 한다. */
+.jump {
+  animation: jump 0.5s cubic-bezier(0.28, 0.84, 0.42, 1) both;
+}
+
+@keyframes jump {
+  0% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-14px);
+  }
+  65% {
+    transform: translateY(0);
+  }
+  82% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
 /* 움직임을 줄이도록 설정한 사용자에게는 바로 보여 준다. */
 @media (prefers-reduced-motion: reduce) {
-  .field--enter {
+  .field--enter,
+  .jump {
     animation: none;
   }
 }
