@@ -1,0 +1,507 @@
+/* 아래 창 (P-06). 담당: 안세환
+   색과 글자 크기는 common.css의 :root 이름을 쓴다. common.css에 없는 값만 아래 .map-body에 둔다.
+
+   기준: Figma "확정 목업 v3"
+     30%         "v3 · P-06 ⑥ 지도의 아파트를 누름 30% · 말풍선 B" (2038:355), 창은 2038:409
+     80% 목록    "v3 · P-06 ⑤ 목록 80% · 말풍선 B" (2038:235)
+     80% 아파트  "v3 · P-06 ⑦ 목록에서 연 아파트 80% (아파트 정보) · 말풍선 B" (2038:486)
+
+   단계('30', '80', 'full')는 sheet.js가 세 곳에 적는다. 창은 지도(.map-area)와 따로 둔다. 웹 배치에서 왼쪽 단으로 옮긴다.
+     .sheet[data-stage]        창의 높이와 창 안의 내용. 올라오고 내려가는 동안에도 그대로다
+     .map-app[data-sheet]      지도 위 버튼, 검색 줄, 칩 줄. 열 때 바로 바뀌고 닫을 때 바로 돌아온다
+     .map-app[data-sheet-map]  지도의 크기. 창이 커질 때는 다 움직인 뒤에 줄이고, 작아지거나 닫힐 때는 먼저 넓힌다
+   창은 열 때 아래에서 올라오고 닫을 때 아래로 내려간다. 단계가 바뀔 때는 높이가 바뀐다 (--sheet-duration, 0.6초). */
+
+.map-body {
+  --sheet-height-30: 262px; /* 30% 단계. 목업의 값 (지도 영역 804의 30%는 241이고, 240보다 작으면 안 된다) */
+  --sheet-radius: 20px;
+  --shadow-sheet: 0 -4px 18px rgba(0, 0, 0, 0.14);
+  --shadow-segment: 0 1px 3px rgba(0, 0, 0, 0.12); /* ㎡/평 전환의 고른 칸 */
+  --text-sheet-name: 20px; /* 아파트 이름. common.css에 20px 이름이 없다 */
+  --text-sheet-arrow: 22px; /* ‹ › */
+  --text-sheet-close: 18px; /* ✕ */
+  --line-height-sheet-value: 32px; /* 평균가와 여유자금의 줄 높이 */
+  --sheet-duration: 0.6s; /* 창이 올라오고 내려가는 시간. sheet.js도 이 값을 읽는다 */
+  --sheet-ease-up: cubic-bezier(0.22, 1, 0.36, 1); /* 빠르게 올라와 천천히 멈춘다 */
+  --sheet-ease-down: cubic-bezier(0.55, 0, 0.75, 0.3); /* 천천히 출발해 빠르게 내려간다 */
+}
+
+/* ───────── 창 ───────── */
+.sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3; /* 지도 위의 버튼보다 위 */
+  display: flex;
+  flex-direction: column;
+  height: var(--sheet-height-30);
+  overflow: hidden;
+  border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-sheet);
+  /* 단계가 바뀔 때 높이가 0.6초 동안 바뀐다 (30% → 80% → 전체 → 30%) */
+  transition:
+    height var(--sheet-duration) var(--sheet-ease-up),
+    border-radius var(--sheet-duration) var(--sheet-ease-up);
+}
+
+/* 80%: 지도 영역(.map-app에서 내 조건 줄을 뺀 높이)의 80%. 390 × 844에서 643, 지도가 161 남는다 (140 이상) */
+.sheet[data-stage="80"] {
+  height: calc((100% - var(--condition-bar-height)) * 0.8);
+}
+
+/* 전체: 내 조건 줄 바로 아래부터. 지도가 다 가려진다 */
+.sheet[data-stage="full"] {
+  height: calc(100% - var(--condition-bar-height));
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 올라오기와 내려가기 (sheet.js가 붙였다 뗀다) */
+.sheet--opening {
+  animation: sheet-up var(--sheet-duration) var(--sheet-ease-up) both;
+}
+
+.sheet--closing {
+  animation: sheet-down var(--sheet-duration) var(--sheet-ease-down) both;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* 움직임을 줄이도록 설정했으면 움직이지 않는다 (sheet.js도 바로 열고 닫는다) */
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    transition: none;
+  }
+
+  .sheet--opening,
+  .sheet--closing {
+    animation: none;
+  }
+}
+
+/* 손잡이. 1차에는 누르면 다음 단계로 바뀐다 (sheet.js).
+   보이는 막대는 40 × 5, 위에서 10px. 버튼은 막대 아래 머리까지의 빈자리(30%에서 33px)를 다 쓴다.
+   누르는 영역이 44 이상이 되도록 위로 11px 넓힌다. */
+.sheet__handle {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 100%;
+  height: 33px;
+  padding: 10px 0 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet__handle::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0 0;
+}
+
+/* 80% 이상에서는 머리가 손잡이 아래 8px에서 시작한다 (목업 2038:486) */
+.sheet[data-stage="80"] .sheet__handle,
+.sheet[data-stage="full"] .sheet__handle {
+  height: 27px;
+}
+
+.sheet__grip {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-line-strong);
+}
+
+/* 목록 자리 (김목산의 list.js가 그린다). 내용만 스크롤된다 */
+#apt-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ───────── 창이 열렸을 때의 지도 ─────────
+   지도를 창에 가리지 않고 창 위의 남은 자리로 줄인다. 카카오 로고가 창에 가려지지 않고,
+   누른 아파트를 남은 지도의 가운데에 둘 수 있다 (map-view.js가 relayout 뒤 가운데를 맞춘다).
+   창이 커질 때는 다 움직인 뒤에 줄이고, 작아지거나 닫힐 때는 먼저 넓힌다. 움직이는 동안 창 뒤에도 지도가 있다. */
+.map-app[data-sheet-map="30"] .map {
+  bottom: var(--sheet-height-30);
+}
+
+.map-app[data-sheet-map="80"] .map {
+  bottom: 80%;
+}
+
+/* 창의 둥근 모서리 뒤로 지도와 비슷한 색이 보이게 한다 */
+.map-app[data-sheet-map] .map-area {
+  background: var(--color-map);
+}
+
+/* 지도 버튼은 창과 같은 빠르기로 오르내린다 */
+.map-controls {
+  transition: bottom var(--sheet-duration) var(--sheet-ease-up);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-controls {
+    transition: none;
+  }
+}
+
+/* 30%: 지도 버튼은 창 위 12px로 올린다. 범례, 안내, 축척, 목록 보기는 창에 가려지므로 숨긴다 (목업 2038:355) */
+.map-app[data-sheet="30"] .map-controls {
+  bottom: calc(var(--sheet-height-30) + 12px);
+}
+
+.map-app[data-sheet="30"] .legend,
+.map-app[data-sheet="30"] .info-tip,
+.map-app[data-sheet="30"] .map-scale,
+.map-app[data-sheet="30"] .list-button {
+  display: none;
+}
+
+/* 80% 이상: 검색 줄과 조건 칩 줄을 숨긴다 (화면 설계서 7.1). 남은 지도가 좁아 버튼도 숨긴다 (목업 2038:235, 2038:486) */
+.map-app[data-sheet="80"] .search-row,
+.map-app[data-sheet="80"] .chip-row,
+.map-app[data-sheet="80"] .map-controls,
+.map-app[data-sheet="80"] .legend,
+.map-app[data-sheet="80"] .info-tip,
+.map-app[data-sheet="80"] .map-scale,
+.map-app[data-sheet="80"] .list-button,
+.map-app[data-sheet="full"] .search-row,
+.map-app[data-sheet="full"] .chip-row,
+.map-app[data-sheet="full"] .map-controls,
+.map-app[data-sheet="full"] .legend,
+.map-app[data-sheet="full"] .info-tip,
+.map-app[data-sheet="full"] .map-scale,
+.map-app[data-sheet="full"] .list-button {
+  display: none;
+}
+
+/* ───────── 아파트 창 (apartment.js) ───────── */
+.apt {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.apt__head {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 var(--page-padding);
+}
+
+/* 첫 줄: 이름과 배지(또는 "← 치평동 목록"), 이전·다음·닫기 */
+.apt__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--touch-size);
+}
+
+.apt__lead {
+  min-width: 0;
+}
+
+.apt__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.apt__name {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--text-sheet-name);
+  font-weight: var(--font-bold);
+  line-height: var(--line-height);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apt__title .badge {
+  flex-shrink: 0;
+}
+
+/* "← 치평동 목록". 목록에서 열었을 때만 (화면 설계서 7.4) */
+.apt__back {
+  height: var(--touch-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.apt__nav {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.apt__nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: var(--touch-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-sheet-arrow);
+  line-height: var(--line-height);
+  cursor: pointer;
+}
+
+.apt__nav-button:disabled {
+  color: var(--color-text-hint);
+  cursor: default;
+}
+
+.apt__nav-button--close {
+  font-size: var(--text-sheet-close);
+}
+
+/* 면적 고르기와 ㎡/평 전환 */
+.apt__areas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apt__area-list {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  /* 가로로 넘치면 밀어서 본다. 위아래 4px 여백은 누르는 영역(44)이 잘리지 않게 둔 자리다 */
+  margin: -4px 0;
+  padding: 4px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.apt__area-list::-webkit-scrollbar {
+  display: none;
+}
+
+.apt__area {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.apt__area[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-bold);
+}
+
+.apt__unit {
+  display: flex;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--color-bg-sub);
+}
+
+.apt__unit-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height);
+  cursor: pointer;
+}
+
+.apt__unit-option[aria-pressed="true"] {
+  background: var(--color-bg);
+  box-shadow: var(--shadow-segment);
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+}
+
+/* 누르는 영역을 44 이상으로 넓힌다. 보이는 크기는 그대로 둔다.
+   ㎡/평은 두 칸이 붙어 있어 가로는 바깥쪽으로만 넓힌다. */
+.apt__unit-option::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
+.apt__unit-option:first-child::after {
+  left: -7px;
+}
+
+.apt__unit-option:last-child::after {
+  right: -7px;
+}
+
+.apt__area::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+/* 탭 (80% 이상) */
+.apt__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.apt__tab {
+  position: relative;
+  flex: 1;
+  height: 47px;
+  padding: 0 0 3px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height);
+  cursor: pointer;
+}
+
+.apt__tab[aria-selected="true"] {
+  color: var(--color-primary);
+  font-weight: var(--font-bold);
+}
+
+.apt__tab[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+/* 30%: 평균가와 여유자금 */
+.apt__money {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 4px var(--page-padding) 0;
+}
+
+.apt__money-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.apt__money-item--end {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.apt__label {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: var(--line-height);
+  white-space: nowrap;
+}
+
+.apt__value {
+  margin: 0; /* 글자색은 body의 색. 여유·부족 금액은 common.css의 .amount--now 등이 구분 색을 준다 */
+  font-size: var(--text-title);
+  font-weight: var(--font-bold);
+  line-height: var(--line-height-sheet-value);
+  white-space: nowrap;
+}
+
+.apt__hint {
+  flex-shrink: 0;
+  margin: 14px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height);
+  text-align: center;
+}
+
+/* 80% 이상: 탭의 내용. 내용만 스크롤된다 */
+.apt__panels {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--page-padding) 24px;
+}
+
+/* 30%에는 탭이 없고, 80% 이상에는 평균가·여유자금 줄과 아래 안내가 없다 */
+.sheet[data-stage="30"] .apt__tabs,
+.sheet[data-stage="30"] .apt__panels,
+.sheet[data-stage="80"] .apt__money,
+.sheet[data-stage="80"] .apt__hint,
+.sheet[data-stage="full"] .apt__money,
+.sheet[data-stage="full"] .apt__hint {
+  display: none;
+}

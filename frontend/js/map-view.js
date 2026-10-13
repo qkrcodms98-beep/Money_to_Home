@@ -11,6 +11,17 @@
 //   - 보고 있는 지역(구, 동)은 store의 'map' 묶음에 둔다. 새로 고쳐도 그 지역으로 돌아온다.
 //   - 구·동 선택 창은 js/region.js(김해원)가 그린다.
 //
+// 아래 창 (P-06)
+//   - 단계는 sheet.js, 아파트 내용은 apartment.js, 목록은 list.js(김목산)가 맡는다.
+//       말풍선을 누름 → 아파트 30%      목록 보기 → 목록 80%      목록의 카드 → 아파트 80%
+//   - 목록은 A-05 응답을 받을 때마다 #apt-list에 다시 그린다 (renderList). 목록 보기는 창만 연다.
+//   - 창은 0.6초 동안 움직인다 (sheet.js, sheet.css). 열 때 올라오고, 닫을 때 내려가고, 단계를 바꿀 때 높이가 바뀐다.
+//     움직이는 동안 누른 아파트를 창 위 남을 자리의 가운데로 부드럽게 옮긴다.
+//     지도는 창이 커질 때는 다 움직인 뒤에 줄이고, 작아지거나 닫힐 때는 먼저 넓혀 창 뒤로 지도가 드러나게 한다.
+//     지도의 크기를 바꿀 때 지도의 그림이 튀지 않게 맞춘다.
+//     누른 아파트는 창을 뺀 남은 영역의 가운데에 둔다 (화면 설계서 7.1).
+//   - 창에 보이는 값은 지도가 받은 A-05 응답을 그대로 쓴다. 창을 열 때 서버를 다시 부르지 않는다.
+//
 // 지켜야 할 것 (CLAUDE.md, NFR-08, NFR-23)
 //   - 화면에서 주소를 좌표로 바꾸지 않는다. SDK에 services 라이브러리를 불러오지 않는다.
 //     좌표는 data/geocode.py가 DB에 넣은 값만 쓴다.
@@ -62,7 +73,7 @@ const CATEGORY_NAMES = { now: '지금 가능', within: '기간 내 가능', lack
 const TARGET_YEAR_TEXT = { 0: '지금', 3: '3년 뒤', 5: '5년 뒤', 10: '10년 뒤' };
 
 const mapState = {
-  data: null, // A-05 응답
+  data: null, // A-05 응답. 아래 창(목록, 아파트)도 이 응답을 그대로 쓴다
   regions: [], // A-02 응답의 regions
   region: null, // 보고 있는 지역 { gu, dong }. dong이 null이면 구 전체
   selectedId: null,
@@ -71,6 +82,7 @@ const mapState = {
   myLocation: null, // 내 위치 점 (kakao.maps.CustomOverlay). 저장하지 않는다
   toastTimer: null,
   wide: false, // 지금 동 표시를 그리고 있는가
+  mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
 };
 
 // ───────── 카카오맵 불러오기 ─────────
@@ -261,6 +273,14 @@ function renderCondition() {
   sentence.textContent = mapState.data ? conditionSentence(input.target_years, mapState.data.target_price) : '';
 }
 
+// 아래 창 30%의 기준 줄. "5년 뒤 기준", 목표 기간이 '지금'이면 "지금 기준".
+// 대출 없이 계산이면 "5년 뒤 기준 · 대출 없이" (와이어프레임 "P-06 아파트 30% (대출 없이)")
+function basisText() {
+  const input = store.get('input');
+  const when = TARGET_YEAR_TEXT[input.target_years] ?? `${input.target_years}년 뒤`;
+  return input.loan_choice === 'none' ? `${when} 기준 · 대출 없이` : `${when} 기준`;
+}
+
 // 지역 버튼의 글자. "서구 치평동", 구 전체면 "서구 전체"
 function renderRegionName() {
   const { gu, dong } = mapState.region;
@@ -308,7 +328,7 @@ function createMarkerElement(apartment, unit) {
   priceText.textContent = priceLabel;
 
   button.append(createMarkerShape(), areaText, priceText);
-  button.addEventListener('click', () => selectMarker(apartment.id));
+  button.addEventListener('click', () => openApartment(apartment));
   return button;
 }
 
@@ -418,13 +438,151 @@ function onZoomChanged() {
   renderMarkers();
 }
 
-// 말풍선을 누르면 1.2배로 커지고 다른 말풍선 위로 올라온다. 30% 창(P-06 ⑥)은 아래 창을 만들 때 붙인다.
+// 고른 말풍선은 1.2배로 커지고 다른 말풍선 위로 올라온다. id가 null이면 고른 것을 푼다.
+// 말풍선을 누르면 openApartment가 이것을 부르고 아래 창 30%(P-06 ⑥)를 연다.
 function selectMarker(id) {
   mapState.selectedId = id;
   document.querySelectorAll('#kakao-map .marker').forEach((el) => {
     el.classList.toggle('marker--selected', Number(el.dataset.id) === id);
   });
   mapState.markers.forEach((overlay) => overlay.setZIndex(overlay.apartmentId === id ? 3 : 2));
+}
+
+// ───────── 아래 창 ─────────
+
+// 지금 지도에 말풍선이 보이는 아파트인가. 좌표가 있고, 자금 부족 표시가 꺼져 있으면 자금 부족이 아닌 것.
+// .map--hide-lack이 숨기는 말풍선과 같은 기준이다 (말풍선의 구분 = apartment.category).
+const isOnMap = (apartment) =>
+  hasCoord(apartment) && (store.get('map').show_lack === true || apartment.category !== 'lack');
+
+// ‹ › 로 넘길 아파트. 지금 지도에 보이는 아파트를 목록의 기본 순서(A-05 응답의 순서)로 (FR-MAP-16).
+// 지금 보고 있는 아파트가 지도에 없으면(좌표 없음 등) 그 자리에 끼워 둔다. 그래야 앞뒤로 넘어갈 수 있다.
+const sheetOrder = (current) =>
+  mapState.data ? mapState.data.apartments.filter((apartment) => apartment === current || isOnMap(apartment)) : [];
+
+// 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구
+const listPlace = () => (mapState.region ? mapState.region.dong || mapState.region.gu : '');
+
+// 목록 (P-06 ⑤). 그리기는 김목산의 list.js. A-05 응답을 받을 때마다 부른다.
+function renderList() {
+  if (!mapState.data) return;
+  listView.render(document.getElementById('apt-list'), mapState.data, {
+    where: mapState.region,
+    onSelect: openApartmentFromList,
+    onClose: () => sheet.close(),
+  });
+}
+
+// 말풍선을 누름 → 아파트 30% (P-06 ⑥). 지도의 표시를 누르면 늘 30%로 연다 (화면 설계서 7.1).
+function openApartment(apartment) {
+  aptPanel.show(apartment, 0);
+  selectMarker(apartment.id);
+  sheet.show('30', 'apartment');
+}
+
+// 목록 보기 → 목록 80% (P-06 ⑤). 목록은 이미 그려 두었으므로 창만 연다.
+function openList() {
+  if (!mapState.data) return;
+  selectMarker(null);
+  sheet.show('80', 'list');
+}
+
+// 목록의 카드 → 아파트 80% (P-06 ⑦). 카드에서 보던 면적으로 연다.
+// 좌표가 없는 아파트는 창만 열고 지도는 그대로 둔다 (P-06 ⑱).
+function openApartmentFromList(apartment, areaIndex) {
+  aptPanel.show(apartment, areaIndex, { listPlace: listPlace() });
+  selectMarker(hasCoord(apartment) ? apartment.id : null);
+  sheet.show('80', 'apartment');
+}
+
+// "← 치평동 목록". 목록은 이미 그려 두었으므로 다시 그리지 않는다.
+function backToList() {
+  selectMarker(null);
+  sheet.show('80', 'list');
+}
+
+// ‹ › 로 다른 아파트로 넘어감. 말풍선을 고르고 가운데로 부드럽게 옮긴다.
+function moveToApartment(apartment) {
+  selectMarker(hasCoord(apartment) ? apartment.id : null);
+  centerSelected({ smooth: true });
+}
+
+// 고른 아파트 (좌표가 있을 때만). 없으면 null
+function selectedApartment() {
+  const { data, selectedId } = mapState;
+  if (!data || selectedId === null) return null;
+  const apartment = data.apartments.find((item) => item.id === selectedId);
+  return apartment && hasCoord(apartment) ? apartment : null;
+}
+
+// 고른 아파트를 지도의 가운데에 둔다. 옮겼으면 true. 전체 단계에서는 지도가 가려지므로 하지 않는다.
+function centerSelected({ smooth = false } = {}) {
+  const apartment = selectedApartment();
+  if (!mapState.map || !apartment || sheet.stage === 'full') return false;
+  if (smooth) mapState.map.panTo(toLatLng(apartment));
+  else mapState.map.setCenter(toLatLng(apartment));
+  return true;
+}
+
+// 창이 움직이는 동안(올라오기, 단계 바꾸기): 고른 아파트를 창이 다 움직인 뒤 남을 자리의 가운데로 부드럽게 옮긴다.
+// 이때 지도는 움직임 전후 가운데 넓은 쪽 크기라서, 그 자리가 지도 안에 있다 (sheet.js).
+// 전체 단계로 가면 지도가 가려지므로 옮기지 않는다.
+function panToRemaining() {
+  const { map } = mapState;
+  const apartment = selectedApartment();
+  if (!map || !apartment || sheet.stage === 'full') return;
+  const box = document.getElementById('kakao-map');
+  const areaHeight = document.querySelector('.map-area').clientHeight;
+  const targetY = (areaHeight - sheet.targetHeight()) / 2;
+  const point = map.getProjection().containerPointFromCoords(toLatLng(apartment));
+  map.panBy(point.x - box.clientWidth / 2, point.y - targetY);
+}
+
+// 지도의 크기가 바뀌었으면(sheet.css) 카카오맵에 알린다. 바뀌었으면 true.
+// 창이 다 움직였으면 고른 아파트를 가운데에 둔다 (이미 그 자리에 와 있어서 튀지 않는다).
+// 그 밖에는 지도의 그림이 화면에서 움직이지 않게 맞춘다.
+// (카카오맵은 크기가 바뀌면 가운데 좌표를 새 가운데로 옮긴다. 위쪽이 그대로 있도록 그만큼 되돌린다.)
+function fitMapToSheet() {
+  const { map } = mapState;
+  if (!map) return false;
+  const box = document.getElementById('kakao-map');
+  const before = mapState.mapHeight || box.clientHeight;
+  const after = box.clientHeight;
+  if (after === before) return false;
+  map.relayout();
+  mapState.mapHeight = after;
+  const settled = sheet.phase === 'open' && !sheet.moving;
+  if (!(settled && centerSelected())) {
+    const point = new kakao.maps.Point(box.clientWidth / 2, after / 2 + (after - before) / 2);
+    map.setCenter(map.getProjection().coordsFromContainerPoint(point));
+  }
+  renderScale();
+  return true;
+}
+
+// 아래 창의 상태가 바뀔 때 (sheet.js가 움직임의 처음과 끝에 부른다)
+//   지도의 크기가 바뀌었으면 맞추고, 움직이는 중이면 고른 아파트를 남을 자리의 가운데로 옮긴다.
+//   크기도 그대로이고 움직이지도 않으면(열린 채 다른 말풍선을 누름) 그 아파트로 부드럽게 옮긴다.
+//   닫기 시작하면 고른 말풍선을 푼다.
+function onSheetChange() {
+  if (sheet.phase === 'closed') return;
+  if (sheet.phase === 'closing') selectMarker(null);
+  const resized = fitMapToSheet();
+  if (sheet.moving) panToRemaining();
+  else if (!resized) centerSelected({ smooth: true });
+}
+
+// A-05를 새로 받은 뒤 열려 있는 아파트 창을 새 응답에 맞춘다.
+// 새 응답에 같은 아파트가 있으면 그것으로 바꿔 보여 주고, 없으면(다른 지역으로 옮김) 창을 닫는다.
+function syncApartmentSheet() {
+  if (sheet.mode !== 'apartment' || !aptPanel.apartment) return;
+  const same = mapState.data.apartments.find((item) => item.id === aptPanel.apartment.id);
+  if (!same) {
+    sheet.close();
+    return;
+  }
+  aptPanel.show(same, aptPanel.areaIndex, { listPlace: aptPanel.listPlace ? listPlace() : null });
+  selectMarker(hasCoord(same) ? same.id : null);
 }
 
 function renderUnitButton() {
@@ -451,6 +609,7 @@ function bindEvents() {
   document.getElementById('lack-switch').addEventListener('click', () => {
     store.set('map', { show_lack: store.get('map').show_lack !== true });
     renderLackSwitch();
+    aptPanel.render(); // ‹ › 로 넘길 아파트가 바뀐다
   });
 
   // ㎡/평 전환 (2차). 표시, 목록, 아파트 창에 함께 적용된다.
@@ -459,6 +618,7 @@ function bindEvents() {
     store.set('map', { area_unit: next });
     renderUnitButton();
     renderMarkers();
+    aptPanel.render();
   });
 
   // 범례 접고 펴기
@@ -513,10 +673,26 @@ function bindEvents() {
     else regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
   });
 
+  // 목록 보기 → 아래 창 80%에 목록 (P-06 ⑤)
+  document.getElementById('list-button').addEventListener('click', openList);
+
+  // 아래 창
+  sheet.onChange(onSheetChange);
+  aptPanel.init({
+    order: sheetOrder,
+    basis: basisText,
+    onMove: moveToApartment,
+    onBackToList: backToList,
+    onClose: () => sheet.close(),
+    onUnitChange: () => {
+      renderUnitButton();
+      renderMarkers();
+    },
+  });
+
   // 아직 만들지 않은 동작. 만들 때 여기에 붙인다.
   //   search-box     아파트 이름 검색, 2차 (P-05 ⑭)
   //   filter-chip    조건 창, 2차 (P-05 ②)
-  //   list-button    아래 창의 목록 80% (P-06 ⑤)
 }
 
 // ───────── 자료 ─────────
@@ -556,6 +732,9 @@ async function loadData() {
   }
   renderCondition();
   renderMarkers();
+  // 아래 창: 목록은 받은 응답으로 다시 그리고, 열려 있는 아파트 창은 새 응답에 맞춘다.
+  renderList();
+  syncApartmentSheet();
 }
 
 // 지도를 그 지역으로 옮긴다. 좌표가 없는 지역이면 옮기지 않는다.
@@ -623,6 +802,7 @@ async function startKakaoMap() {
     const key = await loadKakaoKey();
     await loadKakaoSdk(key);
     if (!mapState.map) mapState.map = createMap(regionCenter(mapState.region) || DEFAULT_CENTER);
+    mapState.mapHeight = document.getElementById('kakao-map').clientHeight;
   } catch (error) {
     console.error('[map]', error.message); // 키 값은 찍지 않는다
     setMapMessage(MSG.mapFail, { retry: true });
@@ -641,6 +821,7 @@ async function initMap() {
   renderUnitButton();
   renderLackSwitch();
   renderLegend();
+  sheet.init();
   bindEvents();
 
   // 구와 동의 목록 (A-02). 못 받아도 처음 지역으로 아파트는 받아 본다.
