@@ -12,7 +12,12 @@ DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)을 한�
   python data/load_trades.py data/collected
   python data/load_trades.py data/아파트_실거래가_정렬.csv
 
-  --dry-run   DB에 넣지 않고 읽은 결과의 건수만 보여 준다.
+  --dry-run      DB에 넣지 않고 읽은 결과의 건수만 보여 준다.
+  --end YYYYMM   평균을 낼 마지막 계약 연월. 빼면 실행한 달의 전월
+
+평균을 내는 기간
+  지난달까지 12개월의 거래로 평균을 낸다 (2026-10-13 회의). 화면에는 "최근 1년 실거래 평균"이라고 적는다.
+  예: 10월에 실행하면 전년 10월 1일 ~ 올해 9월 30일. 이 기간 밖의 거래도 trades에는 넣지만 평균에는 쓰지 않는다.
 
 바꾸는 규칙 (DB 설계서 3.4 ~ 3.6, 5.1)
   - 시군구 "전남광주통합특별시 서구 치평동"을 띄어쓰기로 나눠 둘째를 구, 셋째를 동으로 쓴다. 광주 5개 구만 넣는다.
@@ -30,7 +35,8 @@ DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)을 한�
 다시 실행하면
   - apartments: 있으면 고치고 없으면 넣는다. 좌표, 세대수, 이미 있는 단지 일련번호는 지우지 않는다.
   - trades: 파일에 든 구와 계약 연월의 거래를 모두 지우고 다시 넣는다 (FR-DATA-09).
-  - apartment_prices: DB의 거래 전체로 다시 계산해 고친다. 거래가 없어진 조합은 지운다. 공급면적은 건드리지 않는다.
+  - apartment_prices: DB의 거래 중 평균 기간에 든 것으로 다시 계산해 고친다. 그 기간에 거래가 없는 조합은 지운다.
+    공급면적은 건드리지 않는다.
   - 전체를 한 번에 저장한다. 중간에 오류가 나면 아무것도 바뀌지 않는다.
 """
 import argparse
@@ -38,7 +44,7 @@ import glob
 import os
 import sys
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -225,15 +231,24 @@ def check_overlap(trades):
 # ------------------------------------------------------------------
 # 3. 평균가 계산 (DB 설계서 3.6)
 # ------------------------------------------------------------------
-def build_prices(rows):
+def average_period(end_month):
+    """end_month(YYYYMM)까지 12개월의 (첫날, 마지막 날)."""
+    year, month = int(end_month[:4]), int(end_month[4:])
+    start_year, start_month = (year - 1, month + 1) if month < 12 else (year, 1)
+    last = month_range(end_month)[1] - timedelta(days=1)
+    return date(start_year, start_month, 1), last
+
+
+def build_prices(rows, period):
     """거래(apartment_id, exclusive_area, price, contract_date, is_canceled)로 면적대별 평균가를 만든다.
 
-    면적대는 전용면적의 소수점 아래를 버린 값. 해제된 거래는 뺀다. 평균의 원 미만은 반올림한다.
-    대표 전용면적은 그 면적대의 거래에 가장 많이 나온 값.
+    period(첫날, 마지막 날) 안의 거래만 쓴다. 면적대는 전용면적의 소수점 아래를 버린 값.
+    해제된 거래는 뺀다. 평균의 원 미만은 반올림한다. 대표 전용면적은 그 면적대의 거래에 가장 많이 나온 값.
     """
+    start, end = period
     groups = {}
     for apartment_id, area, price, contract_date, is_canceled in rows:
-        if is_canceled:
+        if is_canceled or not (start <= contract_date <= end):
             continue
         area = Decimal(area)
         groups.setdefault((apartment_id, int(area)), []).append((area, int(price), contract_date))
@@ -307,11 +322,11 @@ def save_trades(cur, trades, ids, gu_months):
     return deleted
 
 
-def save_prices(cur):
-    """DB의 거래 전체로 평균가를 다시 계산해 고친다. 거래가 없어진 조합은 지운다."""
+def save_prices(cur, period):
+    """DB의 거래 중 평균 기간에 든 것으로 평균가를 다시 계산해 고친다. 그 기간에 거래가 없는 조합은 지운다."""
     cur.execute("SELECT apartment_id, exclusive_area, price, contract_date, is_canceled FROM trades")
     rows = [(r["apartment_id"], r["exclusive_area"], r["price"], r["contract_date"], r["is_canceled"]) for r in cur.fetchall()]
-    prices = build_prices(rows)
+    prices = build_prices(rows, period)
     cur.executemany(
         """
         INSERT INTO apartment_prices
@@ -341,7 +356,14 @@ def main():
     ap = argparse.ArgumentParser(description="실거래 CSV를 DB에 넣는다")
     ap.add_argument("paths", nargs="+", help="CSV 파일이나 폴더")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--end", default=None, help="평균을 낼 마지막 계약 연월 YYYYMM. 빼면 실행한 달의 전월")
     args = ap.parse_args()
+
+    today = date.today()
+    end_month = args.end or (f"{today.year - 1}12" if today.month == 1 else f"{today.year}{today.month - 1:02d}")
+    if len(end_month) != 6 or not end_month.isdigit() or not 1 <= int(end_month[4:]) <= 12:
+        sys.exit("--end는 YYYYMM 모양으로 적어 주세요. 예: 202609")
+    period = average_period(end_month)
 
     files = find_files(args.paths)
     raw = pd.concat([read_trade_csv(f) for f in files], ignore_index=True)
@@ -358,12 +380,14 @@ def main():
     months = sorted({ym for _, ym in gu_months})
     print(f"넣을 거래 {len(trades):,}건 (해제 {canceled:,}건 포함), 계약 연월 {months[0]} ~ {months[-1]}")
     print(f"아파트 {len(apartments):,}곳 (단지 일련번호 있음 {with_code:,}곳)")
+    in_period = sum(1 for t in trades if period[0] <= t["contract_date"] <= period[1])
+    print(f"평균 기간 {period[0]} ~ {period[1]} (지난달까지 12개월), 이 기간의 거래 {in_period:,}건")
 
     if args.dry_run:
         index = {(a["gu"], a["dong"], a["jibun"], a["name"]): i for i, a in enumerate(apartments)}
         rows = [(index[(t["gu"], t["dong"], t["jibun"], t["name"])], t["exclusive_area"], t["price"],
                  t["contract_date"], t["is_canceled"]) for t in trades]
-        print(f"면적대별 평균가 {len(build_prices(rows)):,}줄 (이 파일의 거래만으로 계산)")
+        print(f"면적대별 평균가 {len(build_prices(rows, period)):,}줄 (이 파일의 거래만으로 계산)")
         print("--dry-run이라 DB에 넣지 않았습니다.")
         return
 
@@ -373,7 +397,7 @@ def main():
         with conn.cursor() as cur:
             ids = save_apartments(cur, apartments)
             deleted = save_trades(cur, trades, ids, gu_months)
-            price_count, stale = save_prices(cur)
+            price_count, stale = save_prices(cur, period)
         conn.commit()
     except Exception:
         conn.rollback()
