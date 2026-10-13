@@ -71,7 +71,7 @@
 
 ```
 ├─ docs/            프로젝트 문서, 와이어프레임 그림
-├─ db/              테이블 생성 스크립트, 대출 상품 예시 자료
+├─ db/              테이블 생성 스크립트, 대출 상품 자료
 ├─ backend/         FastAPI 서버
 │  ├─ main.py       앱을 만들고 API와 화면을 연결
 │  ├─ models/       DB의 표를 옮긴 클래스 (SQLAlchemy)
