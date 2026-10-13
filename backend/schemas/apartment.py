@@ -6,8 +6,9 @@
 """
 from typing import Literal
 
-from pydantic import BaseModel, StrictInt, field_validator
+from pydantic import BaseModel, StrictInt, field_validator, model_validator
 
+from backend.errors import MSG_INVALID, MSG_MISSING
 from backend.schemas.common import check_asset, check_monthly_saving, check_target_years
 
 Category = Literal["now", "within", "lack"]
@@ -69,21 +70,61 @@ class Conditions(BaseModel):
 # A-05 아파트 찾기
 # ------------------------------------------------------------------
 class Where(BaseModel):
-    """찾을 범위. 1차는 구와 동. dong을 빼면 구 전체. bounds와 keyword는 2차."""
+    """찾을 범위. 둘 중 하나만 보낸다 (bounds는 2차에 더한다).
 
-    gu: str
+    - { "gu": "서구", "dong": "치평동" } 구와 동. dong을 빼면 구 전체
+    - { "keyword": "호반" } 아파트 이름에 이 글자가 든 곳. 광주 5개 구 전체에서 찾는다 (FR-MAP-08)
+    """
+
+    gu: str | None = None
     dong: str | None = None
+    keyword: str | None = None
+
+    @field_validator("keyword")
+    @classmethod
+    def strip_keyword(cls, value: str | None) -> str | None:
+        # 앞뒤 빈칸은 뺀다. 빈칸만 있으면 거부한다
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError(MSG_INVALID)
+        return value
+
+    @model_validator(mode="after")
+    def check_one_kind(self):
+        if self.keyword is None and self.gu is None:
+            raise ValueError(MSG_MISSING)
+        if self.keyword is not None and (self.gu is not None or self.dong is not None):
+            raise ValueError(MSG_INVALID)  # 구·동과 이름을 함께 보내면 어느 쪽으로 찾을지 알 수 없다
+        return self
+
+
+MSG_FILTER_RANGE = "조건의 최소와 최대를 다시 확인해 주세요."
 
 
 class Filters(BaseModel):
-    """면적대(㎡), 평균가(원), 준공 연도의 최소와 최대. 2차에 쓴다. 1차는 받기만 한다."""
+    """면적대(㎡, 전용면적의 소수점 아래를 버린 값), 평균가(원), 준공 연도의 최소와 최대.
+    빼거나 null이면 그 조건이 없다. 최소와 최대는 그 값을 포함한다."""
 
-    area_min: int | None = None
-    area_max: int | None = None
-    price_min: int | None = None
-    price_max: int | None = None
-    built_year_min: int | None = None
-    built_year_max: int | None = None
+    area_min: StrictInt | None = None
+    area_max: StrictInt | None = None
+    price_min: StrictInt | None = None
+    price_max: StrictInt | None = None
+    built_year_min: StrictInt | None = None
+    built_year_max: StrictInt | None = None
+
+    @model_validator(mode="after")
+    def check_range(self):
+        # 최소가 최대보다 크면 거부한다 (명세서 5장, field는 filters)
+        for low, high in (
+            (self.area_min, self.area_max),
+            (self.price_min, self.price_max),
+            (self.built_year_min, self.built_year_max),
+        ):
+            if low is not None and high is not None and low > high:
+                raise ValueError(MSG_FILTER_RANGE)
+        return self
 
 
 class SearchIn(BaseModel):
@@ -91,8 +132,9 @@ class SearchIn(BaseModel):
 
     conditions: Conditions
     where: Where
-    filters: Filters | None = None  # 2차
-    sort: Literal["category", "price_asc", "price_desc"] = "category"  # 1차는 category로 고정
+    filters: Filters | None = None
+    # category: 구분순(기본). price_asc, price_desc: 첫째 면적(카드에 먼저 보이는 면적)의 평균가 순
+    sort: Literal["category", "price_asc", "price_desc"] = "category"
 
 
 class Area(BaseModel):
