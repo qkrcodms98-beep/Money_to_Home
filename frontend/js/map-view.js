@@ -28,6 +28,9 @@ const DEFAULT_CENTER = { latitude: 35.1600, longitude: 126.8514 };
 const DEFAULT_LEVEL = 4; // 카카오맵의 확대 수준. 숫자가 작을수록 가깝다.
 const DONG_LEVEL = 5; // 동 하나를 볼 때
 const GU_LEVEL = 7; // 구 전체를 볼 때
+// 이 수준부터(더 넓게 보면) 아파트 말풍선 대신 동마다 표시 하나를 그린다 (P-05 ③, FR-MAP-20).
+// 와이어프레임에 "미정"으로 남아 있던 값이다. 동 하나(5)는 말풍선, 구 전체(7)는 동 표시가 되게 6으로 정했다.
+const DONG_MARKER_LEVEL = 6;
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 const MIN_LEVEL = 1;
@@ -66,6 +69,7 @@ const mapState = {
   markers: [], // 아파트 말풍선 (kakao.maps.CustomOverlay)
   myLocation: null, // 내 위치 점 (kakao.maps.CustomOverlay). 저장하지 않는다
   toastTimer: null,
+  wide: false, // 지금 동 표시를 그리고 있는가
 };
 
 // ───────── 카카오맵 불러오기 ─────────
@@ -112,7 +116,10 @@ function createMap(center) {
   const map = new kakao.maps.Map(container, { center: toLatLng(center), level: DEFAULT_LEVEL });
   map.setMinLevel(MIN_LEVEL);
   map.setMaxLevel(MAX_LEVEL);
-  kakao.maps.event.addListener(map, 'zoom_changed', renderScale);
+  kakao.maps.event.addListener(map, 'zoom_changed', () => {
+    renderScale();
+    onZoomChanged();
+  });
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
     hideKakaoScale();
@@ -313,6 +320,11 @@ function renderMarkers() {
   const { map, data } = mapState;
   if (!map || !data) return;
   mapState.markers.forEach((overlay) => overlay.setMap(null));
+  mapState.wide = isWide();
+  if (mapState.wide) {
+    renderDongMarkers();
+    return;
+  }
 
   const unit = store.get('map').area_unit || 'm2';
   mapState.markers = data.apartments.filter(hasCoord).map((apartment) => {
@@ -330,6 +342,79 @@ function renderMarkers() {
     overlay.apartmentId = apartment.id;
     return overlay;
   });
+}
+
+// ───────── 넓게 볼 때: 동 표시 (P-05 ③) ─────────
+// 지도를 축소하면 말풍선이 서로 가려서, 동마다 표시 하나로 묶는다. "치평동 / 9곳"
+// 숫자는 그 동에서 목표할 수 있는 아파트 수(지금 가능 + 기간 내 가능)다. 0곳이면 점선 테두리로 그린다.
+
+const isWide = () => Boolean(mapState.map) && mapState.map.getLevel() >= DONG_MARKER_LEVEL;
+
+// 받은 아파트를 동으로 묶는다. [{ gu, dong, target, total, latitude, longitude }]
+function groupByDong() {
+  const groups = new Map();
+  for (const apartment of mapState.data.apartments) {
+    const key = `${apartment.gu} ${apartment.dong}`;
+    if (!groups.has(key)) groups.set(key, { gu: apartment.gu, dong: apartment.dong, target: 0, total: 0, points: [] });
+    const group = groups.get(key);
+    group.total += 1;
+    if (apartment.category !== 'lack') group.target += 1;
+    if (hasCoord(apartment)) group.points.push(apartment);
+  }
+  return [...groups.values()].map((group) => {
+    // 자리는 A-02가 준 그 동의 위치다. 없으면 받은 아파트 좌표의 평균으로 한다.
+    const center = regionCenter(group) || (group.points.length ? {
+      latitude: group.points.reduce((sum, a) => sum + a.latitude, 0) / group.points.length,
+      longitude: group.points.reduce((sum, a) => sum + a.longitude, 0) / group.points.length,
+    } : null);
+    return { ...group, ...center };
+  });
+}
+
+function createDongMarkerElement(group) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `dong-marker${group.target === 0 ? ' dong-marker--empty' : ''}`;
+  button.setAttribute('aria-label', `${group.dong}, 목표할 수 있는 아파트 ${group.target}곳`);
+  const name = document.createElement('span');
+  name.className = 'dong-marker__name';
+  name.textContent = group.dong;
+  const count = document.createElement('span');
+  count.className = 'dong-marker__count';
+  count.textContent = `${format.comma(group.target)}곳`;
+  button.append(name, count);
+  // 누르면 그 동으로 확대한다 (FR-MAP-21). 30% 창은 아래 창을 만들 때 붙인다.
+  button.addEventListener('click', () => moveToRegion({ gu: group.gu, dong: group.dong }));
+  return button;
+}
+
+function renderDongMarkers() {
+  mapState.markers = groupByDong().filter(hasCoord).map((group) => {
+    const overlay = new kakao.maps.CustomOverlay({
+      position: toLatLng(group),
+      content: createDongMarkerElement(group),
+      xAnchor: 0.5,
+      yAnchor: 0.5,
+      zIndex: 2,
+      clickable: true,
+    });
+    overlay.setMap(mapState.map);
+    return overlay;
+  });
+}
+
+// 확대 수준이 바뀌어 말풍선과 동 표시가 서로 바뀔 때 다시 그린다.
+// 동 하나를 보다가 넓게 보면 그 구 전체의 아파트를 받아 동 표시를 그린다. 지역 버튼도 "○○구 전체"로 바뀐다.
+function onZoomChanged() {
+  if (!mapState.data || isWide() === mapState.wide) return;
+  if (isWide() && mapState.region.dong !== null) {
+    mapState.region = { gu: mapState.region.gu, dong: null };
+    store.set('map', { ...mapState.region });
+    renderRegionName();
+    loadData();
+    return;
+  }
+  renderMarkers();
 }
 
 // 말풍선을 누르면 1.2배로 커지고 다른 말풍선 위로 올라온다. 30% 창(P-06 ⑥)은 아래 창을 만들 때 붙인다.
