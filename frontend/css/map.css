@@ -248,8 +248,8 @@
 
 /* 더 넓게 볼 때의 구 표시 (P-05 ⑪). 동 표시와 같은 모양이고 조금 크다. */
 .dong-marker--gu {
-  width: 84px;
-  height: 84px;
+  width: 70px;
+  height: 70px;
 }
 
 .dong-marker--gu .dong-marker__name {
