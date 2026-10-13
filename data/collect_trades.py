@@ -28,6 +28,7 @@
   <폴더>/<구코드>_<계약연월>.csv  구와 계약 연월 하나에 파일 하나. 다 받은 것만 저장한다.
                                   열 이름은 실거래가 공개시스템 CSV와 같고, 단지일련번호와 해제여부가 더 있다.
   <폴더>/failed.csv               실패한 구와 계약 연월, 이유 (FR-DATA-08)
+  <폴더>/collected_at.txt         마지막으로 받은 날. load_trades.py가 수집 기준일로 남긴다 (FR-DATA-05)
 
 규칙
   - 응답의 결과 코드가 정상이 아니거나, 받은 건수가 전체 건수와 다르면 저장하지 않는다 (FR-DATA-07, 08).
@@ -67,6 +68,7 @@ ROWS_PER_PAGE = 1000
 SLEEP_SECONDS = 0.2          # 호출 사이의 간격
 MAX_RETRY = 3
 DEFAULT_OUT = os.path.join("data", "collected")
+COLLECTED_AT = "collected_at.txt"  # 받은 날(YYYY-MM-DD). load_trades.py가 수집 기준일로 남긴다 (FR-DATA-05)
 
 # 저장할 열. 실거래가 공개시스템 CSV의 열 이름을 따른다 (DB 설계서 5.1).
 OUT_COLS = [
@@ -394,6 +396,10 @@ def main():
         time.sleep(SLEEP_SECONDS)
 
     print(f"\n저장 {saved}개 ({total_rows:,}건), 건너뜀 {skipped}개, 실패 {len(failed)}개. 폴더: {args.out}")
+    if saved:
+        with open(os.path.join(args.out, COLLECTED_AT), "w", encoding="utf-8") as f:
+            f.write(date.today().isoformat() + "\n")
+        print(f"받은 날 {date.today().isoformat()}을 {COLLECTED_AT}에 적었습니다.")
     if failed:
         with open(fail_path, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f)
