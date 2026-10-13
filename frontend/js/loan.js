@@ -83,11 +83,8 @@
     head.append(element('span', 'loan-card__dot'), element('span', 'loan-card__name', product.name));
 
     // 펼쳤을 때 (고르기 전, 또는 고른 카드)
-    // 높이가 부드럽게 바뀌도록 내용을 한 겹 더 싼다 (loan.css의 .loan-card__detail)
     const detail = element('span', 'loan-card__detail');
-    const detailInner = element('span', 'loan-card__detail-inner');
-    detail.append(detailInner);
-    detailInner.append(
+    detail.append(
       element('span', 'loan-card__institution', product.institution),
       element('span', 'loan-card__limit', `최대 ${format.won(product.max_limit)}`),
       element('span', 'loan-card__terms', `집값의 ${percent(product.ltv_ratio)}까지 · 연 ${rate(product.annual_rate_pct)}`),
@@ -102,7 +99,7 @@
       openSheet(product);
     });
     foot.append(element('span', 'loan-card__eligibility', `자격: ${product.eligibility_summary} · 기준일 ${product.base_date}`), more);
-    detailInner.append(foot);
+    detail.append(foot);
 
     // 접었을 때 (다른 선택지를 골랐을 때) 한 줄
     const line = element(
