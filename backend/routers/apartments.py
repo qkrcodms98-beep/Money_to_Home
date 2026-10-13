@@ -28,4 +28,5 @@ def list_regions(db: Session = Depends(get_db)):
 
 @router.post("/apartments/search", response_model=SearchOut)
 def search_apartments(body: SearchIn, db: Session = Depends(get_db)):
-    return apartment.search(db, body.conditions, body.where.gu, body.where.dong, body.filters, body.sort)
+    where = body.where
+    return apartment.search(db, body.conditions, where.gu, where.dong, body.filters, body.sort, where.keyword)

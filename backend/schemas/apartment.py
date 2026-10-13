@@ -8,6 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, StrictInt, field_validator, model_validator
 
+from backend.errors import MSG_INVALID, MSG_MISSING
 from backend.schemas.common import check_asset, check_monthly_saving, check_target_years
 
 Category = Literal["now", "within", "lack"]
@@ -69,10 +70,34 @@ class Conditions(BaseModel):
 # A-05 아파트 찾기
 # ------------------------------------------------------------------
 class Where(BaseModel):
-    """찾을 범위. 1차는 구와 동. dong을 빼면 구 전체. bounds와 keyword는 2차."""
+    """찾을 범위. 둘 중 하나만 보낸다 (bounds는 2차에 더한다).
 
-    gu: str
+    - { "gu": "서구", "dong": "치평동" } 구와 동. dong을 빼면 구 전체
+    - { "keyword": "호반" } 아파트 이름에 이 글자가 든 곳. 광주 5개 구 전체에서 찾는다 (FR-MAP-08)
+    """
+
+    gu: str | None = None
     dong: str | None = None
+    keyword: str | None = None
+
+    @field_validator("keyword")
+    @classmethod
+    def strip_keyword(cls, value: str | None) -> str | None:
+        # 앞뒤 빈칸은 뺀다. 빈칸만 있으면 거부한다
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError(MSG_INVALID)
+        return value
+
+    @model_validator(mode="after")
+    def check_one_kind(self):
+        if self.keyword is None and self.gu is None:
+            raise ValueError(MSG_MISSING)
+        if self.keyword is not None and (self.gu is not None or self.dong is not None):
+            raise ValueError(MSG_INVALID)  # 구·동과 이름을 함께 보내면 어느 쪽으로 찾을지 알 수 없다
+        return self
 
 
 MSG_FILTER_RANGE = "조건의 최소와 최대를 다시 확인해 주세요."

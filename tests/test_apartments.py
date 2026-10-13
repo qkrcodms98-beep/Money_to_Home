@@ -105,7 +105,7 @@ EXAMPLE = {
 
 
 def _search(client, where=None, filters=None, sort=None, **changes):
-    body = {"conditions": {**EXAMPLE, **changes}, "where": where or {"gu": "서구", "dong": "치평동"}}
+    body = {"conditions": {**EXAMPLE, **changes}, "where": {"gu": "서구", "dong": "치평동"} if where is None else where}
     if filters is not None:
         body["filters"] = filters
     if sort is not None:
@@ -312,3 +312,63 @@ def test_unknown_sort_is_rejected(client, chipyeong):
     res = _search(client, sort="name")
     assert res.status_code == 422
     assert res.json()["field"] == "sort"
+
+
+# ------------------------------------------------------------------
+# A-05 이름 검색 (where.keyword, 2차)
+# ------------------------------------------------------------------
+@pytest.fixture
+def named(db, chipyeong):
+    """치평동 다섯 곳과 광천동 한 곳에 더해, 북구에 이름이 비슷한 두 곳."""
+    hoban = _priced(21, "운암동", "호반가아파트", [(84, 250_000_000)])
+    hoban.gu = "북구"
+    percent = _priced(22, "운암동", "100%아파트", [(59, 120_000_000)])
+    percent.gu = "북구"
+    db.add_all([hoban, percent])
+    db.commit()
+
+
+def _keyword(client, keyword, **kw):
+    return _search(client, where={"keyword": keyword}, **kw)
+
+
+def test_keyword_searches_all_gu(client, named):
+    body = _keyword(client, "가아파트").json()
+    assert sorted((a["gu"], a["name"]) for a in body["apartments"]) == [("북구", "호반가아파트"), ("서구", "가아파트")]
+
+
+def test_keyword_strips_spaces_and_keeps_rules(client, named):
+    body = _keyword(client, "  아파트 ").json()
+    assert body["counts"]["total"] == 8  # 평균가가 없는 사아파트는 빠진다
+    order = [a["category"] for a in body["apartments"]]
+    assert order == sorted(order, key=["now", "within", "lack"].index)  # 구분순
+
+
+def test_keyword_percent_is_plain_text(client, named):
+    assert [a["id"] for a in _keyword(client, "%").json()["apartments"]] == [22]
+    assert _keyword(client, "_").json()["apartments"] == []
+
+
+def test_keyword_with_filters_and_sort(client, named):
+    ids = [a["id"] for a in _keyword(client, "아파트", filters={"area_max": 59}, sort="price_desc").json()["apartments"]]
+    assert ids == [12, 22]  # 59㎡만: 나 1.5억, 100% 1.2억
+
+
+def test_keyword_no_result_is_empty_list(client, named):
+    res = _keyword(client, "없는이름")
+    assert res.status_code == 200
+    assert res.json()["counts"] == {"now": 0, "within": 0, "lack": 0, "total": 0}
+
+
+@pytest.mark.parametrize("where, field, detail", [
+    ({"keyword": "   "}, "keyword", "입력한 값을 다시 확인해 주세요."),
+    ({"keyword": "호반", "gu": "서구"}, "where", "입력한 값을 다시 확인해 주세요."),
+    ({"keyword": "호반", "dong": "치평동"}, "where", "입력한 값을 다시 확인해 주세요."),
+    ({}, "where", "필요한 값이 빠졌습니다."),
+    ({"dong": "치평동"}, "where", "필요한 값이 빠졌습니다."),
+    ({"keyword": 3}, "keyword", "입력한 값을 다시 확인해 주세요."),
+])
+def test_invalid_where(client, named, where, field, detail):
+    res = _search(client, where=where)
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}

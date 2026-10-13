@@ -85,9 +85,12 @@ def _in_range(value, low, high) -> bool:
     return (low is None or value >= low) and (high is None or value <= high)
 
 
-def search(db: Session, conditions, gu: str, dong: str | None, filters=None, sort: str = "category") -> dict:
+def search(
+    db: Session, conditions, gu: str | None, dong: str | None, filters=None, sort: str = "category", keyword: str | None = None
+) -> dict:
     """A-05 아파트 찾기. 계산은 services/calc.py의 함수만 부른다 (NFR-13).
 
+    - 범위: keyword가 있으면 광주 5개 구 전체에서 이름에 그 글자가 든 아파트, 없으면 gu와 dong (dong이 없으면 구 전체).
     - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다.
     - filters: 면적대와 평균가는 면적마다, 준공 연도는 아파트마다 본다 (FR-APT-03, 09, 10).
       조건에 맞는 면적이 하나도 없는 아파트는 빠진다. 준공 연도 조건이 있으면 준공 연도를 모르는 아파트는 빠진다.
@@ -104,9 +107,14 @@ def search(db: Session, conditions, gu: str, dong: str | None, filters=None, sor
     own = calc.own_funds(current, calc.accumulated_saving(conditions.monthly_saving, years))
     target = calc.target_price(own, product)
 
-    query = select(Apartment).where(Apartment.gu == gu).options(selectinload(Apartment.prices))
-    if dong:
-        query = query.where(Apartment.dong == dong)
+    query = select(Apartment).options(selectinload(Apartment.prices))
+    if keyword is not None:
+        # %와 _도 글자 그대로 찾는다 (autoescape)
+        query = query.where(Apartment.name.contains(keyword, autoescape=True))
+    else:
+        query = query.where(Apartment.gu == gu)
+        if dong:
+            query = query.where(Apartment.dong == dong)
     if filters is not None and filters.built_year_min is not None:
         query = query.where(Apartment.built_year >= filters.built_year_min)
     if filters is not None and filters.built_year_max is not None:
