@@ -4,6 +4,7 @@
 // 지도 화면의 맨 처음에 guard.requireInput()을 부른다.
 
 const STEP_PAGES = { finance: 'profile.html', loan: 'loan.html', plan: 'plan.html' };
+const MAP_PAGE = 'map.html';
 
 const isEmpty = (value) => value === undefined || value === null;
 
@@ -21,6 +22,13 @@ const guard = {
     }
     if (isEmpty(input.monthly_saving) || isEmpty(input.target_years)) return 'plan';
     return null;
+  },
+
+  // 이어서 할 화면. 빠진 첫 단계의 화면이고, 다 넣었으면 지도다.
+  // 시작 화면의 "시작하기"가 쓴다. 이 탭에서 입력하던 값이 있으면 보던 자리로 간다 (FR-PROFILE-11).
+  resumePage() {
+    const step = guard.missingStep();
+    return step === null ? MAP_PAGE : STEP_PAGES[step];
   },
 
   // 빠진 단계가 있으면 그 화면으로 보내고 false를 돌려준다.
