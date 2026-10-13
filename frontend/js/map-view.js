@@ -6,9 +6,10 @@
 //     말풍선의 꼬리 끝이 아파트의 자리다. 좌표가 없는 아파트는 지도에 그리지 않는다 (FR-MAP-07, 목록에만 나온다).
 //   - 현재 위치 버튼, 확대·축소 버튼, 축척을 지도에 붙인다 (FR-MAP-24, 25, 26).
 //
-// 아직 하지 않는 일
-//   - 서버의 아파트 찾기(A-05, 김목산)가 아직 없다. 지금은 아래 PREVIEW_SEARCH(A-05 응답과 같은 모양의 예시)를 쓴다.
-//     A-05가 생기면 loadData()에서 api.post('/api/apartments/search', ...)로 바꾼다. 그리는 코드는 그대로 쓴다.
+// 자료
+//   - 아파트는 A-05(POST /api/apartments/search)에서, 구와 동의 목록과 위치는 A-02(GET /api/regions)에서 받는다.
+//   - 보고 있는 지역(구, 동)은 store의 'map' 묶음에 둔다. 새로 고쳐도 그 지역으로 돌아온다.
+//   - 구·동 선택 창은 js/region.js(김해원)가 그린다.
 //
 // 지켜야 할 것 (CLAUDE.md, NFR-08, NFR-23)
 //   - 화면에서 주소를 좌표로 바꾸지 않는다. SDK에 services 라이브러리를 불러오지 않는다.
@@ -16,51 +17,6 @@
 //   - 현재 위치는 브라우저 안에서 지도를 옮기는 데만 쓴다. 저장소(store)에 넣지 않고, 서버로 보내지 않는다.
 //   - 계산하지 않는다. 구분(now, within, lack)과 금액은 서버가 준 값을 보여 주기만 한다.
 //   - 서버나 DB에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
-
-// true인 동안은 내 조건 줄과 아파트를 아래 예시 값으로 그린다. 입력 확인(guard)도 하지 않는다.
-// A-05가 생기면 false로 바꾸고 loadData()를 채운다. 지도는 이 값과 상관없이 진짜 카카오맵이다.
-const PREVIEW = true;
-
-// 예시 입력. 내 조건 줄의 "5년 뒤"에 쓴다. 진짜 값은 store의 'input' 묶음에 있다.
-const PREVIEW_INPUT = { target_years: 5 };
-const PREVIEW_REGION = '서구 치평동';
-
-// A-05(아파트 찾기) 응답과 같은 모양의 예시 (API 명세서 3.2).
-//   진짜 값: 아파트 5곳의 이름, 구, 동, 위도, 경도. data/geocode.py --limit 5로 DB에 넣은 좌표다 (2026-10-13).
-//   예시 값: id, category, areas(면적, 평균가, 부족자금 등), counts, target_price. 목업의 숫자를 빌려 왔다.
-//            구분 색과 금액은 화면을 확인하려는 것이며, 서버가 계산한 값이 아니다.
-const PREVIEW_SEARCH = {
-  target_price: 366666666,
-  own_funds: 110000000,
-  counts: { now: 2, within: 1, lack: 2, total: 5 },
-  apartments: [
-    {
-      id: 1, name: '중도다이아빌', gu: '광산구', dong: '신촌동', latitude: 35.1501866, longitude: 126.807731,
-      category: 'now',
-      areas: [{ area_band: 59, exclusive_area: 59.9, supply_area: 82, avg_price: 150000000, category: 'now' }],
-    },
-    {
-      id: 2, name: '브라운스톤진월', gu: '남구', dong: '진월동', latitude: 35.1184864, longitude: 126.9011507,
-      category: 'within',
-      areas: [{ area_band: 84, exclusive_area: 84.9, supply_area: 111, avg_price: 300000000, category: 'within' }],
-    },
-    {
-      id: 3, name: '한국', gu: '동구', dong: '용산동', latitude: 35.1192921, longitude: 126.9329316,
-      category: 'now',
-      areas: [{ area_band: 49, exclusive_area: 49.8, supply_area: null, avg_price: 140000000, category: 'now' }],
-    },
-    {
-      id: 4, name: '교대금호어울림', gu: '북구', dong: '풍향동', latitude: 35.1643687, longitude: 126.9297573,
-      category: 'lack',
-      areas: [{ area_band: 84, exclusive_area: 84.9, supply_area: 112, avg_price: 450000000, category: 'lack' }],
-    },
-    {
-      id: 5, name: '금호쌍용', gu: '서구', dong: '치평동', latitude: 35.1506422, longitude: 126.8458227,
-      category: 'lack',
-      areas: [{ area_band: 114, exclusive_area: 114.9, supply_area: 148, avg_price: 600000000, category: 'lack' }],
-    },
-  ],
-};
 
 // ───────── 지도 설정 ─────────
 const KAKAO_SDK_URL = 'https://dapi.kakao.com/v2/maps/sdk.js';
@@ -70,6 +26,10 @@ const SDK_TIMEOUT_MS = 10000;
 // 처음 위치와 확대 수준은 명세서에 "정할 것"으로 남아 있다 (요구사항 8.3). 실제 지도를 보며 정한 뒤 고친다.
 const DEFAULT_CENTER = { latitude: 35.1600, longitude: 126.8514 };
 const DEFAULT_LEVEL = 4; // 카카오맵의 확대 수준. 숫자가 작을수록 가깝다.
+const DONG_LEVEL = 5; // 동 하나를 볼 때
+const GU_LEVEL = 7; // 구 전체를 볼 때
+// 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
+const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 const MIN_LEVEL = 1;
 const MAX_LEVEL = 9; // 광주 5개 구가 한 화면에 들어오는 정도
 
@@ -82,6 +42,7 @@ const GEO_OPTIONS = { enableHighAccuracy: false, timeout: 8000, maximumAge: 6000
 // 안내 문구. 앞의 셋은 와이어프레임의 문장 그대로다 (P-05 ⑰, ㉑, ⑪).
 const MSG = {
   mapFail: '지도를 불러오지 못했습니다. 목록으로 계속 볼 수 있습니다.',
+  dataFail: '아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', // 와이어프레임 P-04 ⑩의 문장
   geoDenied: '위치 권한이 꺼져 있어 현재 위치로 옮기지 못했습니다. 브라우저 설정에서 위치를 허용해 주세요.',
   geoOutside: '현재 위치가 광주 5개 구 밖입니다. 지도를 옮기지 않았습니다.',
   // 와이어프레임에 없는 경우(위치를 찾지 못함, 위치 기능이 없는 브라우저). 가장 가까운 문장을 따랐다.
@@ -98,6 +59,8 @@ const TARGET_YEAR_TEXT = { 0: '지금', 3: '3년 뒤', 5: '5년 뒤', 10: '10년
 
 const mapState = {
   data: null, // A-05 응답
+  regions: [], // A-02 응답의 regions
+  region: null, // 보고 있는 지역 { gu, dong }. dong이 null이면 구 전체
   selectedId: null,
   map: null, // kakao.maps.Map
   markers: [], // 아파트 말풍선 (kakao.maps.CustomOverlay)
@@ -285,11 +248,15 @@ function conditionSentence(targetYears, targetPrice) {
 
 // ───────── 그리기 ─────────
 function renderCondition() {
-  const input = PREVIEW ? PREVIEW_INPUT : store.get('input');
-  document.getElementById('condition-sentence').textContent =
-    conditionSentence(input.target_years, mapState.data.target_price);
-  // 구·동 이름은 지금은 예시다. 구·동 선택(P-05 ⑬)을 만들면 store의 'map' 묶음에서 읽는다.
-  if (PREVIEW) document.getElementById('region-name').textContent = PREVIEW_REGION;
+  const input = store.get('input');
+  const sentence = document.getElementById('condition-sentence');
+  sentence.textContent = mapState.data ? conditionSentence(input.target_years, mapState.data.target_price) : '';
+}
+
+// 지역 버튼의 글자. "서구 치평동", 구 전체면 "서구 전체"
+function renderRegionName() {
+  const { gu, dong } = mapState.region;
+  document.getElementById('region-name').textContent = dong ? `${gu} ${dong}` : `${gu} 전체`;
 }
 
 // 말풍선 B의 모양. Figma 부품 "말풍선 (아파트 표시)" 모양=B 단색의 벡터 경로(2034:40)를 그대로 옮겼다.
@@ -374,17 +341,6 @@ function selectMarker(id) {
   mapState.markers.forEach((overlay) => overlay.setZIndex(overlay.apartmentId === id ? 3 : 2));
 }
 
-// 예시 데이터로 볼 때만: 말풍선이 모두 보이게 지도를 맞춘다. 5곳이 광주 곳곳에 흩어져 있어서다.
-// 진짜 A-05를 붙이면 구·동 선택에 따라 지도를 옮기므로 이 함수는 쓰지 않는다.
-function fitToMarkers() {
-  const points = mapState.data.apartments.filter(hasCoord);
-  if (!points.length) return false;
-  const bounds = new kakao.maps.LatLngBounds();
-  points.forEach((apartment) => bounds.extend(toLatLng(apartment)));
-  mapState.map.setBounds(bounds, 120, 40, 140, 40); // 위, 오른쪽, 아래, 왼쪽 여백(px). 검색 줄과 범례를 피한다
-  return true;
-}
-
 function renderUnitButton() {
   const pyeong = store.get('map').area_unit === 'pyeong';
   document.getElementById('unit-main').textContent = pyeong ? '평' : '㎡';
@@ -464,56 +420,117 @@ function bindEvents() {
     if (!infoText.hidden && !infoText.contains(event.target)) setInfo(false);
   });
 
+  // 구·동 선택 (P-05 ⑬). 창은 js/region.js가 그린다.
+  document.getElementById('region-button').addEventListener('click', () => {
+    const sheet = document.getElementById('region-sheet');
+    if (regionPicker.isOpen()) regionPicker.close();
+    else regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
+  });
+
   // 아직 만들지 않은 동작. 만들 때 여기에 붙인다.
-  //   region-button  구·동 선택 (P-05 ⑬)
   //   search-box     아파트 이름 검색, 2차 (P-05 ⑭)
   //   filter-chip    조건 창, 2차 (P-05 ②)
   //   list-button    아래 창의 목록 80% (P-06 ⑤)
 }
 
-// ───────── 시작 ─────────
-async function loadData() {
-  if (PREVIEW) return PREVIEW_SEARCH;
-  // A-05가 생기면 아래처럼 부른다. 응답의 모양은 PREVIEW_SEARCH와 같다.
-  //   return api.post('/api/apartments/search', { conditions: guard.conditions(), where: { gu, dong } });
-  throw new Error('아직 서버와 연결하지 않았습니다.');
+// ───────── 자료 ─────────
+
+// 보관해 둔 지역. 없거나 목록에 없는 지역이면 처음 지역(없으면 목록의 첫 구)으로 한다.
+function restoreRegion() {
+  const saved = store.get('map');
+  const candidates = [{ gu: saved.gu, dong: saved.dong ?? null }, DEFAULT_REGION];
+  for (const { gu, dong } of candidates) {
+    const region = mapState.regions.find((item) => item.gu === gu);
+    if (!region) continue;
+    if (dong === null) return { gu, dong: null };
+    if (region.dongs.some((item) => item.dong === dong)) return { gu, dong };
+  }
+  const first = mapState.regions[0];
+  return first ? { gu: first.gu, dong: null } : { ...DEFAULT_REGION };
 }
 
-// 카카오맵을 띄우고, 현재 위치가 광주 5개 구 안이면 그리로 옮긴다.
+// 지역의 위치 (그 동이나 구의 아파트 좌표 평균, A-02). 좌표가 없으면 null
+function regionCenter({ gu, dong }) {
+  const region = mapState.regions.find((item) => item.gu === gu);
+  const place = (region && dong && region.dongs.find((item) => item.dong === dong)) || region;
+  return place && hasCoord(place) ? { latitude: place.latitude, longitude: place.longitude } : null;
+}
+
+// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보낸다. 1차에는 filters와 sort를 보내지 않는다.
+// 실패하면 앞의 자료를 그대로 두고 알린다.
+async function loadData() {
+  const { gu, dong } = mapState.region;
+  const where = dong ? { gu, dong } : { gu };
+  try {
+    mapState.data = await api.post('/api/apartments/search', { conditions: guard.conditions(), where });
+    mapState.selectedId = null;
+  } catch (error) {
+    // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
+    showToast(error.status === 422 ? error.detail : MSG.dataFail);
+  }
+  renderCondition();
+  renderMarkers();
+}
+
+// 지도를 그 지역으로 옮긴다. 좌표가 없는 지역이면 옮기지 않는다.
+function panToRegion() {
+  const center = regionCenter(mapState.region);
+  if (!mapState.map || !center) return;
+  mapState.map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
+  mapState.map.setCenter(toLatLng(center));
+}
+
+// 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
+async function moveToRegion({ gu, dong }) {
+  mapState.region = { gu, dong };
+  store.set('map', { gu, dong });
+  renderRegionName();
+  panToRegion();
+  await loadData();
+}
+
+// ───────── 시작 ─────────
+
+// 카카오맵을 띄우고 보고 있는 지역으로 옮긴다.
 // 실패하면 지도 자리에 안내와 "다시 시도"를 둔다 (P-05 ⑰). 목록을 전체 화면으로 바꾸는 것은 목록이 생긴 뒤에 한다.
 async function startKakaoMap() {
   setMapMessage('지도를 불러오는 중입니다.');
   try {
     const key = await loadKakaoKey();
     await loadKakaoSdk(key);
-    if (!mapState.map) mapState.map = createMap(DEFAULT_CENTER);
+    if (!mapState.map) mapState.map = createMap(regionCenter(mapState.region) || DEFAULT_CENTER);
   } catch (error) {
     console.error('[map]', error.message); // 키 값은 찍지 않는다
     setMapMessage(MSG.mapFail, { retry: true });
     return;
   }
   setMapMessage(null);
+  panToRegion();
   renderMarkers();
-  // 예시 데이터로 볼 때는 흩어진 5곳이 모두 보이게 맞추고 현재 위치로 옮기지 않는다.
-  if (PREVIEW && fitToMarkers()) {
-    renderScale();
-    return;
-  }
   renderScale();
-  moveToMyLocation({ quiet: true });
 }
 
 async function initMap() {
-  // 계산에 필요한 입력이 빠졌으면 그 단계로 보낸다 (FR-RESULT-10). 예시 값으로 볼 때는 건너뛴다.
-  if (!PREVIEW && !guard.requireInput()) return;
+  // 계산에 필요한 입력이 빠졌으면 그 단계로 보낸다 (FR-RESULT-10).
+  if (!guard.requireInput()) return;
 
-  mapState.data = await loadData();
-  renderCondition();
   renderUnitButton();
   renderLackSwitch();
   renderLegend();
   bindEvents();
+
+  // 구와 동의 목록 (A-02). 못 받아도 처음 지역으로 아파트는 받아 본다.
+  try {
+    mapState.regions = (await api.get('/api/regions')).regions;
+  } catch (error) {
+    mapState.regions = [];
+  }
+  mapState.region = restoreRegion();
+  renderRegionName();
+
+  // 지도와 아파트를 함께 받는다. 어느 쪽이 먼저 와도 말풍선이 그려진다.
   startKakaoMap();
+  loadData();
 }
 
 document.addEventListener('DOMContentLoaded', initMap);
