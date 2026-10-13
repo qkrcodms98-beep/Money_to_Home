@@ -4,11 +4,15 @@
 //   아파트명, 구분 배지, 이전·다음·닫기, 면적 고르기와 ㎡/평 전환,
 //   "최근 1년 실거래 평균 3억 원", "5년 뒤 기준 여유 2,000만 원"
 //   대출 없이 계산이면 기준 줄에 "· 대출 없이"를 붙인다 (와이어프레임 "P-06 아파트 30% (대출 없이)").
-// 80% 이상에는 탭(아파트 정보, 시나리오)이 보인다. 탭의 내용은 아직 없다.
-//   아파트 정보: 아파트 한 곳 API(A-06)를 붙일 때 이 파일이 채운다.
+// 80% 이상에는 탭(아파트 정보, 시나리오)이 보인다.
+//   아파트 정보 (P-06 ⑦): 아파트 한 곳 API(A-06, GET /api/apartments/{id})로 채운다.
+//     창이 80% 이상이고 아파트 정보 탭이 보일 때 처음 한 번 부른다. 받은 것은 아파트마다 기억해 두고 다시 부르지 않는다.
+//     1차의 여섯 줄: 지번 주소, 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래.
+//     세대수와 가격 범위는 2차, 로드뷰 자리는 3차라 아직 그리지 않는다 (와이어프레임 P-06 ⑦).
+//     값을 모르는 줄(도로명 주소, 준공 연도가 비어 있음)은 그리지 않는다.
 //   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
 //
-// 값은 모두 A-05 응답에 있다. 서버를 다시 부르지 않는다.
+// 30%의 값은 모두 A-05 응답에 있다. 30%에서는 서버를 다시 부르지 않는다.
 // 계산하지 않는다. 배지의 구분과 금액은 서버가 준 값이다 (NFR-13). 글자는 textContent로 넣는다.
 // 부족자금(shortage)이 0보다 크면 "부족", 아니면 그 절댓값이 "여유"다 (API 명세서 A-05, list.js와 같은 규칙).
 //
@@ -24,12 +28,17 @@
 //   aptPanel.show(apartment, areaIndex, { listPlace: '치평동' })   listPlace가 있으면 목록에서 연 것이다
 
 const APT_CATEGORY_NAMES = { now: '지금 가능', within: '기간 내 가능', lack: '자금 부족' };
+// 불러오지 못했을 때. 지도 화면의 문장과 같다 (와이어프레임 P-04 ⑩). 아래에 "다시 시도"를 둔다 (P-05 ⑰과 같은 모양)
+const APT_INFO_FAIL = '아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
 
 const aptPanel = {
   apartment: null,
   areaIndex: 0, // 고른 면적. areas는 평균가가 낮은 순이고 첫째가 처음에 골라져 있다 (FR-APT-05)
   listPlace: null,
   handlers: {},
+  details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
+  loading: new Set(), // 받는 중인 아파트 번호
+  failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
 
   init(handlers) {
     aptPanel.handlers = handlers;
@@ -49,8 +58,14 @@ const aptPanel = {
     });
 
     document.querySelectorAll('.apt__tab').forEach((tab) => {
-      tab.addEventListener('click', () => aptPanel.selectTab(tab.id));
+      tab.addEventListener('click', () => {
+        aptPanel.selectTab(tab.id);
+        aptPanel.renderInfo();
+      });
     });
+
+    // 창이 80% 이상으로 커지면 아파트 정보 탭이 보인다. 그때 처음 부른다.
+    sheet.onChange(() => aptPanel.renderInfo());
   },
 
   unit: () => (store.get('map').area_unit === 'pyeong' ? 'pyeong' : 'm2'),
@@ -135,5 +150,95 @@ const aptPanel = {
     const gap = document.getElementById('apt-gap');
     gap.className = `apt__value amount--${area.category}`;
     gap.textContent = area.shortage > 0 ? `부족 ${format.won(area.shortage)}` : `여유 ${format.won(-area.shortage)}`;
+
+    aptPanel.renderInfo();
+  },
+
+  // ───────── 아파트 정보 탭 (P-06 ⑦, A-06) ─────────
+
+  // 아파트 정보 탭이 지금 보이는가. 80% 이상이고, 아파트 창이고, 그 탭이 골라져 있을 때
+  infoVisible() {
+    return (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment' &&
+      (sheet.stage === '80' || sheet.stage === 'full') &&
+      document.getElementById('apt-tab-info').getAttribute('aria-selected') === 'true';
+  },
+
+  // 보일 때만 그린다. 받은 것이 없으면 받으러 간다.
+  renderInfo() {
+    const { apartment } = aptPanel;
+    if (!apartment || !aptPanel.infoVisible()) return;
+    const panel = document.getElementById('apartment-info');
+    const detail = aptPanel.details.get(apartment.id);
+    if (detail) {
+      panel.replaceChildren(aptPanel.infoRows(detail));
+      return;
+    }
+    if (aptPanel.failed.has(apartment.id)) {
+      panel.replaceChildren(aptPanel.infoFail(apartment.id));
+      return;
+    }
+    panel.replaceChildren(); // 받는 동안은 비워 둔다
+    aptPanel.loadDetail(apartment.id);
+  },
+
+  async loadDetail(id) {
+    if (aptPanel.loading.has(id)) return;
+    aptPanel.loading.add(id);
+    try {
+      aptPanel.details.set(id, await api.get(`/api/apartments/${id}`));
+    } catch (error) {
+      aptPanel.failed.add(id);
+    } finally {
+      aptPanel.loading.delete(id);
+    }
+    // 받는 동안 다른 아파트로 넘어갔으면 그 아파트를 그린다. 같은 아파트면 지금 받은 것으로 그린다
+    aptPanel.renderInfo();
+  },
+
+  // 정보 여섯 줄 (1차). 면적과 평균가와 거래 건수는 지금 고른 면적의 것이다.
+  infoRows(detail) {
+    const picked = aptPanel.apartment.areas[aptPanel.areaIndex];
+    const area = detail.areas.find((item) => item.area_band === picked.area_band) || picked;
+    const rows = [
+      ['지번 주소', `${detail.gu} ${detail.dong} ${detail.jibun}`],
+      ['도로명 주소', detail.road_address],
+      ['준공 연도', detail.built_year === null ? null : `${detail.built_year}년`],
+      ['면적', format.area(area.supply_area, area.exclusive_area, aptPanel.unit())],
+      ['실거래 평균가', format.won(area.avg_price)],
+      ['최근 1년 거래', `${format.comma(area.trade_count)}건`],
+    ];
+    const list = document.createElement('dl');
+    list.className = 'apt-info';
+    rows.filter(([, value]) => value !== null && value !== undefined && value !== '').forEach(([label, value]) => {
+      const row = document.createElement('div');
+      row.className = 'apt-info__row';
+      const term = document.createElement('dt');
+      term.className = 'apt-info__label';
+      term.textContent = label;
+      const desc = document.createElement('dd');
+      desc.className = 'apt-info__value';
+      desc.textContent = value;
+      row.append(term, desc);
+      list.append(row);
+    });
+    return list;
+  },
+
+  infoFail(id) {
+    const box = document.createElement('div');
+    box.className = 'apt-info__fail';
+    const text = document.createElement('p');
+    text.className = 'apt-info__fail-text';
+    text.textContent = APT_INFO_FAIL;
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'link-button';
+    retry.textContent = '다시 시도';
+    retry.addEventListener('click', () => {
+      aptPanel.failed.delete(id);
+      aptPanel.renderInfo();
+    });
+    box.append(text, retry);
+    return box;
   },
 };

@@ -493,7 +493,54 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 var(--page-padding) 24px;
+  padding: 8px var(--page-padding) 24px;
+}
+
+/* 아파트 정보 탭 (P-06 ⑦, 목업 2038:538). 이름은 왼쪽 회색, 값은 오른쪽 굵게. 줄마다 아래 선 */
+.apt-info {
+  margin: 0;
+}
+
+.apt-info__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: var(--text-body);
+  line-height: var(--line-height);
+}
+
+.apt-info__label {
+  flex-shrink: 0;
+  color: var(--color-text-sub);
+  white-space: nowrap;
+}
+
+.apt-info__value {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+  text-align: right;
+}
+
+/* 불러오지 못함. 지도의 불러오지 못함(P-05 ⑰)과 같은 모양 */
+.apt-info__fail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.apt-info__fail-text {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 20px;
 }
 
 /* 30%에는 탭이 없고, 80% 이상에는 평균가·여유자금 줄과 아래 안내가 없다 */
