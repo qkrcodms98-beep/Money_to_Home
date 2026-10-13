@@ -39,7 +39,7 @@
     income: { field: $('income-field'), input: $('income-input'), message: $('income-message'), read: $('income-read'), help: '세전 금액. 계산에는 쓰지 않습니다.', key: 'annual_income' },
     assets: { field: $('assets-field'), input: $('assets-input'), message: $('assets-message'), read: $('assets-read'), help: '예금, 적금처럼 집을 살 때 쓸 수 있는 돈', key: 'current_assets' },
   };
-  const rrn = { field: $('rrn-field'), front: $('rrn-front'), back: $('rrn-back'), message: $('rrn-message'), age: $('rrn-age'), help: '계산에는 쓰지 않고 화면에 표시만 합니다.' };
+  const rrn = { field: $('rrn-field'), front: $('rrn-front'), back: $('rrn-back'), message: $('rrn-message'), help: '계산에는 쓰지 않고 화면에 표시만 합니다.' };
   const ageField = $('age-field');
   const ageValue = $('age-value');
 
@@ -102,7 +102,6 @@
   function renderRrn() {
     const result = checkRrn(rrn.front.value, rrn.back.value);
     showMessage(rrn, result.error);
-    rrn.age.textContent = result.age !== null ? `만 ${result.age}세` : '';
     return result.age;
   }
 
@@ -130,11 +129,20 @@
     submit.disabled = !canGoOn();
   }
 
-  function goTo(next, focus) {
+  // 새로 나타나는 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 모양은 profile.css의 .field--enter
+  function slideIn(field) {
+    field.classList.remove('field--enter');
+    void field.offsetWidth; // 같은 입력란이 다시 나타날 때도 처음부터 움직이게 한다
+    field.classList.add('field--enter');
+  }
+
+  function goTo(next, focus, animate = true) {
     step = next;
     store.set('place', { profile_step: next });
     render();
-    if (focus) focus.focus();
+    const entering = { rrn: rrn.field, income: money.income.field, assets: money.assets.field }[next];
+    if (animate && entering) slideIn(entering);
+    if (focus) focus.focus({ preventScroll: true });
   }
 
   // ── 저장 ─────────────────────────────────────────────
@@ -233,7 +241,7 @@
     if (first === 'assets' && has(input.current_assets)) first = 'confirm';
 
     const focus = { rrn: rrn.front, income: money.income.input, assets: money.assets.input }[first];
-    goTo(first, focus);
+    goTo(first, focus, false); // 처음 열 때는 움직이지 않는다
   }
 
   start();

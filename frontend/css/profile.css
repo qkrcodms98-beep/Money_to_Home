@@ -10,6 +10,30 @@
 .profile .page {
   flex: 1;
   width: 100%;
+  overflow-x: clip; /* 밀려 들어오는 입력란 때문에 가로 스크롤이 생기지 않게 한다 */
+}
+
+/* 입력을 마치면 다음 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. */
+.field--enter {
+  animation: field-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes field-enter {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 움직임을 줄이도록 설정한 사용자에게는 바로 보여 준다. */
+@media (prefers-reduced-motion: reduce) {
+  .field--enter {
+    animation: none;
+  }
 }
 
 .profile .bottom-action {
