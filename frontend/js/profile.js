@@ -23,10 +23,10 @@
   };
 
   const TITLES = {
-    rrn: ['주민등록번호 앞 7자리를 알려 주세요', '만 나이를 계산하는 데만 쓰고 저장하지 않습니다.'],
+    rrn: ['주민등록번호 앞 7자리를\n알려 주세요', '만 나이를 계산하는 데만 쓰고 저장하지 않습니다.'],
     income: ['연 소득은 얼마인가요?', '만 원 단위로 입력합니다.'],
     assets: ['지금 가진 돈은 얼마인가요?', '만 원 단위로 입력합니다.'],
-    confirm: ['입력한 내용이 맞는지 확인해 주세요', '고칠 값을 누르면 바로 수정할 수 있습니다.'],
+    confirm: ['입력한 내용이 맞는지\n확인해 주세요', '고칠 값을 누르면 바로 수정할 수 있습니다.'],
   };
 
   const $ = (id) => document.getElementById(id);
@@ -255,6 +255,7 @@
 
     const focus = { rrn: rrn.front, income: money.income.input, assets: money.assets.input }[first];
     goTo(first, focus, false); // 처음 열 때는 움직이지 않는다
+    guard.showNotice();
   }
 
   start();

@@ -109,6 +109,7 @@
 - 모든 화면이 `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js`를 이 순서로 먼저 불러 쓴다 (`frontend/index.html` 참고).
 - 서버는 `api.get`, `api.post`, `api.put`으로만 부른다. `fetch`를 직접 쓰지 않는다.
 - 브라우저 저장소는 `store.get`, `store.set`으로만 읽고 쓴다. `sessionStorage`를 직접 쓰지 않는다.
+- **앞 단계가 빠졌으면 그 화면으로 보내고 한 줄로 알려 준다** (`js/guard.js`). 대출상품 화면은 맨 처음에 `if (!guard.requireStep('loan')) return;`, 지도 화면은 `if (!guard.requireInput()) return;`을 부른다. 입력 화면은 HTML에 `<p class="notice form-page__notice" id="step-notice" hidden></p>`를 두고, 다 그린 뒤 `guard.showNotice()`를 부른다. 넣은 값이 하나도 없으면 시작 화면으로 간다. 본보기는 `plan.html`과 `plan.js`다.
 - 금액과 면적은 `format.won`, `format.area`로 보여 준다.
 - 화면의 모양(색, 글자, 여백)은 [Figma 파일 "money-to-home-mockup"의 섹션 "확정 목업 v3"](https://www.figma.com/design/TSra3U9pIFYKxXvSNS4pu7/money-to-home-mockup?node-id=2034-2)을 따른다. 배치, 문구, 상태는 와이어프레임 설명서를 따른다. 둘이 다르면 목업을 따른다.
 - **모바일에는 헤더가 없다.** 서비스 이름(로고)도 두지 않는다. 지도 화면의 맨 위는 내 조건 줄(목표 가능 가격, 수정, 로그인)이고, 입력 화면은 위 52px을 흰 여백으로 둔다.

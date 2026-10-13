@@ -305,6 +305,16 @@ body {
   padding-bottom: 28px;
 }
 
+/* 제목의 줄을 나눌 곳은 제목 글에 줄바꿈 문자로 적는다 (profile.js의 TITLES). */
+.form-page__head .title {
+  white-space: pre-line;
+}
+
+/* 다른 화면에서 보내져 왔을 때의 한 줄 안내. 제목 아래, 입력란 위에 둔다. */
+.form-page__notice {
+  margin-bottom: 24px;
+}
+
 /* 입력을 마치면 다음 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 나타나는 요소에 이 이름을 붙인다. */
 .field--enter {
   animation: field-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -375,8 +385,10 @@ body {
   border-bottom: 1px solid var(--color-line);
 }
 
+/* 입력 중인 칸은 밑줄이 파랗고 두껍다. 높이가 바뀌지 않게 그림자로 1px을 더한다. */
 .field__row:focus-within {
   border-bottom-color: var(--color-primary);
+  box-shadow: 0 1px 0 var(--color-primary);
 }
 
 .field__input {

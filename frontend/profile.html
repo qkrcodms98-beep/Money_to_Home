@@ -29,6 +29,8 @@
         <h1 class="title" id="profile-title">주민등록번호 앞 7자리를 알려 주세요</h1>
         <p class="subtitle" id="profile-subtitle">만 나이를 계산하는 데만 쓰고 저장하지 않습니다.</p>
       </header>
+      <!-- 다른 화면에서 보내져 왔을 때의 안내. guard.showNotice()가 채운다. -->
+      <p class="notice form-page__notice" id="step-notice" role="status" hidden></p>
 
       <!-- 만 나이 (주민등록번호를 확인한 뒤에 보인다). 누르면 주민등록번호를 다시 입력한다. -->
       <button type="button" class="field field--button" id="age-field" hidden>
