@@ -104,7 +104,8 @@ Money_to_Home/
 │  │  └─ data_collection.py, saved_result.py
 │  ├─ schemas/                 요청과 응답의 모양, 값의 범위
 │  │  ├─ common.py             여러 API가 함께 쓰는 범위와 검사 함수
-│  │  ├─ loan.py               대출 상품
+│  │  ├─ apartment.py          구와 동, 아파트 찾기
+│  │  ├─ loan.py               대출 상품, 대출 계산
 │  │  ├─ plan.py               저축 계획 계산
 │  │  └─ profile.py            재무정보 저장
 │  ├─ routers/                 API
@@ -120,35 +121,44 @@ Money_to_Home/
 │     ├─ calc.py               계산 규칙 C-01 ~ C-13. 계산은 이 파일에만 둔다.
 │     ├─ loan_product.py       대출 상품을 읽는 함수
 │     ├─ profile.py            재무정보를 읽고 쓰는 함수
-│     └─ (기능마다 하나)        아파트 찾기, 아파트 한 곳 등
+│     ├─ apartment.py          구와 동의 목록, 아파트 찾기
+│     └─ (기능마다 하나)        아파트 한 곳 등
 ├─ frontend/                   화면
 │  ├─ index.html               P-01 시작
-│  ├─ profile.html             P-02 재무정보 (예정)
-│  ├─ loan.html                P-03 대출상품 (예정)
-│  ├─ plan.html                P-04 저축 계획 (예정)
-│  ├─ map.html                 P-05 지도, P-06 아래 창 (예정)
+│  ├─ profile.html             P-02 재무정보
+│  ├─ loan.html                P-03 대출상품
+│  ├─ plan.html                P-04 저축 계획
+│  ├─ map.html                 P-05 지도, P-06 아래 창 (아래 창은 예정)
 │  ├─ login.html               P-07 로그인 (2차, 예정)
 │  ├─ signup.html              P-08 회원가입 (2차, 예정)
 │  ├─ css/
-│  │  ├─ common.css            헤더, 버튼, 입력란, 색
-│  │  └─ (화면마다 하나)
+│  │  ├─ common.css            색, 버튼, 입력란, 한 번에 하나씩 묻는 틀
+│  │  ├─ index.css, profile.css, loan.css, plan.css, map.css   화면마다 하나
+│  │  └─ list.css, region.css  목록 카드, 구·동 선택 창
 │  └─ js/
 │     ├─ api.js                API를 부르는 공통 함수, 오류 처리
 │     ├─ store.js              브라우저 저장소 읽고 쓰기
 │     ├─ format.js             금액과 면적의 표기
 │     ├─ guard.js              입력이 빠졌으면 그 단계로 보내기
 │     ├─ layout.js             헤더 그리기
-│     └─ (화면마다 하나. 지도는 여러 개로 나눈다)
+│     ├─ index.js, profile.js, loan.js, plan.js   화면마다 하나
+│     ├─ map-view.js           지도, 말풍선, 넓게 볼 때의 동 표시
+│     ├─ region.js             구·동 선택 창
+│     ├─ list.js               목록 카드
+│     └─ (예정) sheet.js, apartment.js, scenario.js   아래 창, 아파트 정보 탭, 시나리오 탭
 ├─ tests/                      자동 테스트
 │  ├─ conftest.py              테스트 공통 준비. DB 없이 돌게 한다.
 │  ├─ test_app.py              서버의 틀, 오류 응답, 입력 검증
-│  └─ test_calc.py             계산 테스트
+│  ├─ test_calc.py             계산 테스트
+│  └─ test_profile.py, test_loan_products.py, test_loans.py, test_plans.py, test_apartments.py   API마다 하나
 ├─ data/                       실거래 자료와 수집·적재 스크립트
 │  ├─ (CSV 9개)                실거래가, 공급면적 대조, 요약
 │  ├─ collect_expos_area.py, build_supply_area.py    건축물대장으로 공급면적을 보완한다.
-│  ├─ load_trades.py           실거래 CSV를 정리해 DB에 넣는다. (예정)
-│  ├─ geocode.py               주소를 좌표로 바꾼다. (예정)
-│  ├─ collect_trades.py        실거래가 API로 받는다. (2차, 예정)
+│  ├─ collect_trades.py        실거래가 API로 지난달까지 12개월을 받아 data/collected에 둔다.
+│  ├─ load_trades.py           실거래 CSV를 정리해 DB에 넣고 면적대별 평균가를 만든다.
+│  ├─ load_supply_area.py      공급면적을 붙인다.
+│  ├─ geocode.py               주소를 카카오 API로 좌표로 바꾼다. --from-file로 파일의 좌표를 넣는다.
+│  ├─ geocoded.csv             변환을 마친 좌표 1,055곳. 팀이 나눠 쓴다.
 │  └─ load_households.py       세대수를 붙인다. (2차, 예정)
 ├─ db/
 │  ├─ schema.sql               표 만들기

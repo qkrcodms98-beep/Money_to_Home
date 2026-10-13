@@ -4,6 +4,7 @@
 
 | 파일 | 내용 | 쓴 때 |
 | --- | --- | --- |
+| [handoff_map.md](handoff_map.md) | 지도 화면에서 바뀐 것. 진짜 자료 연결, 구·동 선택, 넓게 볼 때의 동 표시, 아래 창을 만들 때 맞출 것 | 2026-10-13 |
 | [notice_sync_develop.md](notice_sync_develop.md) | 최신 내용 받기. 터미널 명령과 DB 다시 넣기, Claude 새 대화 | 2026-10-13 |
 | [notice_before_work.md](notice_before_work.md) | 작업 전에 읽을 것. 준비, SQLAlchemy로 DB 다루기, 각자 할 일 | 2026-10-13 |
 | [guide_moksan.md](guide_moksan.md) | 자료와 탐색. 구와 동 목록, 아파트 찾기, 목록 화면 | 2026-10-13 |

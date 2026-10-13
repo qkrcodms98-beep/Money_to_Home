@@ -101,13 +101,21 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-4. 서버를 켭니다.
+4. 실거래 자료와 좌표를 DB에 넣습니다. 외부 API를 부르지 않고 저장소에 든 파일에서 넣습니다.
+
+```
+python data/load_trades.py data/collected
+python data/load_supply_area.py
+python data/geocode.py --from-file data/geocoded.csv
+```
+
+5. 서버를 켭니다.
 
 ```
 uvicorn backend.main:app --reload --port 8000
 ```
 
-5. 브라우저에서 `http://localhost:8000`을 엽니다. API 목록은 `http://localhost:8000/docs`, 상태 확인은 `http://localhost:8000/api/health`입니다.
+6. 브라우저에서 `http://localhost:8000`을 엽니다. 주소에 `frontend`를 넣지 않습니다. API 목록은 `http://localhost:8000/docs`, 상태 확인은 `http://localhost:8000/api/health`입니다.
 6. 자동 테스트는 `pytest`로 돌립니다.
 
 ## 협업 규칙

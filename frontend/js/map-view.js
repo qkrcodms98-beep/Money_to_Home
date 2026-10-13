@@ -434,7 +434,7 @@ function renderUnitButton() {
 }
 
 function renderLackSwitch() {
-  const show = store.get('map').show_lack !== false; // 처음에는 켜 둔다
+  const show = store.get('map').show_lack === true; // 처음에는 꺼 둔다 (2026-10-13에 정함). 켜야 자금이 부족한 아파트가 보인다
   document.getElementById('lack-switch').setAttribute('aria-checked', String(show));
   document.getElementById('map').classList.toggle('map--hide-lack', !show);
 }
@@ -449,7 +449,7 @@ function renderLegend() {
 function bindEvents() {
   // 자금 부족 표시 끄고 켜기
   document.getElementById('lack-switch').addEventListener('click', () => {
-    store.set('map', { show_lack: store.get('map').show_lack === false });
+    store.set('map', { show_lack: store.get('map').show_lack !== true });
     renderLackSwitch();
   });
 
