@@ -70,9 +70,10 @@ def test_empty_db_gives_empty_list(client):
 # ------------------------------------------------------------------
 # A-05 아파트 찾기
 # ------------------------------------------------------------------
-def _priced(id, dong, name, bands, lat=None, lng=None):
+def _priced(id, dong, name, bands, lat=None, lng=None, built_year=None):
     """bands: [(면적대, 평균가), ...]"""
-    apt = models.Apartment(id=id, name=name, gu="서구", dong=dong, jibun=str(id), latitude=lat, longitude=lng)
+    apt = models.Apartment(id=id, name=name, gu="서구", dong=dong, jibun=str(id), latitude=lat, longitude=lng,
+                           built_year=built_year)
     for band, price in bands:
         apt.prices.append(models.ApartmentPrice(
             area_band=band, exclusive_area=f"{band}.9400", supply_area=f"{band + 27}.00", avg_price=price,
@@ -86,11 +87,11 @@ def _priced(id, dong, name, bands, lat=None, lng=None):
 def chipyeong(db, products):
     """서구 치평동. 예시 조건(보유 5,000만, 월 100만, 5년, 첫째 상품 30년)으로 구분이 정해져 있다."""
     db.add_all([
-        _priced(11, "치평동", "가아파트", [(114, 390_000_000), (84, 300_000_000)], "35.1490000", "126.8450000"),
-        _priced(12, "치평동", "나아파트", [(59, 150_000_000)]),  # 좌표 없음
-        _priced(13, "치평동", "다아파트", [(84, 450_000_000)], "35.1500000", "126.8500000"),
-        _priced(14, "치평동", "라아파트", [(84, 700_000_000)], "35.1510000", "126.8510000"),
-        _priced(15, "치평동", "마아파트", [(84, 360_000_000)], "35.1520000", "126.8520000"),
+        _priced(11, "치평동", "가아파트", [(114, 390_000_000), (84, 300_000_000)], "35.1490000", "126.8450000", 2005),
+        _priced(12, "치평동", "나아파트", [(59, 150_000_000)], built_year=1995),  # 좌표 없음
+        _priced(13, "치평동", "다아파트", [(84, 450_000_000)], "35.1500000", "126.8500000", 2015),
+        _priced(14, "치평동", "라아파트", [(84, 700_000_000)], "35.1510000", "126.8510000", 2020),
+        _priced(15, "치평동", "마아파트", [(84, 360_000_000)], "35.1520000", "126.8520000"),  # 준공 연도 모름
         _priced(16, "광천동", "바아파트", [(84, 200_000_000)]),
         _priced(17, "치평동", "사아파트", []),  # 평균가가 없다
     ])
@@ -103,8 +104,10 @@ EXAMPLE = {
 }
 
 
-def _search(client, where=None, **changes):
+def _search(client, where=None, filters=None, **changes):
     body = {"conditions": {**EXAMPLE, **changes}, "where": where or {"gu": "서구", "dong": "치평동"}}
+    if filters is not None:
+        body["filters"] = filters
     return client.post("/api/apartments/search", json=body)
 
 
@@ -206,3 +209,65 @@ def test_unknown_loan_choice_uses_spec_message(client, chipyeong):
     res = _search(client, loan_choice="maybe")
     assert res.status_code == 422
     assert res.json() == {"detail": "대출 상품과 상환 기간을 골라 주세요.", "field": "loan_choice"}
+
+
+# ------------------------------------------------------------------
+# A-05 조건 (filters, 2차)
+# ------------------------------------------------------------------
+def _ids(client, filters):
+    return [a["id"] for a in _search(client, filters=filters).json()["apartments"]]
+
+
+def test_empty_or_null_filters_change_nothing(client, chipyeong):
+    assert _ids(client, {}) == _ids(client, {"area_min": None, "price_max": None}) == [12, 15, 11, 13, 14]
+
+
+def test_area_filter_keeps_matching_areas_only(client, chipyeong):
+    body = _search(client, filters={"area_min": 100, "area_max": 114}).json()
+    assert [a["id"] for a in body["apartments"]] == [11]  # 114㎡가 있는 가아파트만
+    ga = body["apartments"][0]
+    assert [area["area_band"] for area in ga["areas"]] == [114]
+    assert ga["category"] == "lack"  # 남은 면적(3.9억)의 구분
+    assert body["counts"] == {"now": 0, "within": 0, "lack": 1, "total": 1}
+
+
+def test_area_filter_includes_both_ends(client, chipyeong):
+    assert _ids(client, {"area_min": 59, "area_max": 59}) == [12]
+
+
+def test_price_filter(client, chipyeong):
+    # 3억 ~ 4.5억: 마(3.6억), 가(3억, 3.9억), 다(4.5억). 나(1.5억)와 라(7억)는 빠진다
+    assert _ids(client, {"price_min": 300_000_000, "price_max": 450_000_000}) == [15, 11, 13]
+
+
+def test_built_year_filter_drops_unknown_year(client, chipyeong):
+    assert _ids(client, {"built_year_min": 2000, "built_year_max": 2015}) == [11, 13]  # 마는 준공 연도를 모른다
+    assert _ids(client, {"built_year_max": 2000}) == [12]
+
+
+def test_filters_together_can_give_empty_list(client, chipyeong):
+    res = _search(client, filters={"area_min": 59, "area_max": 59, "built_year_min": 2000})
+    assert res.status_code == 200
+    assert res.json()["counts"]["total"] == 0
+
+
+@pytest.mark.parametrize("filters", [
+    {"area_min": 85, "area_max": 84},
+    {"price_min": 300_000_001, "price_max": 300_000_000},
+    {"built_year_min": 2021, "built_year_max": 2020},
+])
+def test_min_greater_than_max_is_rejected(client, chipyeong, filters):
+    res = _search(client, filters=filters)
+    assert res.status_code == 422
+    assert res.json() == {"detail": "조건의 최소와 최대를 다시 확인해 주세요.", "field": "filters"}
+
+
+@pytest.mark.parametrize("filters, field, detail", [
+    ({"price_min": 1.5}, "price_min", "소수는 입력할 수 없습니다. 만 원 단위의 정수로 입력해 주세요."),
+    ({"area_max": "84"}, "area_max", "숫자만 입력할 수 있습니다."),
+    ({"built_year_min": True}, "built_year_min", "숫자만 입력할 수 있습니다."),
+])
+def test_filter_values_must_be_integers(client, chipyeong, filters, field, detail):
+    res = _search(client, filters=filters)
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}
