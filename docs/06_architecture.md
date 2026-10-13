@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 상태 | 초안 (v0.3). 팀장이 T-1 ~ T-6을 권장안으로 정했다 (2026-10-11). 프로젝트 골격을 만들면서 폴더 구조를 강사님의 예시에 맞추고 담당을 적었다 (2026-10-12). 발표는 팀장의 노트북에서 하기로 했다 (T-7, 2026-10-12). DB에 접근하는 방법은 SQL을 직접 쓰는 것으로 확정했다 (수업에서 SQLAlchemy를 배우지 않았다, 2026-10-13). |
+| 문서 상태 | 초안 (v0.3). 팀장이 T-1 ~ T-6을 권장안으로 정했다 (2026-10-11). 프로젝트 골격을 만들면서 폴더 구조를 강사님의 예시에 맞추고 담당을 적었다 (2026-10-12). 발표는 팀장의 노트북에서 하기로 했다 (T-7, 2026-10-12). 강사님의 수업 자료에 따라 DB를 SQLAlchemy로 다루기로 바꿨다 (T-2, 2026-10-13). |
 | 작성일 | 2026-10-11 |
 | 기준 문서 | `docs/02_requirements.md` (v1.10), `docs/03_ui_design.md` (v1.5), `docs/04_database_design.md` (v0.3), `docs/05_api_spec.md` (v0.2) |
 | 다루는 것 | 전체 구성, 기술 스택, 폴더 구조, 서버와 화면의 구조, 자료 준비, 설정, 로그인, 실행 방법, 검토 결과 |
@@ -75,7 +75,7 @@
 | 값 검사 | Pydantic (FastAPI에 들어 있다) | 요청의 모양과 범위 검사 | 확정 |
 | DB | MariaDB 11.4. 개발 도구는 HeidiSQL | 자료 보관 | 확정 |
 | 자료 처리 | Pandas | 수집 스크립트 | 확정 |
-| DB 접근 | PyMySQL로 SQL을 직접 쓴다. | 서버, 적재 스크립트 | 확정 (T-2) |
+| DB 접근 | SQLAlchemy 2. 접속은 PyMySQL이 한다. 수집·적재 스크립트만 SQL을 직접 쓴다. | 서버 | 확정 (T-2, 2026-10-13에 바꿈) |
 | 로그인 | 서명한 쿠키, bcrypt | 2차의 회원 기능 | 확정 (T-3) |
 | 테스트 | pytest | 계산 모듈의 자동 테스트 | 권장 |
 | 설정 | python-dotenv, `.env` | 키와 DB 접속 정보 | 권장 |
@@ -95,12 +95,13 @@ Money_to_Home/
 ├─ backend/                    서버
 │  ├─ main.py                  앱을 만들고 API와 화면 파일을 연결한다.
 │  ├─ config.py                .env의 값을 읽는다.
-│  ├─ database.py              DB 연결을 열고 닫는다.
+│  ├─ database.py              DB 엔진과 세션. 요청마다 세션을 내주고 닫는다.
 │  ├─ deps.py                  지금 사용자가 누구인지 알아내는 함수
 │  ├─ errors.py                오류 응답을 한 모양으로 바꾼다.
-│  ├─ models/                  DB의 표를 읽고 쓰는 함수. 표마다 파일 하나
-│  │  ├─ loan_product.py       loan_products 표
-│  │  └─ profile.py            profiles 표
+│  ├─ models/                  DB의 표를 옮긴 클래스 (SQLAlchemy). 표 하나에 파일 하나
+│  │  ├─ user.py, loan_product.py, profile.py
+│  │  ├─ apartment.py, trade.py, apartment_price.py
+│  │  └─ data_collection.py, saved_result.py
 │  ├─ schemas/                 요청과 응답의 모양, 값의 범위
 │  │  ├─ common.py             여러 API가 함께 쓰는 범위와 검사 함수
 │  │  ├─ loan.py               대출 상품
@@ -115,7 +116,10 @@ Money_to_Home/
 │  │  ├─ scenario.py           A-07 시나리오
 │  │  └─ auth.py               A-14 ~ A-18 회원 (2차, 예정)
 │  └─ services/
-│     └─ calc.py               계산 규칙 C-01 ~ C-13. 계산은 이 파일에만 둔다.
+│     ├─ calc.py               계산 규칙 C-01 ~ C-13. 계산은 이 파일에만 둔다.
+│     ├─ loan_product.py       대출 상품을 읽는 함수
+│     ├─ profile.py            재무정보를 읽고 쓰는 함수
+│     └─ (기능마다 하나)        아파트 찾기, 아파트 한 곳 등
 ├─ frontend/                   화면
 │  ├─ index.html               P-01 시작
 │  ├─ profile.html             P-02 재무정보 (예정)
@@ -157,19 +161,20 @@ Money_to_Home/
 └─ README.md
 ```
 
-`models`는 표를 클래스로 옮긴 것이 아니라 SQL을 담은 함수의 모음이다. SQL을 직접 쓰기로 했기 때문이다 (T-2).
+`models`는 DB의 표를 옮긴 클래스다 (SQLAlchemy). 표는 `db/schema.sql`로 만들고, 클래스는 이미 있는 표에 이름을 맞춰 적는다. DB를 읽고 쓰는 함수는 `services`에 둔다.
 
 ---
 
 ## 4. 서버의 구조
 
-### 4.1 세 층
+### 4.1 네 층
 
 | 층 | 파일 | 하는 일 | 규칙 |
 | --- | --- | --- | --- |
-| 받는 곳 | `routers/`, `schemas/` | 요청을 받고, 값을 검사하고, 응답을 만든다. | 계산식을 쓰지 않는다. 아래 두 층을 부르기만 한다. |
+| 받는 곳 | `routers/`, `schemas/` | 요청을 받고, 값을 검사하고, 응답을 만든다. | DB를 다루는 코드와 계산식을 쓰지 않는다. `services`를 부르기만 한다. |
+| 일하는 곳 | `services/` (계산 모듈 제외) | DB에서 읽고 쓴다. 규칙을 확인한다. | `select(...)`는 여기에만 쓴다. `commit`하지 않는다. |
 | 계산 | `services/calc.py` | 숫자를 받아 숫자를 돌려준다. | DB를 모른다. 요청도 모른다. 그래서 DB 없이 테스트할 수 있다. |
-| 자료 | `database.py`, `models/` | DB에서 읽고 쓴다. | SQL에 값을 직접 붙이지 않고 매개변수로 넘긴다. |
+| 자료 | `database.py`, `models/` | 표를 클래스로 옮겨 둔다. 세션을 내준다. | 표는 `db/schema.sql`로 만든다. 클래스는 그 표에 맞춘다. |
 
 ### 4.2 요청 하나가 지나가는 길
 
@@ -213,7 +218,7 @@ Money_to_Home/
 | 계산식은 한 곳에만 | `services/calc.py` 밖에 계산식을 쓰지 않는다. | NFR-13 |
 | 계산과 탐색은 요청의 값만 쓴다. | A-03 ~ A-07, A-12는 로그인 정보와 `profiles` 표를 읽지 않는다. | NFR-18 |
 | 요청 중에 외부 API를 부르지 않는다. | 서버 코드에 실거래가 API나 카카오 API 호출을 두지 않는다. | NFR-08 |
-| SQL에 값을 붙이지 않는다. | 매개변수로 넘긴다. | NFR-09 |
+| SQL에 값을 붙이지 않는다. | SQLAlchemy의 `select(...).where(...)`를 쓴다. 값이 매개변수로 넘어간다. | NFR-09 |
 | 오류는 한 모양으로 | `errors.py`에 공통 처리기를 하나 둔다. 검증 오류, 없는 자료, 서버 오류를 모두 `{"detail", "field"}`로 바꾼다. | NFR-19 |
 | 오류의 내부 정보를 내보내지 않는다. | 서버 오류의 문장은 고정한다. 자세한 내용은 서버의 기록에만 남긴다. | NFR-11 |
 
@@ -327,7 +332,7 @@ Money_to_Home/
 | 위험 | 막는 방법 | 근거 |
 | --- | --- | --- |
 | 키가 Git에 올라감 | `.env`를 `.gitignore`에 넣었다. 올리기 전에 올릴 파일에 키가 없는지 본다. | NFR-04 |
-| SQL에 나쁜 값이 섞임 | 매개변수로만 넘긴다. | NFR-09 |
+| SQL에 나쁜 값이 섞임 | SQLAlchemy로 다룬다. 값은 매개변수로만 넘어간다. | NFR-09 |
 | 화면에 나쁜 글자가 섞임 | 글자를 HTML로 해석하지 않는 방법으로 넣는다. | NFR-20 |
 | 오류로 내부 정보가 드러남 | 오류 문장을 고정한다. | NFR-11 |
 | 주민등록번호가 남음 | 화면에서만 쓰고 저장소, 서버, DB 어디에도 넣지 않는다. | NFR-25 |
@@ -360,10 +365,10 @@ uvicorn backend.main:app --reload --port 8000
 
 | 담당 | 화면 | 서버 | 그 밖 |
 | --- | --- | --- | --- |
-| 김해원 (팀장). 입력과 공통 | `index.html`, `profile.html`, `plan.html`, `common.css`, 공통 JavaScript 다섯 개 | `main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/profile.py`, `schemas/common.py`, `schemas/profile.py` | `requirements.txt`, `CLAUDE.md`, 문서, PR 검토와 통합 점검 |
-| 박채은. 대출과 계산 | `loan.html`, 시나리오 탭 (`scenario.js`) | `services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `models/loan_product.py`, `schemas/loan.py` | 대출 상품 조사, `db/seed_loan_products.sql`, `tests/test_calc.py` |
-| 김목산. 자료와 탐색 | 목록, 카드, 조건과 정렬 (`list.js`) | `routers/apartments.py`, 아파트와 거래의 `models`, `schemas` | `data/collect_trades.py`, `data/load_trades.py` |
-| 안세환. 지도와 아파트 창 | `map.html`, 지도, 아파트 표시, 아래 창, 아파트 정보 탭 | `routers/apartment_detail.py` | `data/geocode.py`, 카카오맵 |
+| 김해원 (팀장). 입력과 공통 | `index.html`, `profile.html`, `plan.html`, `common.css`, 공통 JavaScript 다섯 개 | `main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 여덟 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py` | `requirements.txt`, `CLAUDE.md`, 문서, PR 검토와 통합 점검 |
+| 박채은. 대출과 계산 | `loan.html`, 시나리오 탭 (`scenario.js`) | `services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `services/loan_product.py`, `schemas/loan.py` | 대출 상품 조사, `db/seed_loan_products.sql`, `tests/test_calc.py` |
+| 김목산. 자료와 탐색 | 목록, 카드, 조건과 정렬 (`list.js`) | `routers/apartments.py`, `services/apartment.py`, `schemas/apartment.py` | `data/collect_trades.py`, `data/load_trades.py` |
+| 안세환. 지도와 아파트 창 | `map.html`, 지도, 아파트 표시, 아래 창, 아파트 정보 탭 | `routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py` | `data/geocode.py`, 카카오맵 |
 
 - 자기 파일만 고친다. 남의 파일을 고쳐야 하면 담당에게 먼저 말한다.
 - `main.py`에는 새 router를 등록하는 한 줄만 더한다.
@@ -408,7 +413,7 @@ uvicorn backend.main:app --reload --port 8000
 
 | 번호 | 확인할 것 | 확인하는 때 |
 | --- | --- | --- |
-| 1 | PyMySQL로 MariaDB 11.4에 접속이 되는가 | 서버의 틀을 만들 때 |
+| 1 | SQLAlchemy와 PyMySQL로 MariaDB 11.4에 접속이 되는가 (확인함) | 서버의 틀을 만들 때 |
 | 2 | FastAPI가 화면 파일과 API를 한 주소로 낼 때 주소가 겹치지 않는가 | 서버의 틀을 만들 때 |
 | 3 | 쿠키의 수명이 요청마다 늘어나 "마지막 요청 뒤 30분"이 되는가 | 2차, 로그인을 만들 때 |
 | 4 | 카카오맵이 등록한 주소에서 뜨는가 | 지도 화면을 시작할 때 |
@@ -427,20 +432,20 @@ uvicorn backend.main:app --reload --port 8000
 | 번호 | 질문 | 결정 | 고른 이유 |
 | --- | --- | --- | --- |
 | T-1 | 화면 파일을 누가 내주는가 | FastAPI가 함께 낸다. | 주소가 하나라 출처 제한과 쿠키 설정이 필요 없다. 실행 명령도 하나다. |
-| T-2 | DB에 어떻게 접근하는가 | PyMySQL로 SQL을 직접 쓴다. | 표가 8개뿐이고, 표를 스크립트로 만들기로 했다. SQL이 그대로 보여 HeidiSQL에서 바로 시험할 수 있다. |
+| T-2 | DB에 어떻게 접근하는가 | SQLAlchemy로 다룬다. 접속은 PyMySQL이 한다. | 강사님의 수업 자료가 SQLAlchemy 모델을 요구한다. 수집·적재 스크립트는 한 번 돌리는 것이라 SQL을 그대로 둔다. |
 | T-3 | 로그인 상태를 어디에 두는가 | 서명한 쿠키 | 표와 정리 작업이 필요 없다. 명세서에 이미 "세션 서명 키"가 있다. |
 | T-4 | 지도 키를 화면에 어떻게 전달하는가 | API로 준다 (A-26). | HTML을 손대지 않아도 되고, 키가 Git에 올라갈 일이 없다. |
 | T-5 | 화면 파일을 어떻게 나누는가 | 화면마다 HTML 하나 | 담당별로 파일이 나뉘어 충돌이 적다. |
 | T-6 | 표를 만드는 스크립트의 자리 | `db/schema.sql`로 옮겼다. | 문서 폴더에는 문서만 둔다. |
 
-T-2는 확정이다. 수업에서 SQLAlchemy를 배우지 않았으므로 SQL을 직접 쓴다 (2026-10-13). `models/`에는 표를 옮긴 클래스가 아니라 SQL을 담은 함수를 둔다.
+T-2는 2026-10-13에 바꿨다. 강사님의 수업 자료(10월 13일, "SQLAlchemy Model 생성")에 따라 SQL을 직접 쓰던 것을 SQLAlchemy로 바꿨다. 표는 여전히 `db/schema.sql`로 만든다. T-3은 수업에서 정해 준 방법이 있으면 그것이 먼저다 (T-8).
 
 ### 11.2 남은 것
 
 | 번호 | 질문 | 선택지 | 비고 |
 | --- | --- | --- | --- |
 | T-7 | 발표할 때 어디서 돌리는가 | **정함 (2026-10-12): 발표자(팀장)의 노트북에서 돌린다.** | 지금 구조 그대로다. 주소는 `http://localhost:8000`이고 카카오에 등록한 주소와 같다. 발표 전에 그 노트북에서 DB를 채우고 처음부터 끝까지 한 번 돌려 본다. 지도와 글꼴은 인터넷이 있어야 한다. |
-| T-8 | 수업에서 정해 준 기술이 있는가 | 로그인 방법, DB 제품(MySQL인지 MariaDB인지) | **DB 접근 방법은 정했다 (2026-10-13): SQL을 직접 쓴다.** 수업에서 SQLAlchemy를 배우지 않았다. 로그인 방법은 2차에 회원 기능을 만들기 전에, DB 제품은 필요하면 확인한다. |
+| T-8 | 수업에서 정해 준 기술이 있는가 | 로그인 방법, DB 제품(MySQL인지 MariaDB인지) | **DB 접근 방법은 정했다 (2026-10-13): SQLAlchemy.** 로그인 방법은 2차에 회원 기능을 만들기 전에 확인한다. |
 
 ---
 
@@ -454,7 +459,7 @@ T-2는 확정이다. 수업에서 SQLAlchemy를 배우지 않았으므로 SQL을
 | NFR-04 | 키를 `.env`에 | 7장, `config.py` |
 | NFR-05 | 크롬 최신 버전 | 화면 전체 |
 | NFR-08 | DB에 저장된 자료로 제공 | 6장, 4.4 |
-| NFR-09 | SQL 매개변수 | `models/`, 4.4 |
+| NFR-09 | SQL 매개변수 | `services/`, 4.4 |
 | NFR-10 | 로그인하지 않은 요청 거부 | `deps.py`, 8.2 |
 | NFR-11 | 오류의 내부 정보를 숨김 | `main.py`의 공통 처리기 |
 | NFR-12 | 금액은 원 단위 정수 | `services/calc.py`, DB의 BIGINT, API의 금액 단위 |
