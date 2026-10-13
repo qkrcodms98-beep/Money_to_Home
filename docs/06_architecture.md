@@ -105,6 +105,7 @@ Money_to_Home/
 │  ├─ schemas/                 요청과 응답의 모양, 값의 범위
 │  │  ├─ common.py             여러 API가 함께 쓰는 범위와 검사 함수
 │  │  ├─ loan.py               대출 상품
+│  │  ├─ plan.py               저축 계획 계산
 │  │  └─ profile.py            재무정보 저장
 │  ├─ routers/                 API
 │  │  ├─ system.py             상태 확인, A-26 화면 설정
