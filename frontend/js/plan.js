@@ -31,12 +31,9 @@
     now: '지금 목표할 수 있는지만 구분합니다. 필요한 월 저축액은 표시하지 않습니다.',
   };
 
-  // 현재 보유자산이 있어야 계산할 수 있다. 없으면 재무정보 화면으로 보낸다.
+  // 재무정보나 대출 선택이 빠졌으면 그 화면으로 보낸다. 값이 하나도 없으면 시작 화면으로 간다.
+  if (!guard.requireStep('plan')) return;
   const currentAssets = store.get('input').current_assets;
-  if (currentAssets === undefined || currentAssets === null) {
-    location.replace('profile.html');
-    return;
-  }
 
   const $ = (id) => document.getElementById(id);
   const form = $('plan-form');
@@ -260,6 +257,7 @@
       if (saved) saved.checked = true;
     }
     goTo(has(input.monthly_saving) ? 'term' : 'saving', false);
+    guard.showNotice();
     calculate();
   }
 

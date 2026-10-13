@@ -255,6 +255,7 @@
 
     const focus = { rrn: rrn.front, income: money.income.input, assets: money.assets.input }[first];
     goTo(first, focus, false); // 처음 열 때는 움직이지 않는다
+    guard.showNotice();
   }
 
   start();

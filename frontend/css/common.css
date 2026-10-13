@@ -305,6 +305,11 @@ body {
   padding-bottom: 28px;
 }
 
+/* 다른 화면에서 보내져 왔을 때의 한 줄 안내. 제목 아래, 입력란 위에 둔다. */
+.form-page__notice {
+  margin-bottom: 24px;
+}
+
 /* 입력을 마치면 다음 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 나타나는 요소에 이 이름을 붙인다. */
 .field--enter {
   animation: field-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
