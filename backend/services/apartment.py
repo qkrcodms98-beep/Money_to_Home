@@ -80,12 +80,22 @@ def _product_for(db: Session, conditions) -> dict | None:
     return loan_product.for_calc(product)
 
 
-def search(db: Session, conditions, gu: str, dong: str | None) -> dict:
+def _in_range(value, low, high) -> bool:
+    """low ~ high 안에 있는지 (양 끝 포함). None인 쪽은 조건이 없다."""
+    return (low is None or value >= low) and (high is None or value <= high)
+
+
+def search(db: Session, conditions, gu: str, dong: str | None, filters=None, sort: str = "category") -> dict:
     """A-05 아파트 찾기. 계산은 services/calc.py의 함수만 부른다 (NFR-13).
 
     - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다.
-    - areas는 평균가가 낮은 순이고, 아파트의 구분은 첫째 면적의 구분이다.
-    - 순서: 지금 가능 → 기간 내 가능 → 자금 부족. 같은 구분 안에서는 평균가가 목표 가능 가격에 가까운 순.
+    - filters: 면적대와 평균가는 면적마다, 준공 연도는 아파트마다 본다 (FR-APT-03, 09, 10).
+      조건에 맞는 면적이 하나도 없는 아파트는 빠진다. 준공 연도 조건이 있으면 준공 연도를 모르는 아파트는 빠진다.
+    - areas는 조건에 맞는 면적만, 평균가가 낮은 순이고, 아파트의 구분은 첫째 면적의 구분이다.
+    - 순서 (sort)
+      category  : 지금 가능 → 기간 내 가능 → 자금 부족. 같은 구분 안에서는 평균가가 목표 가능 가격에 가까운 순.
+      price_asc : 첫째 면적의 평균가가 낮은 순. price_desc: 높은 순 (FR-APT-06, 와이어프레임 B2).
+      값이 같으면 아파트 번호 순이다. areas의 순서(평균가 낮은 순)는 sort와 상관없이 같다.
     - counts는 아파트 단위로 센다. 자금이 부족한 아파트도 항상 준다.
     """
     product = _product_for(db, conditions)
@@ -97,11 +107,20 @@ def search(db: Session, conditions, gu: str, dong: str | None) -> dict:
     query = select(Apartment).where(Apartment.gu == gu).options(selectinload(Apartment.prices))
     if dong:
         query = query.where(Apartment.dong == dong)
+    if filters is not None and filters.built_year_min is not None:
+        query = query.where(Apartment.built_year >= filters.built_year_min)
+    if filters is not None and filters.built_year_max is not None:
+        query = query.where(Apartment.built_year <= filters.built_year_max)
 
     items = []
     for apt in db.scalars(query).all():
         areas = []
         for price in sorted(apt.prices, key=lambda p: (p.avg_price, p.area_band)):
+            if filters is not None and not (
+                _in_range(price.area_band, filters.area_min, filters.area_max)
+                and _in_range(price.avg_price, filters.price_min, filters.price_max)
+            ):
+                continue
             loan = calc.loan_amount(price.avg_price, product)
             cap = product["max_house_price"] if product else None
             areas.append({
@@ -130,7 +149,12 @@ def search(db: Session, conditions, gu: str, dong: str | None) -> dict:
             "areas": areas,
         })
 
-    items.sort(key=lambda a: (CATEGORY_ORDER[a["category"]], abs(a["areas"][0]["avg_price"] - target), a["id"]))
+    if sort == "price_asc":
+        items.sort(key=lambda a: (a["areas"][0]["avg_price"], a["id"]))
+    elif sort == "price_desc":
+        items.sort(key=lambda a: (-a["areas"][0]["avg_price"], a["id"]))
+    else:
+        items.sort(key=lambda a: (CATEGORY_ORDER[a["category"]], abs(a["areas"][0]["avg_price"] - target), a["id"]))
     counts = {key: sum(1 for a in items if a["category"] == key) for key in CATEGORY_ORDER}
     counts["total"] = len(items)
     return {"target_price": target, "own_funds": own, "counts": counts, "apartments": items}
