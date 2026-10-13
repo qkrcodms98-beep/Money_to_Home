@@ -2,8 +2,11 @@
 
 - A-02 구와 동의 목록: RegionsOut
 - A-05 아파트 찾기: SearchIn, SearchOut
+- A-12 구별·동별 개수: SummaryIn, SummaryOut
+- A-13 수집 기준일: DataStatusOut
 - Conditions는 API 명세서 2.2의 조건 묶음이다. A-07(시나리오) 등도 같은 모양으로 받는다.
 """
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, StrictInt, field_validator, model_validator
@@ -176,3 +179,41 @@ class SearchOut(BaseModel):
     own_funds: int  # 목표 시점 자기자금 (C-03)
     counts: Counts  # 아파트 단위로 센다
     apartments: list[ApartmentItem]
+
+
+# ------------------------------------------------------------------
+# A-12 구별·동별 개수
+# ------------------------------------------------------------------
+class SummaryIn(BaseModel):
+    """A-12 요청"""
+
+    conditions: Conditions
+    level: Literal["gu", "dong"]  # gu: 구마다 하나, dong: 동마다 하나
+    gu: str | None = None  # level이 dong일 때 어느 구의 동을 볼지. 빼면 5개 구의 모든 동
+    filters: Filters | None = None  # A-05와 같다
+
+
+class RegionSummary(BaseModel):
+    gu: str
+    dong: str | None  # level이 gu면 null
+    latitude: float | None  # 그 지역 아파트 좌표의 평균 (A-02와 같다). 좌표가 없으면 null
+    longitude: float | None
+    target_count: int  # 목표할 수 있는 아파트 수. 지금 가능 + 기간 내 가능
+    counts: Counts  # 아파트 단위로 센다
+
+
+class SummaryOut(BaseModel):
+    """A-12 응답"""
+
+    target_price: int
+    level: Literal["gu", "dong"]
+    regions: list[RegionSummary]
+
+
+# A-13 수집 기준일
+# ------------------------------------------------------------------
+class DataStatusOut(BaseModel):
+    """A-13 응답. 날짜는 "2026-10-12" 모양. 남긴 기록이 없으면 null"""
+
+    trades_base_date: date | None  # 실거래를 받은 날
+    households_base_date: date | None  # 세대수 자료의 기준 시점. 아직 없어 null

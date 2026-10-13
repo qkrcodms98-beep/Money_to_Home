@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.schemas.apartment import RegionsOut, SearchIn, SearchOut
+from backend.schemas.apartment import DataStatusOut, RegionsOut, SearchIn, SearchOut, SummaryIn, SummaryOut
 from backend.services import apartment
 
 router = APIRouter(prefix="/api", tags=["아파트 탐색"])
@@ -30,3 +30,13 @@ def list_regions(db: Session = Depends(get_db)):
 def search_apartments(body: SearchIn, db: Session = Depends(get_db)):
     where = body.where
     return apartment.search(db, body.conditions, where.gu, where.dong, body.filters, body.sort, where.keyword)
+
+
+@router.post("/regions/summary", response_model=SummaryOut)
+def summarize_regions(body: SummaryIn, db: Session = Depends(get_db)):
+    return apartment.regions_summary(db, body.conditions, body.level, body.gu, body.filters)
+
+
+@router.get("/data-status", response_model=DataStatusOut)
+def get_data_status(db: Session = Depends(get_db)):
+    return apartment.data_status(db)
