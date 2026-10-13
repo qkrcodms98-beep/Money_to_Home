@@ -14,7 +14,7 @@
   --shadow-control: 0 2px 8px rgba(0, 0, 0, 0.16); /* 지도 버튼, 범례 */
   --shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.3); /* 목록 보기 */
   --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.22); /* 말풍선 B */
-  --color-dong: #5b3aa6; /* 넓게 볼 때의 동 표시. 조금 진한 보라 */
+  --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라 */
 
   /* 말풍선의 꼬리 끝(아파트의 자리)이 말풍선 왼쪽 위에서 떨어진 거리.
      꼬리(15 × 10)는 왼쪽에서 1px, 위에서 47px에 있고 끝은 그 가운데 아래다. */
@@ -212,8 +212,8 @@
   transition: transform 0.15s ease;
 }
 
-/* 넓게 볼 때의 동 표시 (P-05 ③). 동그라미 안에 "치평동 / 17곳". 가운데가 그 동의 자리다.
-   바탕은 조금 진한 보라의 절반 투명이다 (2026-10-13에 정함). 지도가 비쳐 보이고 글자는 흰색으로 또렷하게 둔다. */
+/* 넓게 볼 때의 동 표시 (P-05 ③). 동그라미 안에 동 이름과 큰 숫자. 가운데가 그 동의 자리다.
+   바탕은 연보라를 조금 비치게 칠한다 (2026-10-13에 정함). 글자는 흰색이다. */
 .dong-marker {
   display: flex;
   flex-direction: column;
@@ -224,7 +224,7 @@
   padding: 0;
   border: 1px solid var(--color-dong);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-dong) 50%, transparent);
+  background: color-mix(in srgb, var(--color-dong) 78%, transparent);
   color: var(--color-on-primary);
   font-family: inherit;
   white-space: nowrap;
@@ -241,15 +241,15 @@
 }
 
 .dong-marker__count {
-  font-size: var(--text-item);
+  font-size: var(--text-amount);
   font-weight: var(--font-bold);
-  line-height: 20px;
+  line-height: 24px;
 }
 
 /* 목표할 수 있는 곳이 없는 동은 점선 테두리에 더 옅은 바탕 */
 .dong-marker--empty {
   border-style: dashed;
-  background: color-mix(in srgb, var(--color-dong) 20%, transparent);
+  background: color-mix(in srgb, var(--color-dong) 28%, transparent);
   color: var(--color-dong);
 }
 

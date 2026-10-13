@@ -31,7 +31,7 @@ const GU_LEVEL = 7; // 구 전체를 볼 때
 // 이 수준부터(더 넓게 보면) 아파트 말풍선 대신 동마다 표시 하나를 그린다 (P-05 ③, FR-MAP-20).
 // 와이어프레임에 "미정"으로 남아 있던 값이다. 동 하나(5)는 말풍선, 구 전체(7)는 동 표시가 되게 6으로 정했다.
 const DONG_MARKER_LEVEL = 6;
-const ZOOM_MS = 900; // 동 표시를 눌렀을 때 그 동으로 확대되는 시간
+const ZOOM_MS = 600; // 동 표시를 눌렀을 때 그 동으로 확대되는 시간
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 const MIN_LEVEL = 1;
@@ -382,7 +382,7 @@ function createDongMarkerElement(group) {
   name.textContent = group.dong;
   const count = document.createElement('span');
   count.className = 'dong-marker__count';
-  count.textContent = `${format.comma(group.target)}곳`;
+  count.textContent = format.comma(group.target); // 숫자만 크게 적는다. "곳"은 읽어 주는 글(aria-label)에만 둔다
   button.append(name, count);
   // 누르면 그 동으로 확대한다 (FR-MAP-21). 30% 창은 아래 창을 만들 때 붙인다.
   button.addEventListener('click', () => zoomToDong({ gu: group.gu, dong: group.dong }));
@@ -576,7 +576,7 @@ async function moveToRegion({ gu, dong }) {
 }
 
 // 동 표시를 눌렀을 때: 그 동으로 천천히 확대한다 (FR-MAP-21).
-// 누른 동의 자리를 붙잡고 확대한 뒤, 그 자리가 화면 가운데로 오도록 부드럽게 옮긴다.
+// 그 동의 자리가 화면 가운데로 오면서 함께 확대된다. 옮기기와 확대를 따로 하지 않고 한 번에 한다.
 // 확대가 끝나면 zoom_changed가 말풍선으로 바꿔 그린다. 아파트는 확대하는 동안 받아 둔다.
 async function zoomToDong({ gu, dong }) {
   const center = regionCenter({ gu, dong });
@@ -588,9 +588,28 @@ async function zoomToDong({ gu, dong }) {
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
   renderRegionName();
+  const { map } = mapState;
   const target = toLatLng(center);
-  mapState.map.setLevel(DONG_LEVEL, { anchor: target, animate: { duration: ZOOM_MS } });
-  setTimeout(() => mapState.map.panTo(target), ZOOM_MS + 50);
+  const scale = 2 ** (map.getLevel() - DONG_LEVEL); // 확대되는 배율. 수준이 하나 내려가면 두 배다
+  if (scale <= 1) {
+    map.panTo(target); // 이미 가까이 보고 있으면 옮기기만 한다
+  } else {
+    // 카카오맵은 "한 점을 붙잡고 확대"만 할 수 있다. 그래서 붙잡을 점을 계산한다.
+    // 화면의 점 a를 붙잡고 scale배 확대하면, 화면의 점 p는 a + scale × (p − a)로 간다.
+    // 그 동(p)이 화면 가운데(c)로 가려면 a = (scale × p − c) ÷ (scale − 1)을 붙잡으면 된다.
+    const projection = map.getProjection();
+    const p = projection.containerPointFromCoords(target);
+    const box = document.getElementById('kakao-map');
+    const c = { x: box.clientWidth / 2, y: box.clientHeight / 2 };
+    const anchor = projection.coordsFromContainerPoint(
+      new kakao.maps.Point((scale * p.x - c.x) / (scale - 1), (scale * p.y - c.y) / (scale - 1)),
+    );
+    map.setLevel(DONG_LEVEL, { anchor, animate: { duration: ZOOM_MS } });
+    // 계산의 반올림으로 조금 어긋난 것을 끝난 뒤에 맞춘다.
+    setTimeout(() => {
+      if (mapState.region.gu === gu && mapState.region.dong === dong) map.panTo(target);
+    }, ZOOM_MS + 80);
+  }
   await loadData();
 }
 
