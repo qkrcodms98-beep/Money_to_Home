@@ -31,6 +31,7 @@ const GU_LEVEL = 7; // 구 전체를 볼 때
 // 이 수준부터(더 넓게 보면) 아파트 말풍선 대신 동마다 표시 하나를 그린다 (P-05 ③, FR-MAP-20).
 // 와이어프레임에 "미정"으로 남아 있던 값이다. 동 하나(5)는 말풍선, 구 전체(7)는 동 표시가 되게 6으로 정했다.
 const DONG_MARKER_LEVEL = 6;
+const ZOOM_MS = 900; // 동 표시를 눌렀을 때 그 동으로 확대되는 시간
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 const MIN_LEVEL = 1;
@@ -384,7 +385,7 @@ function createDongMarkerElement(group) {
   count.textContent = `${format.comma(group.target)}곳`;
   button.append(name, count);
   // 누르면 그 동으로 확대한다 (FR-MAP-21). 30% 창은 아래 창을 만들 때 붙인다.
-  button.addEventListener('click', () => moveToRegion({ gu: group.gu, dong: group.dong }));
+  button.addEventListener('click', () => zoomToDong({ gu: group.gu, dong: group.dong }));
   return button;
 }
 
@@ -571,6 +572,25 @@ async function moveToRegion({ gu, dong }) {
   store.set('map', { gu, dong });
   renderRegionName();
   panToRegion();
+  await loadData();
+}
+
+// 동 표시를 눌렀을 때: 그 동으로 천천히 확대한다 (FR-MAP-21).
+// 누른 동의 자리를 붙잡고 확대한 뒤, 그 자리가 화면 가운데로 오도록 부드럽게 옮긴다.
+// 확대가 끝나면 zoom_changed가 말풍선으로 바꿔 그린다. 아파트는 확대하는 동안 받아 둔다.
+async function zoomToDong({ gu, dong }) {
+  const center = regionCenter({ gu, dong });
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!center || still) {
+    await moveToRegion({ gu, dong }); // 자리를 모르거나 움직임을 줄이도록 설정했으면 바로 옮긴다
+    return;
+  }
+  mapState.region = { gu, dong };
+  store.set('map', { gu, dong });
+  renderRegionName();
+  const target = toLatLng(center);
+  mapState.map.setLevel(DONG_LEVEL, { anchor: target, animate: { duration: ZOOM_MS } });
+  setTimeout(() => mapState.map.panTo(target), ZOOM_MS + 50);
   await loadData();
 }
 
