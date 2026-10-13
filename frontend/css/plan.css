@@ -1,0 +1,124 @@
+/* P-04 저축 계획 화면에만 쓰는 모양. 입력란, 버튼, 진행 바, 한 번에 하나씩 묻는 틀(.form-page)은 common.css에 있다. */
+
+/* 목표 기간: 선택지 네 개를 한 줄에 나란히 둔다. */
+.term {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 22px;
+  border: 0;
+}
+
+.term .field__label {
+  padding: 0 0 10px;
+}
+
+.term__options {
+  display: flex;
+  gap: 8px;
+}
+
+.term__option {
+  flex: 1;
+  cursor: pointer;
+}
+
+/* 동그란 단추는 숨기고 글자 상자를 누르게 한다. 키보드로는 그대로 고를 수 있다. */
+.term__option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.term__option span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-size);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-item);
+  font-weight: var(--font-medium);
+}
+
+.term__option input:checked + span {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-bold);
+}
+
+.term__option input:focus-visible + span {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 결과 상자: 자기자금을 크게, 그 아래에 어떻게 나온 값인지 두 줄 */
+.result {
+  padding: 18px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
+}
+
+.result__label {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-label);
+  font-weight: var(--font-medium);
+}
+
+.result__amount {
+  margin: 2px 0 0;
+  font-size: var(--text-title);
+  font-weight: var(--font-bold);
+  line-height: 34px;
+}
+
+.result__rows {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+
+.result__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--text-label);
+  line-height: 24px;
+}
+
+.result__row dt {
+  color: var(--color-text-sub);
+}
+
+.result__row dd {
+  margin: 0;
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+}
+
+/* 계산식은 이름 아래 줄에 둔다. 한 줄에 두면 좁은 화면에서 중간에 끊긴다. */
+.result__formula {
+  display: block;
+  color: var(--color-text-hint);
+  line-height: 18px;
+  font-size: var(--text-help);
+}
+
+/* 결과 상자 아래의 작은 글씨 */
+.result-note {
+  margin: 10px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 19px;
+}
+
+/* 버튼이 꺼져 있는 이유. 버튼 바로 위에 둔다. */
+.bottom-action__hint {
+  margin: 0 0 10px;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  text-align: center;
+}

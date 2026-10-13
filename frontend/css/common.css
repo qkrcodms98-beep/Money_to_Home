@@ -281,6 +281,53 @@ body {
   background: var(--color-bg);
 }
 
+/* ───────── 한 번에 하나씩 묻는 입력 화면의 틀 (P-02 ~ P-04) ─────────
+   <form class="form-page"> 안에 <main class="page">와 <div class="bottom-action">을 둔다.
+   버튼이 화면 아래에 붙도록 본문이 남은 높이를 채운다. */
+.form-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--top-space) - var(--progress-height));
+}
+
+.form-page .page {
+  flex: 1;
+  width: 100%;
+  overflow-x: clip; /* 밀려 들어오는 입력란 때문에 가로 스크롤이 생기지 않게 한다 */
+}
+
+.form-page .bottom-action {
+  width: 100%;
+}
+
+/* 제목과 설명 */
+.form-page__head {
+  padding-bottom: 28px;
+}
+
+/* 입력을 마치면 다음 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 나타나는 요소에 이 이름을 붙인다. */
+.field--enter {
+  animation: field-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes field-enter {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 움직임을 줄이도록 설정한 사용자에게는 바로 보여 준다. */
+@media (prefers-reduced-motion: reduce) {
+  .field--enter {
+    animation: none;
+  }
+}
+
 /* ───────── 입력란 ─────────
    이름, 값(밑줄), 설명 줄의 세 줄이다. 오류 문구는 설명 줄 자리에 넣어 화면이 밀리지 않게 한다. */
 .field {

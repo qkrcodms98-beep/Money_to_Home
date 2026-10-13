@@ -129,7 +129,7 @@
     submit.disabled = !canGoOn();
   }
 
-  // 새로 나타나는 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 모양은 profile.css의 .field--enter
+  // 새로 나타나는 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 모양은 common.css의 .field--enter
   function slideIn(field) {
     field.classList.remove('field--enter');
     void field.offsetWidth; // 같은 입력란이 다시 나타날 때도 처음부터 움직이게 한다
