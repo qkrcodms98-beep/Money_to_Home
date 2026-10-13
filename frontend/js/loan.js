@@ -223,6 +223,15 @@
     });
   }
 
+  // 고른 카드가 있는 곳으로 화면을 부드럽게 옮긴다. 아래 카드를 고르면 내려가고, 위 카드를 고르면 올라간다.
+  // render() 뒤에 부른다. 카드가 접히고 펴진 뒤의 자리로 옮긴다. 움직임을 줄이도록 설정했으면 바로 옮긴다.
+  function scrollToPicked() {
+    const card = form.querySelector('.loan-card--picked');
+    if (!card) return;
+    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+  }
+
   // 상품을 고르거나 바꾸면 상환 기간 선택이 풀린다 (P-03 ④, FR-LOAN-11)
   function pickProduct(id, animate = true) {
     if (choice && choice.loan_choice === 'product' && choice.loan_product_id === id) return;
@@ -231,7 +240,10 @@
     renderYearsOptions(findProduct(id));
     remember();
     render();
-    if (animate) slideIn(yearsField);
+    if (animate) {
+      slideIn(yearsField);
+      scrollToPicked();
+    }
     calculate();
   }
 
@@ -243,15 +255,16 @@
     calculate();
   }
 
-  function pickNone() {
+  function pickNone(animate = true) {
     choice = { loan_choice: 'none', loan_product_id: null, repayment_years: null };
     calcFailed = false;
     errorBar.hidden = true;
     remember();
     render();
+    if (animate) scrollToPicked();
   }
 
-  noneRadio.addEventListener('change', pickNone);
+  noneRadio.addEventListener('change', () => pickNone());
 
   // ── 계산 ─────────────────────────────────────────────
 
@@ -367,7 +380,7 @@
   function restore() {
     const input = store.get('input');
     if (choice === null && input.loan_choice === 'none') {
-      pickNone();
+      pickNone(false); // 다시 들어왔을 때는 화면을 옮기지 않는다
       return;
     }
     if (choice === null && input.loan_choice === 'product') {

@@ -33,6 +33,11 @@
   cursor: pointer;
 }
 
+/* 고른 카드로 화면을 옮길 때 카드 위에 남기는 여백 (loan.js의 scrollToPicked) */
+.loan-card {
+  scroll-margin-top: 16px;
+}
+
 .loan-card input {
   position: absolute;
   opacity: 0;
