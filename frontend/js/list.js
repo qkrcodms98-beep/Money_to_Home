@@ -1,29 +1,39 @@
 // 목록 (P-06 ⑤ 목록 80%). 담당: 김목산
 //
 // 지도 화면에 묶이지 않는다. 그릴 요소를 받아 그 안에만 그린다.
-// map.html(안세환)은 고치지 않는다. 세환과 맞춘 자리는 id="apartment-list" 하나다.
+// map.html(안세환)은 고치지 않는다. 세환과 맞춘 자리는 id="apt-list" 하나다.
 //
-//   const el = document.getElementById('apartment-list');
+//   const el = document.getElementById('apt-list');
 //
 //   // A-05 응답으로 그리기만 한다. 지도가 이미 A-05를 불렀으면 그 응답을 넘긴다.
 //   listView.render(el, result);
 //   listView.render(el, result, {
 //     where: { gu: '서구', dong: '치평동' },        // 머리의 "서구 치평동 · 23곳"
+//     sort: 'category',                              // 지금 정렬. 머리의 "정렬: 구분순"
+//     onSort: (sort) => { ... },                     // 정렬을 고름. A-05를 sort로 다시 불러 그린다. 없으면 정렬 버튼이 없다
 //     onSelect: (apartment, areaIndex) => { ... },  // 카드를 누름. 80% 아파트 창을 연다 (세환)
 //     onClose: () => { ... },                        // 닫기
 //   });
 //
-//   // A-05를 불러 그리고, 받은 응답을 돌려준다.
+//   // A-05를 불러 그리고, 받은 응답을 돌려준다. 정렬은 store의 map.sort를 쓰고, 바꾸면 알아서 다시 부른다.
 //   const result = await listView.load(el, { gu: '서구', dong: '치평동' }, { onSelect, onClose });
 //
 // 숫자는 서버(A-05)가 준 것을 그대로 보여 준다. 여기서 계산하지 않는다 (NFR-13).
 // 서버에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
-// 정렬(가격순)과 면적 단위(평)는 2차라 아직 없다. 순서는 서버가 준 순서(구분순) 그대로다.
+// 순서는 서버가 준 순서 그대로다. 정렬은 서버(A-05의 sort)가 한다 (와이어프레임 B1, B2).
+// 면적 단위(평)는 아직 없다.
 
 const LIST_GROUPS = [
   { key: 'now', title: '지금 목표할 수 있는 곳', chip: '지금', badge: '지금 가능' },
   { key: 'within', title: '목표 기간 안에 가능한 곳', chip: '기간 내', badge: '기간 내 가능' },
   { key: 'lack', title: '자금이 부족한 곳', chip: '부족', badge: '자금 부족' },
+];
+
+// 정렬. 값은 A-05의 sort와 같다
+const LIST_SORTS = [
+  { key: 'category', label: '구분순' },
+  { key: 'price_asc', label: '가격 낮은 순' },
+  { key: 'price_desc', label: '가격 높은 순' },
 ];
 
 const LIST_TEXT = {
@@ -127,12 +137,64 @@ function listHead(result, options) {
   info.append(button, tip);
   head.append(info);
 
+  if (options.onSort) head.append(listSortMenu(options.sort || 'category', options.onSort));
+
   const close = listEl('button', 'list__close', '×');
   close.type = 'button';
   close.setAttribute('aria-label', '닫기');
   close.addEventListener('click', () => options.onClose && options.onClose());
   head.append(close);
   return head;
+}
+
+// "정렬: 구분순" 글자 버튼과 작은 선택 창 (B1). 고르면 창을 닫고 onSort(sort)를 부른다
+function listSortMenu(current, onSort) {
+  const wrap = listEl('div', 'list__sort');
+  const now = LIST_SORTS.find((s) => s.key === current) || LIST_SORTS[0];
+  const button = listEl('button', 'list__sort-button', `정렬: ${now.label}`);
+  button.type = 'button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+
+  const menu = listEl('ul', 'list__sort-menu');
+  menu.setAttribute('role', 'listbox');
+  menu.hidden = true;
+
+  const setOpen = (open) => {
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+  };
+  // 창 밖을 누르면 닫는다
+  const onOutside = (event) => {
+    if (!wrap.isConnected) document.removeEventListener('click', onOutside); // 목록을 다시 그렸으면 치운다
+    else if (!wrap.contains(event.target)) setOpen(false);
+  };
+  document.addEventListener('click', onOutside);
+  wrap.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      setOpen(false);
+      button.focus();
+    }
+  });
+
+  LIST_SORTS.forEach((s) => {
+    const item = listEl('li');
+    const option = listEl('button', 'list__sort-option', s.label);
+    option.type = 'button';
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', String(s.key === now.key));
+    if (s.key === now.key) option.append(listEl('span', 'list__sort-check', '✓'));
+    option.addEventListener('click', () => {
+      setOpen(false);
+      if (s.key !== now.key) onSort(s.key);
+    });
+    item.append(option);
+    menu.append(item);
+  });
+
+  button.addEventListener('click', () => setOpen(menu.hidden));
+  wrap.append(button, menu);
+  return wrap;
 }
 
 function listEmpty(title, help, buttonText, onButton) {
@@ -151,9 +213,14 @@ function listEmpty(title, help, buttonText, onButton) {
 const listView = {
   // A-05를 불러 그리고, 받은 결과를 돌려준다. 조건은 guard.conditions()가 만든다.
   async load(container, where, handlers = {}) {
+    const sort = store.get('map').sort || 'category';
+    const onSort = (next) => {
+      store.set('map', { sort: next });
+      listView.load(container, where, handlers).catch(() => {}); // 실패하면 load가 오류 문구를 그린다
+    };
     try {
-      const result = await api.post('/api/apartments/search', { conditions: guard.conditions(), where });
-      listView.render(container, result, { ...handlers, where });
+      const result = await api.post('/api/apartments/search', { conditions: guard.conditions(), where, sort });
+      listView.render(container, result, { ...handlers, where, sort, onSort });
       return result;
     } catch (error) {
       container.replaceChildren(listEl('p', 'notice notice--error', error.detail));
@@ -161,7 +228,7 @@ const listView = {
     }
   },
 
-  // A-05 응답으로 목록을 그린다. options: { where, onSelect, onClose } (모두 없어도 된다)
+  // A-05 응답으로 목록을 그린다. options: { where, sort, onSort, onSelect, onClose } (모두 없어도 된다)
   render(container, result, options = {}) {
     const root = listEl('section', 'list');
     root.append(listHead(result, options));
@@ -181,6 +248,15 @@ const listView = {
     if (result.counts.now === 0 && result.counts.within === 0) {
       root.append(listEmpty(LIST_TEXT.noTargetTitle, LIST_TEXT.noTargetHelp, LIST_TEXT.noTargetButton,
         () => { location.href = 'plan.html'; }));
+    }
+
+    // 가격순이면 구분별 제목 없이 서버가 준 순서로 잇는다. 구분은 카드의 배지로만 보인다 (B2)
+    if (options.sort === 'price_asc' || options.sort === 'price_desc') {
+      const section = listEl('div', 'list__group');
+      result.apartments.forEach((a) => section.append(listCard(a, options)));
+      root.append(section);
+      container.replaceChildren(root);
+      return;
     }
 
     LIST_GROUPS.forEach((g) => {
