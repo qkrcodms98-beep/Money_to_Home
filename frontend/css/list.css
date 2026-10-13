@@ -19,14 +19,30 @@
 }
 
 .list__title {
+  /* 한 줄로 둔다. 자리가 모자라면 지역 이름이 말줄임(…)되고 "· 22곳"은 남는다 */
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
   margin: 0;
   font-size: var(--text-button);
   font-weight: var(--font-bold);
+  white-space: nowrap;
+}
+
+.list__place {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list__count {
+  flex-shrink: 0;
 }
 
 .list__info-wrap {
   position: relative;
   display: inline-flex;
+  flex-shrink: 0;
 }
 
 .list__info {
@@ -73,7 +89,77 @@
   display: block;
 }
 
+.list__sort + .list__close {
+  margin-left: 0;
+}
+
+/* 정렬: 테두리 없이 글자만 있는 버튼과 작은 선택 창 (B1) */
+.list__sort {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.list__sort-button {
+  min-height: var(--touch-size);
+  white-space: nowrap;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+
+/* 버튼 글자 뒤의 작은 ▾ */
+.list__sort-button::after {
+  content: ' ▾';
+  font-size: var(--text-badge);
+}
+
+.list__sort-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  min-width: 150px;
+  margin: 0;
+  padding: 4px 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-dim) 12%, transparent);
+  list-style: none;
+}
+
+.list__sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--touch-size);
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.list__sort-option[aria-selected='true'] {
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+}
+
+.list__sort-check {
+  color: var(--color-primary);
+}
+
 .list__close {
+  flex-shrink: 0;
   width: var(--touch-size);
   height: var(--touch-size);
   margin-left: auto;
@@ -180,6 +266,7 @@
 
 .list-card__gap {
   font-weight: var(--font-bold);
+  white-space: nowrap; /* "부족 1억 8,000만 원"이 중간에서 끊기지 않고 통째로 넘어간다 */
 }
 
 .list-card__gap--now {
