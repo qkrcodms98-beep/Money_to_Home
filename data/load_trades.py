@@ -13,11 +13,14 @@ DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)을 한�
   python data/load_trades.py data/아파트_실거래가_정렬.csv
 
   --dry-run      DB에 넣지 않고 읽은 결과의 건수만 보여 준다.
-  --end YYYYMM   평균을 낼 마지막 계약 연월. 빼면 실행한 달의 전월
+  --end YYYYMM   평균을 낼 마지막 계약 연월. 빼면 읽은 파일의 마지막 계약 연월
 
-평균을 내는 기간
-  지난달까지 12개월의 거래로 평균을 낸다 (2026-10-13 회의). 화면에는 "최근 1년 실거래 평균"이라고 적는다.
-  예: 10월에 실행하면 전년 10월 1일 ~ 올해 9월 30일. 이 기간 밖의 거래도 trades에는 넣지만 평균에는 쓰지 않는다.
+평균을 내는 기간 (CLAUDE.md, FR-DATA-01)
+  수집과 평균의 기간이 같다. 수집 기간은 수집을 실행한 달의 전월까지 12개월이다.
+  그래서 읽은 파일의 마지막 계약 연월까지 12개월로 평균을 낸다. 적재를 언제 돌려도 수집 기간과 같다.
+  예: 10월에 수집한 data/collected (2025-10 ~ 2026-09) -> 2025-10-01 ~ 2026-09-30.
+  공개시스템 CSV처럼 마지막 달이 덜 찬 파일을 넣을 때는 --end로 마지막 연월을 준다.
+  이 기간 밖의 거래도 trades에는 넣지만 평균에는 쓰지 않는다. 화면에는 "최근 1년 실거래 평균"이라고 적는다.
 
 바꾸는 규칙 (DB 설계서 3.4 ~ 3.6, 5.1)
   - 시군구 "전남광주통합특별시 서구 치평동"을 띄어쓰기로 나눠 둘째를 구, 셋째를 동으로 쓴다. 광주 5개 구만 넣는다.
@@ -356,14 +359,10 @@ def main():
     ap = argparse.ArgumentParser(description="실거래 CSV를 DB에 넣는다")
     ap.add_argument("paths", nargs="+", help="CSV 파일이나 폴더")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--end", default=None, help="평균을 낼 마지막 계약 연월 YYYYMM. 빼면 실행한 달의 전월")
+    ap.add_argument("--end", default=None, help="평균을 낼 마지막 계약 연월 YYYYMM. 빼면 읽은 파일의 마지막 계약 연월")
     args = ap.parse_args()
-
-    today = date.today()
-    end_month = args.end or (f"{today.year - 1}12" if today.month == 1 else f"{today.year}{today.month - 1:02d}")
-    if len(end_month) != 6 or not end_month.isdigit() or not 1 <= int(end_month[4:]) <= 12:
+    if args.end and (len(args.end) != 6 or not args.end.isdigit() or not 1 <= int(args.end[4:]) <= 12):
         sys.exit("--end는 YYYYMM 모양으로 적어 주세요. 예: 202609")
-    period = average_period(end_month)
 
     files = find_files(args.paths)
     raw = pd.concat([read_trade_csv(f) for f in files], ignore_index=True)
@@ -378,10 +377,11 @@ def main():
     canceled = sum(t["is_canceled"] for t in trades)
     with_code = sum(1 for a in apartments if a["complex_code"])
     months = sorted({ym for _, ym in gu_months})
+    period = average_period(args.end or months[-1])
     print(f"넣을 거래 {len(trades):,}건 (해제 {canceled:,}건 포함), 계약 연월 {months[0]} ~ {months[-1]}")
     print(f"아파트 {len(apartments):,}곳 (단지 일련번호 있음 {with_code:,}곳)")
     in_period = sum(1 for t in trades if period[0] <= t["contract_date"] <= period[1])
-    print(f"평균 기간 {period[0]} ~ {period[1]} (지난달까지 12개월), 이 기간의 거래 {in_period:,}건")
+    print(f"평균 기간 {period[0]} ~ {period[1]} (12개월), 이 기간의 거래 {in_period:,}건")
 
     if args.dry_run:
         index = {(a["gu"], a["dong"], a["jibun"], a["name"]): i for i, a in enumerate(apartments)}
