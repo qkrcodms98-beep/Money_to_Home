@@ -227,12 +227,40 @@
   }
 
   // 고른 카드가 있는 곳으로 화면을 부드럽게 옮긴다. 아래 카드를 고르면 내려가고, 위 카드를 고르면 올라간다.
-  // render() 뒤에 부른다. 카드가 접히고 펴진 뒤의 자리로 옮긴다. 움직임을 줄이도록 설정했으면 바로 옮긴다.
+  // 브라우저의 기본 이동은 짧고 딱딱해서 직접 움직인다. 천천히 출발해 천천히 멈춘다.
+  // 카드가 접히고 펴지는 동안 자리가 계속 바뀌므로, 그릴 때마다 카드의 지금 자리를 다시 재서 따라간다.
+  const SCROLL_MS = 520;
+  const SCROLL_GAP = 16; // 카드 위에 남기는 여백
+  let scrollRun = 0;
+
   function scrollToPicked() {
     const card = form.querySelector('.loan-card--picked');
     if (!card) return;
-    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    card.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    const run = ++scrollRun;
+    const target = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      return Math.max(0, Math.min(max, card.getBoundingClientRect().top + window.scrollY - SCROLL_GAP));
+    };
+    // 움직임을 줄이도록 설정했으면 바로 옮긴다.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      window.scrollTo(0, target());
+      return;
+    }
+    const from = window.scrollY;
+    const startedAt = performance.now();
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const step = (now) => {
+      if (run !== scrollRun) return; // 다른 카드를 골랐거나 사용자가 직접 움직였다
+      const t = Math.min(1, (now - startedAt) / SCROLL_MS);
+      window.scrollTo(0, from + (target() - from) * ease(t));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // 사용자가 직접 화면을 움직이면 따라가던 것을 멈춘다.
+  for (const name of ['wheel', 'touchstart', 'keydown']) {
+    window.addEventListener(name, () => { scrollRun += 1; }, { passive: true });
   }
 
   // 상품을 고르거나 바꾸면 상환 기간 선택이 풀린다 (P-03 ④, FR-LOAN-11)

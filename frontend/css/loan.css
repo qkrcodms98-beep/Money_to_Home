@@ -32,11 +32,6 @@
   cursor: pointer;
 }
 
-/* 고른 카드로 화면을 옮길 때 카드 위에 남기는 여백 (loan.js의 scrollToPicked) */
-.loan-card {
-  scroll-margin-top: 16px;
-}
-
 .loan-card input {
   position: absolute;
   opacity: 0;
@@ -234,12 +229,12 @@
   padding: 0 0 10px;
 }
 
-/* 상환 기간: 한 줄로 이어 붙인 선택 버튼 묶음 (확정 목업 v3의 P-03 ③) */
+/* 상환 기간: 회색 띠 안에서 고른 칸만 흰색으로 떠오른다 (2026-10-13에 정한 모양. 시안 3번) */
 .years__options {
   display: flex;
-  overflow: hidden;
-  border: 1px solid var(--color-line-strong);
+  padding: 3px;
   border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
 }
 
 .years__option {
@@ -254,30 +249,27 @@
   pointer-events: none;
 }
 
-.years__option + .years__option span {
-  border-left: 1px solid var(--color-line-strong);
-}
-
 .years__option span {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  min-height: var(--touch-size);
+  border-radius: 9px; /* 바깥 모서리(12px)에서 안쪽 여백(3px)을 뺀 값 */
+  color: var(--color-text-sub);
   font-size: var(--text-item);
   font-weight: var(--font-medium);
 }
 
 .years__option input:checked + span {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-line);
+  color: var(--color-primary);
   font-weight: var(--font-bold);
 }
 
 .years__option input:focus-visible + span {
   outline: 2px solid var(--color-primary);
-  outline-offset: -3px;
+  outline-offset: -2px;
 }
 
 /* ───────── 결과 (버튼 위의 고정 영역) ───────── */
