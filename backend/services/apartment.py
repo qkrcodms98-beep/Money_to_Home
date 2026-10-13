@@ -3,6 +3,8 @@
 routers/apartments.py가 부른다. 저장은 하지 않는다 (읽기만 한다).
 요청에 든 값만 쓴다. 로그인 정보와 profiles 표를 읽지 않는다 (NFR-18).
 """
+from decimal import Decimal
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -156,12 +158,22 @@ def _counts(categories) -> dict:
 
 
 def search(
-    db: Session, conditions, gu: str | None, dong: str | None, filters=None, sort: str = "category", keyword: str | None = None
+    db: Session,
+    conditions,
+    gu: str | None,
+    dong: str | None,
+    filters=None,
+    sort: str = "category",
+    keyword: str | None = None,
+    bounds=None,
 ) -> dict:
     """A-05 아파트 찾기. 계산은 services/calc.py의 함수만 부른다 (NFR-13).
 
-    - 범위: keyword가 있으면 광주 5개 구 전체에서 이름에 그 글자가 든 아파트, 없으면 gu와 dong (dong이 없으면 구 전체).
-    - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다.
+    - 범위: 셋 중 하나
+      gu와 dong : 그 구와 동 (dong이 없으면 구 전체)
+      bounds    : 지도에 보이는 영역. 위도가 south ~ north, 경도가 west ~ east인 아파트 (양 끝 포함, FR-MAP-01, 22)
+      keyword   : 광주 5개 구 전체에서 이름에 그 글자가 든 아파트
+    - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다. 다만 bounds로 찾을 때는 나오지 않는다 (명세서 Q-8).
     - filters: 면적대와 평균가는 면적마다, 준공 연도는 아파트마다 본다 (FR-APT-03, 09, 10).
       조건에 맞는 면적이 하나도 없는 아파트는 빠진다. 준공 연도 조건이 있으면 준공 연도를 모르는 아파트는 빠진다.
     - areas는 조건에 맞는 면적만, 평균가가 낮은 순이고, 아파트의 구분은 첫째 면적의 구분이다.
@@ -178,6 +190,11 @@ def search(
     if keyword is not None:
         # %와 _도 글자 그대로 찾는다 (autoescape)
         query = query.where(Apartment.name.contains(keyword, autoescape=True))
+    elif bounds is not None:
+        # 좌표 칸이 DECIMAL이라 Decimal로 바꿔 비교한다 (경계의 값이 소수 오차로 빠지지 않게).
+        # 좌표가 없는 아파트는 BETWEEN에 걸리지 않아 저절로 빠진다
+        south, west, north, east = (Decimal(str(v)) for v in (bounds.south, bounds.west, bounds.north, bounds.east))
+        query = query.where(Apartment.latitude.between(south, north), Apartment.longitude.between(west, east))
     else:
         query = query.where(Apartment.gu == gu)
         if dong:

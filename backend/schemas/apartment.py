@@ -9,7 +9,7 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, StrictInt, field_validator, model_validator
+from pydantic import BaseModel, StrictFloat, StrictInt, field_validator, model_validator
 
 from backend.errors import MSG_INVALID, MSG_MISSING
 from backend.schemas.common import check_asset, check_monthly_saving, check_target_years
@@ -72,15 +72,35 @@ class Conditions(BaseModel):
 # ------------------------------------------------------------------
 # A-05 아파트 찾기
 # ------------------------------------------------------------------
+MSG_BOUNDS = "지도 영역을 다시 확인해 주세요."
+
+
+class Bounds(BaseModel):
+    """지도에 보이는 영역 (위도와 경도). 남쪽이 북쪽보다, 서쪽이 동쪽보다 작아야 한다 (명세서 5장)."""
+
+    south: StrictFloat
+    west: StrictFloat
+    north: StrictFloat
+    east: StrictFloat
+
+    @model_validator(mode="after")
+    def check_order(self):
+        if not (self.south < self.north and self.west < self.east):
+            raise ValueError(MSG_BOUNDS)
+        return self
+
+
 class Where(BaseModel):
-    """찾을 범위. 둘 중 하나만 보낸다 (bounds는 2차에 더한다).
+    """찾을 범위. 셋 중 하나만 보낸다.
 
     - { "gu": "서구", "dong": "치평동" } 구와 동. dong을 빼면 구 전체
+    - { "bounds": { "south": 35.14, "west": 126.83, "north": 35.16, "east": 126.86 } } 지도에 보이는 영역
     - { "keyword": "호반" } 아파트 이름에 이 글자가 든 곳. 광주 5개 구 전체에서 찾는다 (FR-MAP-08)
     """
 
     gu: str | None = None
     dong: str | None = None
+    bounds: Bounds | None = None
     keyword: str | None = None
 
     @field_validator("keyword")
@@ -96,10 +116,11 @@ class Where(BaseModel):
 
     @model_validator(mode="after")
     def check_one_kind(self):
-        if self.keyword is None and self.gu is None:
+        kinds = sum(value is not None for value in (self.gu, self.bounds, self.keyword))
+        if kinds == 0:
             raise ValueError(MSG_MISSING)
-        if self.keyword is not None and (self.gu is not None or self.dong is not None):
-            raise ValueError(MSG_INVALID)  # 구·동과 이름을 함께 보내면 어느 쪽으로 찾을지 알 수 없다
+        if kinds > 1 or (self.dong is not None and self.gu is None):
+            raise ValueError(MSG_INVALID)  # 둘 이상을 함께 보내면 어느 쪽으로 찾을지 알 수 없다
         return self
 
 
