@@ -241,7 +241,9 @@ const firstArea = (apartment) => apartment.areas[0];
 function markerAreaText(area, unit) {
   const known = area.supply_area !== null && area.supply_area !== undefined;
   const value = known ? area.supply_area : area.exclusive_area;
-  const text = unit === 'pyeong' ? `${format.pyeong(value)}평` : `${Math.round(value)}㎡`;
+  // ㎡일 때 공급면적은 반올림, 전용면적은 버림이다 (format.js의 area와 같다)
+  const squareMeter = known ? `${Math.round(value)}㎡` : format.exclusive(value);
+  const text = unit === 'pyeong' ? `${format.pyeong(value)}평` : squareMeter;
   return known ? text : `전용 ${text}`;
 }
 

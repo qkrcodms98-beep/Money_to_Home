@@ -92,7 +92,7 @@ sessionStorage.setItem('mth.input', JSON.stringify({
 | 맞출 것 | 내용 |
 | --- | --- |
 | 목록을 다시 그리는 때 | 지역이 바뀌면 `loadData()`가 끝난 뒤입니다. `loadData()`의 끝에서 목록도 다시 그리게 한 줄을 넣으면 됩니다. |
-| 목록 | `listView.render(요소, mapState.data, { where: mapState.region, onSelect, onClose })`. 요소는 `<div id="apartment-list"></div>` (김목산의 `js/list.js`) |
+| 목록 | `listView.render(요소, mapState.data, { where: mapState.region, onSelect, onClose })`. 요소는 `<div id="apt-list"></div>` (김목산의 `js/list.js`) |
 | 창이 겹칠 때 | 구·동 선택 창이 5입니다. 아래 창이 열려 있을 때 지역 버튼을 누르면 어느 쪽이 위에 올지 정해 주세요. |
 | 동 표시를 눌렀을 때 | 와이어프레임은 그 동으로 확대하고 30% 창이 올라옵니다 (P-06 ④). 지금은 확대만 합니다. `zoomToDong()`의 끝에 붙이면 됩니다. |
 | 말풍선을 눌렀을 때 | `selectMarker(id)`는 그대로입니다. 30% 창(P-06 ⑥)을 여기에 붙이면 됩니다. |

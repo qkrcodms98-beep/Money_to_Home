@@ -41,12 +41,19 @@ const format = {
   // ㎡ → 평. 반올림한 정수 (요구사항 명세서 부록 C).
   pyeong: (squareMeter) => Math.round(squareMeter / PYEONG),
 
+  // 전용면적의 ㎡. 소수점 아래를 버린다 (84.94 → "84㎡", 59.88 → "59㎡").
+  // 흔히 부르는 "84㎡형", "59㎡형"과 같고, 조건 검색의 면적대(area_band)와도 같은 숫자다 (2026-10-13에 정함).
+  exclusive: (squareMeter) => `${Math.floor(squareMeter)}㎡`,
+
   // 면적 표기 (FR-APT-13, 14).
   //   공급면적이 있으면 "111㎡ (전용 84㎡)", 없으면 "전용 59㎡"
   //   unit이 'pyeong'이면 "34평 (전용 25평)", "전용 18평"
+  //   ㎡일 때 공급면적은 반올림, 전용면적은 버림이다. 평은 둘 다 실제 면적을 나눠 반올림한다.
   area(supplyArea, exclusiveArea, unit = 'm2') {
-    const show = (value) => (unit === 'pyeong' ? `${format.pyeong(value)}평` : `${Math.round(value)}㎡`);
-    if (supplyArea === null || supplyArea === undefined) return `전용 ${show(exclusiveArea)}`;
-    return `${show(supplyArea)} (전용 ${show(exclusiveArea)})`;
+    const pyeong = unit === 'pyeong';
+    const exclusive = pyeong ? `${format.pyeong(exclusiveArea)}평` : format.exclusive(exclusiveArea);
+    if (supplyArea === null || supplyArea === undefined) return `전용 ${exclusive}`;
+    const supply = pyeong ? `${format.pyeong(supplyArea)}평` : `${Math.round(supplyArea)}㎡`;
+    return `${supply} (전용 ${exclusive})`;
   },
 };
