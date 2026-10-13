@@ -1,0 +1,81 @@
+/* P-01 시작 화면에만 쓰는 모양. 공통 부품은 common.css에 있다. */
+
+.start {
+  padding-top: 32px;
+}
+
+.start__logo {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 24px;
+}
+
+/* 세 단계 설명 */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 28px 0;
+  list-style: none;
+}
+
+.steps__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.steps__number {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-body);
+  font-weight: var(--font-bold);
+}
+
+.steps__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.steps__name {
+  font-size: var(--text-item);
+  font-weight: var(--font-bold);
+}
+
+.steps__desc {
+  color: var(--color-text-sub);
+  font-size: var(--text-label);
+}
+
+/* 화면이 짧아도 버튼이 내용 아래에 오도록 한다. Figma의 버튼 위치는 390 × 844 기준 위에서 694px이다. */
+.start-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--top-space));
+}
+
+.start-layout .page {
+  flex: 1;
+  width: 100%;
+}
+
+.start-layout .bottom-action {
+  width: 100%;
+  padding-bottom: 94px;
+}
+
+@media (max-height: 760px) {
+  .start-layout .bottom-action {
+    padding-bottom: 20px;
+  }
+}

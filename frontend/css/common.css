@@ -1,26 +1,95 @@
-/* 모든 화면이 함께 쓰는 모양. 헤더, 버튼, 입력란, 색.
+/* 모든 화면이 함께 쓰는 모양. 색, 글자, 헤더, 진행 바, 버튼, 입력란, 구분 표시.
+
+   값은 Figma 파일 "money-to-home-mockup"의 섹션 "확정 목업 v3"에서 가져왔다. 이름도 Figma의 변수 이름과 같다.
+     Figma  color/primary   →  여기  --color-primary
+
    화면마다의 모양은 css 폴더에 그 화면 이름으로 파일을 따로 만든다. 예: profile.css
-   색과 크기는 아래 :root의 이름으로만 쓴다. 화면 파일에 색 값을 직접 적지 않는다. */
+   색과 글자 크기는 아래 :root의 이름으로만 쓴다. 화면 파일에 값을 직접 적지 않는다. */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 :root {
-  --color-text: #1f2328;
-  --color-text-sub: #57606a;
-  --color-line: #d0d7de;
+  /* 바탕과 선 */
   --color-bg: #ffffff;
-  --color-bg-sub: #f6f8fa;
-  --color-primary: #1f6feb;
+  --color-bg-sub: #f2f2f7;
+  --color-line: #e5e5ea;
+  --color-line-strong: #c7c7cc;
+  --color-dim: #000000;
+
+  /* 글자 */
+  --color-text: #1c1c1e;
+  --color-text-sub: #636366;
+  --color-text-hint: #aeaeb2;
+
+  /* 주조색 */
+  --color-primary: #007aff;
+  --color-primary-soft: #eaf3ff;
   --color-on-primary: #ffffff;
-  --color-error: #cf222e;
 
-  /* 구분. 색만으로 구분하지 않는다. 글자와 모양(채움, 실선, 점선)을 함께 쓴다. */
-  --color-now: #1a7f37;
-  --color-within: #1f6feb;
-  --color-lack: #cf222e;
+  /* 꺼진 버튼 */
+  --color-disabled: #e5e5ea;
+  --color-on-disabled: #aeaeb2;
 
-  --header-height: 56px;
+  /* 오류 */
+  --color-error: #ff3b30;
+  --color-error-text: #d70015;
+  --color-error-soft: #fff1f0;
+
+  /* 구분. 팔레트 F 라임 (Figma의 color/now, color/lime/*).
+     지금 가능은 파랑, 기간 내 가능은 라임, 자금 부족은 빨강.
+     띠와 배지의 바탕은 이름 그대로의 색, 흰 바탕 위의 글자는 -text 색, 옅은 바탕은 -soft 색을 쓴다. */
+  --color-now: #007aff;
+  --color-now-text: #116dd1;
+  --color-within: #94c93d;
+  --color-within-text: #4a7317;
+  --color-within-soft: #f2f9e8;
+  --color-lack: #ff6b6b;
+  --color-lack-text: #c92a2a;
+  --color-lack-soft: #ffeded;
+
+  /* 지도 */
+  --color-map: #eef1f4;
+  --color-map-block: #e4e8ec;
+  --color-map-park: #dcefd8;
+  --color-map-water: #cfe3f7;
+  --color-map-road: #ffffff;
+  --color-marker-price: #414141;
+  --color-keypad: #d1d4da;
+
+  /* 글꼴 */
+  --font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-bold: 700;
+
+  /* 글자 크기 */
+  --text-display: 28px; /* 시작 화면의 큰 제목. 줄 높이 38px */
+  --text-value: 26px; /* 입력란의 값 */
+  --text-title: 24px; /* 입력 화면의 제목. 줄 높이 34px */
+  --text-amount: 22px; /* 강조하는 금액 */
+  --text-button: 17px; /* 버튼, 헤더의 서비스 이름, 입력란의 단위 */
+  --text-item: 16px; /* 목록의 항목 이름 */
+  --text-body: 15px; /* 본문. 줄 높이 22px */
+  --text-label: 14px; /* 입력란의 이름, 칩 */
+  --text-help: 13px; /* 설명 줄, 안내. 줄 높이 19 ~ 20px */
+  --text-badge: 12px; /* 배지 */
+  --line-height: 1.45;
+
+  /* 크기 */
+  --top-space: 52px; /* 모바일에는 헤더가 없다. 입력 화면은 이 높이만큼 위를 흰 여백으로 둔다 */
+  --condition-bar-height: 40px; /* 지도 화면 맨 위의 내 조건 줄 */
+  --progress-height: 44px;
   --touch-size: 44px; /* 누르는 영역은 가로세로 44픽셀 이상 */
-  --page-width: 480px;
-  --gap: 16px;
+  --button-height: 56px;
+  --input-height: 50px;
+  --page-width: 390px;
+  --page-padding: 20px;
+
+  /* 모서리 */
+  --radius-button: 14px;
+  --radius-card: 12px;
+  --radius-badge: 6px;
+  --radius-pill: 999px;
 }
 
 * {
@@ -31,129 +100,310 @@ body {
   margin: 0;
   color: var(--color-text);
   background: var(--color-bg);
-  font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  font-family: var(--font-family);
+  font-size: var(--text-body);
+  font-weight: var(--font-regular);
+  line-height: var(--line-height);
+  word-break: keep-all;
 }
 
-/* 헤더 */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* ───────── 위 여백 ─────────
+   모바일에는 헤더가 없다. 입력 화면(P-01 ~ P-04, P-07, P-08)은 body 맨 위에 이 요소를 둔다.
+   지도 화면은 이것 대신 내 조건 줄을 둔다. */
+.top-space {
+  height: var(--top-space);
+  background: var(--color-bg);
+}
+
+/* ───────── 진행 바 (P-02 ~ P-04) ───────── */
+.progress {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  height: var(--header-height);
-  padding: 0 var(--gap);
+  gap: 10px;
+  height: var(--progress-height);
+  padding: 0 var(--page-padding) 0 8px;
   background: var(--color-bg);
-  border-bottom: 1px solid var(--color-line);
 }
 
-.header__home {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--touch-size);
-  color: var(--color-text);
-  font-weight: 700;
-  font-size: 18px;
-  text-decoration: none;
-}
-
-/* 본문 */
-.page {
-  max-width: var(--page-width);
-  margin: 0 auto;
-  padding: var(--gap);
-}
-
-/* 버튼 */
-.button {
+.progress__back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: var(--touch-size);
-  padding: 12px var(--gap);
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  background: var(--color-bg);
+  width: var(--touch-size);
+  height: var(--touch-size);
+  border: 0;
+  background: transparent;
   color: var(--color-text);
-  font: inherit;
-  font-weight: 600;
+  font-family: inherit;
+  font-size: 26px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.progress__bars {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+}
+
+.progress__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-line);
+}
+
+.progress__bar--done {
+  background: var(--color-primary);
+}
+
+.progress__label {
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+/* ───────── 본문 ───────── */
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 24px var(--page-padding) 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: var(--font-bold);
+  line-height: 34px;
+}
+
+.title--display {
+  font-size: var(--text-display);
+  line-height: 38px;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-body);
+  line-height: 22px;
+}
+
+/* 안내 문구 상자 */
+.notice {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 20px;
+}
+
+.notice--error {
+  border: 1px solid var(--color-error);
+  background: var(--color-error-soft);
+  color: var(--color-error-text);
+}
+
+/* ───────── 버튼 ───────── */
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--button-height);
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-bg-sub);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-button);
+  font-weight: var(--font-bold);
   text-decoration: none;
   cursor: pointer;
 }
 
 .button--primary {
-  border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
 
-.button:disabled {
-  border-color: var(--color-line);
-  background: var(--color-bg-sub);
-  color: var(--color-text-sub);
+.button:disabled,
+.button--disabled {
+  background: var(--color-disabled);
+  color: var(--color-on-disabled);
   cursor: not-allowed;
 }
 
-/* 입력란 */
-.field {
-  display: block;
-  margin-bottom: var(--gap);
+/* 밑줄 친 글자 버튼. "처음부터 다시 입력", "새로 입력하기" */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--touch-size);
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--font-medium);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-.field__label {
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 600;
-}
-
-.field__input {
-  width: 100%;
-  min-height: var(--touch-size);
-  padding: 10px 12px;
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  font: inherit;
-}
-
-.field__input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-/* 입력란 아래의 설명 줄. 오류 문구도 이 자리에 넣어 화면이 밀리지 않게 한다. */
-.field__help {
-  display: block;
-  min-height: 1.5em;
-  margin-top: 4px;
-  color: var(--color-text-sub);
-  font-size: 14px;
-}
-
-.field--error .field__input {
-  border-color: var(--color-error);
-}
-
-.field--error .field__help {
-  color: var(--color-error);
-}
-
-/* 안내 문구 */
-.notice {
-  padding: 12px var(--gap);
-  border-radius: 8px;
-  background: var(--color-bg-sub);
-  color: var(--color-text-sub);
-  font-size: 14px;
-}
-
-/* 화면 아래에 붙는 버튼 */
+/* 화면 아래에 붙는 버튼 영역 */
 .bottom-action {
   position: sticky;
   bottom: 0;
-  padding: var(--gap) 0;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 12px var(--page-padding) 20px;
   background: var(--color-bg);
+}
+
+/* ───────── 입력란 ─────────
+   이름, 값(밑줄), 설명 줄의 세 줄이다. 오류 문구는 설명 줄 자리에 넣어 화면이 밀리지 않게 한다. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 22px;
+}
+
+.field__label {
+  color: var(--color-text-sub);
+  font-size: var(--text-label);
+  font-weight: var(--font-medium);
+}
+
+.field__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--input-height);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.field__row:focus-within {
+  border-bottom-color: var(--color-primary);
+}
+
+.field__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-value);
+  font-weight: var(--font-bold);
+}
+
+.field__input::placeholder {
+  color: var(--color-text-hint);
+}
+
+.field__unit {
+  color: var(--color-text-sub);
+  font-size: var(--text-button);
+  white-space: nowrap;
+}
+
+.field__help {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 19px;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 19px;
+}
+
+/* 설명 줄 오른쪽의 읽어 주는 금액. "3,600만 원" */
+.field__read {
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+}
+
+.field--error .field__row {
+  border-bottom-color: var(--color-error);
+}
+
+.field--error .field__help {
+  color: var(--color-error-text);
+}
+
+/* ───────── 구분 ───────── */
+/* 배지. "지금 가능", "기간 내 가능", "자금 부족" */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--radius-badge);
+  font-size: var(--text-badge);
+  font-weight: var(--font-bold);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* 개수 칩. "지금 5", "기간 내 4", "부족 14" */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: var(--text-label);
+  font-weight: var(--font-bold);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.badge--now,
+.chip--now {
+  background: var(--color-now);
+  color: var(--color-on-primary);
+}
+
+.badge--within,
+.chip--within {
+  background: var(--color-within-soft);
+  color: var(--color-within-text);
+}
+
+.badge--lack,
+.chip--lack {
+  background: var(--color-lack-soft);
+  color: var(--color-lack-text);
+}
+
+/* 금액 글자. "여유 2,000만 원", "부족 2,500만 원" */
+.amount {
+  font-size: var(--text-amount);
+  font-weight: var(--font-bold);
+}
+
+.amount--now {
+  color: var(--color-now-text);
+}
+
+.amount--within {
+  color: var(--color-within-text);
+}
+
+.amount--lack {
+  color: var(--color-lack-text);
 }
