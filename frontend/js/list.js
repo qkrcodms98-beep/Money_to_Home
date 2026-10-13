@@ -1,9 +1,9 @@
 // 목록 (P-06 ⑤ 목록 80%). 담당: 김목산
 //
 // 지도 화면에 묶이지 않는다. 그릴 요소를 받아 그 안에만 그린다.
-// map.html(안세환)은 고치지 않는다. 세환과 맞춘 자리는 id="apartment-list" 하나다.
+// map.html(안세환)은 고치지 않는다. 세환과 맞춘 자리는 id="apt-list" 하나다.
 //
-//   const el = document.getElementById('apartment-list');
+//   const el = document.getElementById('apt-list');
 //
 //   // A-05 응답으로 그리기만 한다. 지도가 이미 A-05를 불렀으면 그 응답을 넘긴다.
 //   listView.render(el, result);
