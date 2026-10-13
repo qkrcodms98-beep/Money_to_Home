@@ -372,3 +372,22 @@ def test_invalid_where(client, named, where, field, detail):
     res = _search(client, where=where)
     assert res.status_code == 422
     assert res.json() == {"detail": detail, "field": field}
+
+
+# ------------------------------------------------------------------
+# A-13 수집 기준일
+# ------------------------------------------------------------------
+def test_data_status_without_records_is_null(client):
+    assert client.get("/api/data-status").json() == {"trades_base_date": None, "households_base_date": None}
+
+
+def test_data_status_gives_latest_date_per_dataset(client, db):
+    db.add_all([
+        models.DataCollection(dataset="trades", source="실거래가 API", base_date=date(2026, 10, 12), row_count=16000),
+        models.DataCollection(dataset="trades", source="실거래가 공개시스템 CSV", base_date=date(2026, 10, 7), row_count=16919),
+        models.DataCollection(dataset="households", source="건축물대장", base_date=date(2026, 8, 31), row_count=1000),
+        models.DataCollection(dataset="coordinates", source="카카오", base_date=date(2026, 10, 13), row_count=1055),
+    ])
+    db.commit()
+    # 자료마다 가장 최근에 남긴 줄의 기준일 (DB 설계서 3.7). 좌표의 기준일은 보여 주지 않는다
+    assert client.get("/api/data-status").json() == {"trades_base_date": "2026-10-07", "households_base_date": "2026-08-31"}

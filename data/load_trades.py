@@ -1,6 +1,6 @@
 """실거래 CSV를 읽어 apartments, trades, apartment_prices 표를 채운다. 담당: 김목산
 
-DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)을 한다.
+DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)과 10번(수집 기준일)을 한다.
 좌표(7번)는 data/geocode.py(안세환), 공급면적(8번)은 다음 단계에서 붙인다.
 
 읽는 파일 (둘 다 같은 열 이름이다)
@@ -14,6 +14,12 @@ DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)을 한�
 
   --dry-run      DB에 넣지 않고 읽은 결과의 건수만 보여 준다.
   --end YYYYMM   평균을 낼 마지막 계약 연월. 빼면 읽은 파일의 마지막 계약 연월
+  --base-date YYYY-MM-DD   수집 기준일(자료를 받은 날). 빼면 폴더의 collected_at.txt를 쓴다.
+
+수집 기준일 (FR-DATA-05, DB 설계서 3.7)
+  data_collections에 trades 줄을 하나 남긴다 (받은 곳, 기준일, 넣은 거래 수). A-13이 가장 최근 줄을 보여 준다.
+  기준일은 거래를 "받은 날"이다. collect_trades.py가 폴더에 적어 둔 collected_at.txt를 읽는다.
+  공개시스템 CSV처럼 그 파일이 없으면 --base-date로 내려받은 날을 준다. 둘 다 없으면 기준일을 남기지 않고 알린다.
 
 평균을 내는 기간 (CLAUDE.md, FR-DATA-01)
   수집과 평균의 기간이 같다. 수집 기간은 수집을 실행한 달의 전월까지 12개월이다.
@@ -40,6 +46,7 @@ DB 설계서 5장의 4 ~ 6번(아파트, 거래, 면적대별 평균가)을 한�
   - trades: 파일에 든 구와 계약 연월의 거래를 모두 지우고 다시 넣는다 (FR-DATA-09).
   - apartment_prices: DB의 거래 중 평균 기간에 든 것으로 다시 계산해 고친다. 그 기간에 거래가 없는 조합은 지운다.
     공급면적은 건드리지 않는다.
+  - data_collections: 실행할 때마다 줄을 하나 더한다 (DB 설계서 5장의 10번). 화면은 가장 최근 줄만 쓴다.
   - 전체를 한 번에 저장한다. 중간에 오류가 나면 아무것도 바뀌지 않는다.
 """
 import argparse
@@ -355,11 +362,50 @@ def save_prices(cur, period):
     return len(prices), len(stale)
 
 
+COLLECTED_AT = "collected_at.txt"  # collect_trades.py가 적는 받은 날
+SOURCE_API = "실거래가 API"
+SOURCE_CSV = "실거래가 공개시스템 CSV"
+
+
+def find_base_date(paths, given):
+    """수집 기준일과 받은 곳. --base-date가 있으면 그것, 없으면 collected_at.txt. 둘 다 없으면 (None, None).
+
+    collected_at.txt는 준 폴더 안, 파일을 줬으면 그 파일이 든 폴더에서 찾는다. 있으면 API로 받은 자료다.
+    """
+    markers = {os.path.join(p if os.path.isdir(p) else os.path.dirname(p), COLLECTED_AT) for p in paths}
+    markers = sorted(m for m in markers if os.path.isfile(m))
+    if given:
+        try:
+            base = date.fromisoformat(given)
+        except ValueError:
+            sys.exit("--base-date는 YYYY-MM-DD 모양으로 적어 주세요. 예: 2026-10-12")
+        return base, SOURCE_API if markers else SOURCE_CSV
+    dates = []
+    for marker in markers:
+        with open(marker, encoding="utf-8") as f:
+            try:
+                dates.append(date.fromisoformat(f.read().strip()))
+            except ValueError:
+                sys.exit(f"{marker}의 날짜를 읽을 수 없습니다. YYYY-MM-DD 한 줄이어야 합니다.")
+    if not dates:
+        return None, None
+    return max(dates), SOURCE_API
+
+
+def save_collection(cur, base_date, source, row_count):
+    """수집 기준일을 한 줄 남긴다 (DB 설계서 3.7)."""
+    cur.execute(
+        "INSERT INTO data_collections (dataset, source, base_date, row_count) VALUES (%s, %s, %s, %s)",
+        ("trades", source, base_date, row_count),
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description="실거래 CSV를 DB에 넣는다")
     ap.add_argument("paths", nargs="+", help="CSV 파일이나 폴더")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--end", default=None, help="평균을 낼 마지막 계약 연월 YYYYMM. 빼면 읽은 파일의 마지막 계약 연월")
+    ap.add_argument("--base-date", default=None, help="수집 기준일 YYYY-MM-DD. 빼면 폴더의 collected_at.txt")
     args = ap.parse_args()
     if args.end and (len(args.end) != 6 or not args.end.isdigit() or not 1 <= int(args.end[4:]) <= 12):
         sys.exit("--end는 YYYYMM 모양으로 적어 주세요. 예: 202609")
@@ -382,6 +428,11 @@ def main():
     print(f"아파트 {len(apartments):,}곳 (단지 일련번호 있음 {with_code:,}곳)")
     in_period = sum(1 for t in trades if period[0] <= t["contract_date"] <= period[1])
     print(f"평균 기간 {period[0]} ~ {period[1]} (12개월), 이 기간의 거래 {in_period:,}건")
+    base_date, source = find_base_date(args.paths, args.base_date)
+    if base_date:
+        print(f"수집 기준일 {base_date} ({source})")
+    else:
+        print(f"수집 기준일을 찾지 못해 남기지 않습니다. 폴더에 {COLLECTED_AT}가 없으면 --base-date로 받은 날을 주세요.")
 
     if args.dry_run:
         index = {(a["gu"], a["dong"], a["jibun"], a["name"]): i for i, a in enumerate(apartments)}
@@ -398,6 +449,8 @@ def main():
             ids = save_apartments(cur, apartments)
             deleted = save_trades(cur, trades, ids, gu_months)
             price_count, stale = save_prices(cur, period)
+            if base_date:
+                save_collection(cur, base_date, source, len(trades))
         conn.commit()
     except Exception:
         conn.rollback()
@@ -405,7 +458,8 @@ def main():
     finally:
         conn.close()
     print(f"\nDB에 넣었습니다. 아파트 {len(apartments):,}곳, 거래 {len(trades):,}건 (지운 예전 거래 {deleted:,}건), "
-          f"면적대별 평균가 {price_count:,}줄 (지운 조합 {stale:,}줄)")
+          f"면적대별 평균가 {price_count:,}줄 (지운 조합 {stale:,}줄)"
+          + (f", 수집 기준일 {base_date}" if base_date else ""))
 
 
 if __name__ == "__main__":
