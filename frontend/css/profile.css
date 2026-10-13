@@ -1,48 +1,4 @@
-/* P-02 재무정보 화면에만 쓰는 모양. 입력란, 버튼, 진행 바는 common.css에 있다. */
-
-/* 버튼이 화면 아래에 붙도록 본문이 남은 높이를 채운다. */
-.profile {
-  display: flex;
-  flex-direction: column;
-  min-height: calc(100vh - var(--top-space) - var(--progress-height));
-}
-
-.profile .page {
-  flex: 1;
-  width: 100%;
-  overflow-x: clip; /* 밀려 들어오는 입력란 때문에 가로 스크롤이 생기지 않게 한다 */
-}
-
-/* 입력을 마치면 다음 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. */
-.field--enter {
-  animation: field-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes field-enter {
-  from {
-    opacity: 0;
-    transform: translateX(48px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* 움직임을 줄이도록 설정한 사용자에게는 바로 보여 준다. */
-@media (prefers-reduced-motion: reduce) {
-  .field--enter {
-    animation: none;
-  }
-}
-
-.profile .bottom-action {
-  width: 100%;
-}
-
-.profile__head {
-  padding-bottom: 28px;
-}
+/* P-02 재무정보 화면에만 쓰는 모양. 입력란, 버튼, 진행 바, 한 번에 하나씩 묻는 틀(.form-page)은 common.css에 있다. */
 
 /* 주민등록번호 앞 7자리: 앞 6자리, 줄표, 뒤 첫째 자리, 점 여섯 개 */
 .rrn {

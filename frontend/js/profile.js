@@ -26,7 +26,7 @@
     rrn: ['주민등록번호 앞 7자리를 알려 주세요', '만 나이를 계산하는 데만 쓰고 저장하지 않습니다.'],
     income: ['연 소득은 얼마인가요?', '만 원 단위로 입력합니다.'],
     assets: ['지금 가진 돈은 얼마인가요?', '만 원 단위로 입력합니다.'],
-    confirm: ['입력한 내용을 확인해 주세요', '고칠 값을 누르면 바로 수정할 수 있습니다.'],
+    confirm: ['입력한 내용이 맞는지 확인해 주세요', '고칠 값을 누르면 바로 수정할 수 있습니다.'],
   };
 
   const $ = (id) => document.getElementById(id);
@@ -129,11 +129,23 @@
     submit.disabled = !canGoOn();
   }
 
-  // 새로 나타나는 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 모양은 profile.css의 .field--enter
+  // 새로 나타나는 입력란이 오른쪽에서 왼쪽으로 밀려 들어온다. 모양은 common.css의 .field--enter
   function slideIn(field) {
-    field.classList.remove('field--enter');
+    field.classList.remove('field--enter', 'jump');
+    field.style.animationDelay = '';
     void field.offsetWidth; // 같은 입력란이 다시 나타날 때도 처음부터 움직이게 한다
     field.classList.add('field--enter');
+  }
+
+  // 확인 단계로 바뀔 때 제목과 값들이 한 번 뛰어오른다. 화면이 바뀐 것을 알아보게 한다. 모양은 common.css의 .jump
+  function jump() {
+    const targets = [$('profile-title').parentElement, ageField, money.income.field, money.assets.field];
+    targets.forEach((target, index) => {
+      target.classList.remove('field--enter', 'jump');
+      void target.offsetWidth;
+      target.style.animationDelay = `${index * 60}ms`; // 위에서부터 차례로
+      target.classList.add('jump');
+    });
   }
 
   function goTo(next, focus, animate = true) {
@@ -142,6 +154,7 @@
     render();
     const entering = { rrn: rrn.field, income: money.income.field, assets: money.assets.field }[next];
     if (animate && entering) slideIn(entering);
+    if (animate && next === 'confirm') jump();
     if (focus) focus.focus({ preventScroll: true });
   }
 
