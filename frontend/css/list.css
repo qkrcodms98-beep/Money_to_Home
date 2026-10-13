@@ -1,0 +1,246 @@
+/* 목록 (P-06 ⑤ 목록 80%). 담당: 김목산
+   색과 크기는 common.css의 :root에 있는 이름만 쓴다. 값을 직접 적지 않는다. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px var(--page-padding) 24px;
+  color: var(--color-text);
+  font-family: var(--font-family);
+}
+
+/* 머리: "서구 치평동 · 23곳", 안내 아이콘, 닫기 */
+.list__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch-size);
+}
+
+.list__title {
+  margin: 0;
+  font-size: var(--text-button);
+  font-weight: var(--font-bold);
+}
+
+.list__info-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.list__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid var(--color-text);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-badge);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+/* 누르는 영역을 44px로 넓힌다 */
+.list__info::after {
+  content: '';
+  position: absolute;
+  inset: calc((22px - var(--touch-size)) / 2);
+}
+
+.list__tip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -8px;
+  z-index: 10;
+  display: none;
+  width: 240px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--text-help);
+  line-height: var(--line-height);
+}
+
+.list__info-wrap:hover .list__tip,
+.list__info-wrap--open .list__tip {
+  display: block;
+}
+
+.list__close {
+  width: var(--touch-size);
+  height: var(--touch-size);
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-title);
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 개수 칩: 지금 5, 기간 내 4, 부족 14 */
+.list__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.list__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list__group-title {
+  margin: 4px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-label);
+  font-weight: var(--font-bold);
+}
+
+/* 카드. 아파트마다 한 장 */
+.list-card {
+  display: flex;
+  border: 1.5px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/* 자금이 부족한 카드는 점선 테두리 */
+.list-card--lack {
+  border-style: dashed;
+}
+
+.list-card__body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.list-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.list-card__name {
+  margin: 0;
+  font-size: var(--text-item);
+  font-weight: var(--font-bold);
+  overflow-wrap: anywhere;
+}
+
+.list-card__meta,
+.list-card__money {
+  margin: 6px 0 0;
+  font-size: var(--text-body);
+  line-height: var(--line-height);
+}
+
+.list-card__meta {
+  color: var(--color-text-sub);
+}
+
+/* "위치 없음" */
+.list-card__tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-badge);
+  color: var(--color-text-sub);
+  font-size: var(--text-badge);
+  vertical-align: middle;
+}
+
+/* "상한 초과". 목업(P-06 ⑲)은 주황이지만 common.css에 주황 색 이름이 아직 없다.
+   빨강은 '자금 부족'과 헷갈리므로 쓰지 않고, 진한 글자로만 구별한다. 이름이 생기면 바꾼다. */
+.list-card__tag--cap {
+  border-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+}
+
+.list-card__gap {
+  font-weight: var(--font-bold);
+}
+
+.list-card__gap--now {
+  color: var(--color-now-text);
+}
+
+.list-card__gap--within {
+  color: var(--color-within-text);
+}
+
+.list-card__gap--lack {
+  color: var(--color-lack-text);
+}
+
+/* 면적이 여러 개면 오른쪽의 › 와 "1/2" */
+.list-card__next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 52px;
+  min-height: var(--touch-size);
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--color-line);
+  background: none;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.list-card__arrow {
+  font-size: var(--text-button);
+  line-height: 1;
+}
+
+.list-card__page {
+  font-size: var(--text-badge);
+}
+
+/* 결과 없음, 목표할 수 있는 곳이 없음 */
+.list__empty {
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
+}
+
+.list__empty-title {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--font-bold);
+}
+
+.list__empty-help {
+  margin: 6px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: var(--line-height);
+}
+
+.list__empty-button {
+  margin-top: 8px;
+}
