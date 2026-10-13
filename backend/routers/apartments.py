@@ -8,8 +8,18 @@
 A-06 아파트 한 곳은 backend/routers/apartment_detail.py에 있다 (담당: 안세환).
 
 요청의 conditions만 쓴다. 로그인 정보와 profiles 표를 읽지 않는다 (NFR-18).
-계산식은 여기에 쓰지 않는다. backend/services/calc.py의 함수를 부른다 (NFR-13).
+DB를 다루는 코드는 backend/services/apartment.py, 계산은 backend/services/calc.py에 있다 (NFR-13).
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from backend.database import get_db
+from backend.schemas.apartment import RegionsOut
+from backend.services import apartment
 
 router = APIRouter(prefix="/api", tags=["아파트 탐색"])
+
+
+@router.get("/regions", response_model=RegionsOut)
+def list_regions(db: Session = Depends(get_db)):
+    return {"regions": apartment.regions(db)}
