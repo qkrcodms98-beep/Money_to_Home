@@ -25,7 +25,6 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
   padding: 16px;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-card);
@@ -74,11 +73,22 @@
   font-weight: var(--font-bold);
 }
 
+/* 펼친 내용. 접고 펼 때 높이가 부드럽게 바뀌어, 아래 카드가 그만큼 천천히 내려가고 올라온다.
+   높이를 auto로는 움직일 수 없어서, 격자의 줄 높이를 1fr과 0fr 사이에서 바꾼다. */
 .loan-card__detail {
+  display: grid;
+  grid-template-rows: 1fr;
+  padding-left: 32px;
+  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+
+.loan-card__detail-inner {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-left: 32px;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 4px;
 }
 
 .loan-card__institution,
@@ -93,6 +103,10 @@
 .loan-card__desc,
 .loan-card__line {
   padding-left: 32px;
+}
+
+.loan-card__desc {
+  margin-top: 4px;
 }
 
 .loan-card__limit {
@@ -139,17 +153,35 @@
   cursor: pointer;
 }
 
-/* 접은 카드: 이름과 한 줄만 보인다. 펼친 카드에서는 한 줄을 숨긴다. */
+/* 접은 카드: 이름과 한 줄만 보인다. 펼친 카드에서는 한 줄을 숨긴다.
+   display를 바꾸지 않고 높이와 투명도를 움직여 부드럽게 접고 편다. */
 .loan-card__line {
-  display: none;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
 }
 
 .loan-card--folded .loan-card__detail {
-  display: none;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden; /* 접힌 카드의 "자세히"에 초점이 가지 않게 한다. 다 접힌 뒤에 숨긴다 */
+  transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, visibility 0s 0.32s;
 }
 
 .loan-card--folded .loan-card__line {
-  display: block;
+  max-height: 64px; /* 좁은 화면에서 세 줄까지 */
+  padding-top: 4px;
+  opacity: 1;
+}
+
+/* 움직임을 줄이도록 설정한 사용자에게는 바로 바뀐다. */
+@media (prefers-reduced-motion: reduce) {
+  .loan-card__detail,
+  .loan-card--folded .loan-card__detail,
+  .loan-card__line {
+    transition: none;
+  }
 }
 
 /* ───────── 상품을 불러오는 동안 (P-03 ⑦) ───────── */
@@ -197,12 +229,12 @@
   padding: 0 0 10px;
 }
 
-/* 상환 기간: 한 줄로 이어 붙인 선택 버튼 묶음 (확정 목업 v3의 P-03 ③) */
+/* 상환 기간: 회색 띠 안에서 고른 칸만 흰색으로 떠오른다 (2026-10-13에 정한 모양. 시안 3번) */
 .years__options {
   display: flex;
-  overflow: hidden;
-  border: 1px solid var(--color-line-strong);
+  padding: 3px;
   border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
 }
 
 .years__option {
@@ -217,30 +249,27 @@
   pointer-events: none;
 }
 
-.years__option + .years__option span {
-  border-left: 1px solid var(--color-line-strong);
-}
-
 .years__option span {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  min-height: var(--touch-size);
+  border-radius: 9px; /* 바깥 모서리(12px)에서 안쪽 여백(3px)을 뺀 값 */
+  color: var(--color-text-sub);
   font-size: var(--text-item);
   font-weight: var(--font-medium);
 }
 
 .years__option input:checked + span {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-line);
+  color: var(--color-primary);
   font-weight: var(--font-bold);
 }
 
 .years__option input:focus-visible + span {
   outline: 2px solid var(--color-primary);
-  outline-offset: -3px;
+  outline-offset: -2px;
 }
 
 /* ───────── 결과 (버튼 위의 고정 영역) ───────── */
