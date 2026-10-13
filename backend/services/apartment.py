@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from backend.errors import ApiError
-from backend.models import Apartment, ApartmentPrice
+from backend.models import Apartment, ApartmentPrice, DataCollection
 from backend.services import calc, loan_product
 
 MSG_CHOOSE_LOAN = "대출 상품과 상환 기간을 골라 주세요."
@@ -166,3 +166,24 @@ def search(
     counts = {key: sum(1 for a in items if a["category"] == key) for key in CATEGORY_ORDER}
     counts["total"] = len(items)
     return {"target_price": target, "own_funds": own, "counts": counts, "apartments": items}
+
+
+def _latest_base_date(db: Session, dataset: str):
+    """그 자료의 가장 최근에 남긴 줄의 기준일. 남긴 줄이 없으면 None."""
+    return db.scalar(
+        select(DataCollection.base_date)
+        .where(DataCollection.dataset == dataset)
+        .order_by(DataCollection.id.desc())
+        .limit(1)
+    )
+
+
+def data_status(db: Session) -> dict:
+    """A-13 수집 기준일. 자료 종류마다 가장 최근에 남긴 줄의 기준일 (DB 설계서 3.7, FR-DATA-05).
+
+    실거래는 data/load_trades.py가 넣을 때 남긴다. 세대수는 아직 넣는 스크립트가 없어 None이다.
+    """
+    return {
+        "trades_base_date": _latest_base_date(db, "trades"),
+        "households_base_date": _latest_base_date(db, "households"),
+    }
