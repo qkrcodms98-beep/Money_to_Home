@@ -279,6 +279,8 @@ pip install -r requirements.txt
 
 2 ~ 3분 걸린다. 마지막에 `Successfully installed`가 나오면 맞다.
 
+`requirements.txt`가 바뀌었다는 알림을 받으면 이 명령을 다시 실행한다. 이미 깔린 것은 건너뛰고 새것만 깐다. 서버를 켰을 때 `ModuleNotFoundError`가 나오면 이 명령을 안 한 것이다.
+
 ### 7.5 대출 상품 예시 자료 넣기 (처음 한 번)
 
 HeidiSQL에서 **파일 > SQL 파일 불러오기**로 `C:\projects\Money_to_Home\db\seed_loan_products.sql`을 열고 **F9**를 누른다. `loan_products` 표에 두 줄이 생긴다. 숫자는 개발용 예시다.

@@ -1,60 +1,31 @@
-"""profiles 표를 읽고 쓰는 함수. 회원 한 명에 한 줄이다."""
+"""profiles 표. 재무정보, 대출 선택, 저축 계획. 회원 한 명에 한 줄이다."""
+from datetime import datetime
+
+from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Integer, SmallInteger, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from backend.database import Base
+from backend.models.loan_product import LoanProduct
 
 
-def find_by_user(conn, user_id: int) -> dict | None:
-    """저장한 재무정보. 고른 상품의 이름을 함께 준다. 없으면 None."""
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT p.age, p.annual_income, p.current_assets,
-                   p.loan_choice, p.loan_product_id, lp.name AS loan_product_name,
-                   p.repayment_years, p.monthly_saving, p.target_years, p.updated_at
-              FROM profiles p
-              LEFT JOIN loan_products lp ON lp.id = p.loan_product_id
-             WHERE p.user_id = %s
-            """,
-            (user_id,),
-        )
-        return cur.fetchone()
+class Profile(Base):
+    __tablename__ = "profiles"
 
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    age: Mapped[int] = mapped_column(SmallInteger)  # 만 나이. 15 ~ 100. 계산에 쓰지 않는다
+    annual_income: Mapped[int] = mapped_column(BigInteger)  # 연 소득. 원. 계산에 쓰지 않는다
+    current_assets: Mapped[int] = mapped_column(BigInteger)  # 현재 보유자산. 원
+    loan_choice: Mapped[str | None] = mapped_column(Enum("product", "none", name="loan_choice"))  # 비어 있으면 아직 안 고름
+    loan_product_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("loan_products.id"))
+    repayment_years: Mapped[int | None] = mapped_column(SmallInteger)
+    monthly_saving: Mapped[int | None] = mapped_column(BigInteger)  # 월 저축 가능액. 원
+    target_years: Mapped[int | None] = mapped_column(SmallInteger)  # 0, 3, 5, 10 중 하나. 0은 "지금"
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
-def save_finance(conn, user_id: int, age: int, annual_income: int, current_assets: int, restart: bool) -> None:
-    """재무정보를 저장한다. restart면 대출 선택과 저축 계획을 함께 지운다 (DB 설계서 3.2)."""
-    sql = """
-        INSERT INTO profiles (user_id, age, annual_income, current_assets)
-        VALUES (%s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-            age = VALUES(age),
-            annual_income = VALUES(annual_income),
-            current_assets = VALUES(current_assets)
-    """
-    if restart:
-        sql += """,
-            loan_choice = NULL,
-            loan_product_id = NULL,
-            repayment_years = NULL,
-            monthly_saving = NULL,
-            target_years = NULL
-        """
-    with conn.cursor() as cur:
-        cur.execute(sql, (user_id, age, annual_income, current_assets))
+    loan_product: Mapped[LoanProduct | None] = relationship(lazy="joined")
 
-
-def save_loan(conn, user_id: int, loan_choice: str, loan_product_id: int | None, repayment_years: int | None) -> None:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            UPDATE profiles
-               SET loan_choice = %s, loan_product_id = %s, repayment_years = %s
-             WHERE user_id = %s
-            """,
-            (loan_choice, loan_product_id, repayment_years, user_id),
-        )
-
-
-def save_plan(conn, user_id: int, monthly_saving: int, target_years: int) -> None:
-    with conn.cursor() as cur:
-        cur.execute(
-            "UPDATE profiles SET monthly_saving = %s, target_years = %s WHERE user_id = %s",
-            (monthly_saving, target_years, user_id),
-        )
+    @property
+    def loan_product_name(self) -> str | None:
+        """고른 상품의 이름. 고르지 않았으면 None"""
+        return self.loan_product.name if self.loan_product else None

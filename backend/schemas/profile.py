@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, StrictBool, StrictInt, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, field_validator, model_validator
 
 from backend.schemas.common import check_age, check_asset, check_monthly_saving, check_target_years
 
@@ -51,6 +51,9 @@ class PlanIn(BaseModel):
 
 
 class Profile(BaseModel):
+    # models의 Profile을 그대로 넘기면 이 모양으로 바뀐다.
+    model_config = ConfigDict(from_attributes=True)
+
     age: int
     annual_income: int
     current_assets: int

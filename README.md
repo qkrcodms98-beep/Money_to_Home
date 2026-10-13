@@ -51,7 +51,7 @@
 | 구분 | 기술 |
 | --- | --- |
 | Frontend | HTML, CSS, JavaScript |
-| Backend | Python, FastAPI |
+| Backend | Python, FastAPI, SQLAlchemy |
 | Database | MariaDB 11.4 (MySQL 호환) |
 | Data | Pandas, 국토교통부 아파트 매매 실거래가 API |
 | Map | 카카오맵 API |
@@ -74,10 +74,10 @@
 ├─ db/              테이블 생성 스크립트, 대출 상품 예시 자료
 ├─ backend/         FastAPI 서버
 │  ├─ main.py       앱을 만들고 API와 화면을 연결
-│  ├─ models/       DB의 표를 읽고 쓰는 함수
+│  ├─ models/       DB의 표를 옮긴 클래스 (SQLAlchemy)
 │  ├─ schemas/      요청과 응답의 모양, 값의 범위
 │  ├─ routers/      API
-│  └─ services/     계산 모듈
+│  └─ services/     DB를 읽고 쓰는 함수, 계산 모듈
 ├─ frontend/        웹 화면 (HTML, CSS, JavaScript)
 ├─ tests/           자동 테스트
 ├─ data/            실거래 자료와 수집·가공 스크립트
