@@ -33,6 +33,10 @@ DB 설계서 5장의 9번(세대수를 붙인다), 요구사항 FR-DATA-13, FR-A
   3. 한 번지에 우리 아파트가 둘 이상이면(라인효친1·2처럼) 건물명이 그 아파트 이름과 맞는 것만 쓴다.
      맞는 것이 없으면 비운다. 남의 세대수를 붙이지 않는다.
   세대수가 0이거나 찾지 못하면 비운다(NULL). 세대수를 지어내지 않는다.
+  4. 대장으로 비어 버린 곳 가운데 웹 자료로 확인한 곳은 data/households_manual.csv의 값으로 채운다 (출처 URL을 함께 적어 둔다).
+     대장에 값이 있는 곳은 덮지 않는다. override 칸이 yes인 줄만 대장 값을 덮는다
+     (대장 값이 한 번지의 여러 단지 합으로 나온 곳. 문흥동 971-1 현대 643 = 1차 282 + 2차 360).
+     DB에 넣을 때마다 이 파일을 함께 읽는다.
 
 넣는 곳
   apartments.households      넣을 때마다 전부 비우고 파일의 값으로 다시 붙인다 (DB 설계서 5장 9번)
@@ -42,6 +46,8 @@ DB 설계서 5장의 9번(세대수를 붙인다), 요구사항 FR-DATA-13, FR-A
   data/households.csv        받은 결과 (구, 동, 지번, 아파트명, 세대수, 구한 방법, 총괄표제부 합, 표제부 합, 받은 날).
                              전체를 받은 뒤 저장소에 올려 팀이 나눠 쓴다. 두 합을 남겨 두어 API를 다시 부르지 않고도 고른 까닭을 볼 수 있다.
                              아파트를 받을 때마다 한 줄씩 적으므로, 중간에 멈춰도 다시 돌리면 남은 것부터 받는다.
+  data/households_manual.csv 사람이 웹 자료로 확인해 적은 세대수와 출처 (구, 동, 지번, 아파트명, 세대수, 덮어쓰기, 확실성, 출처, 메모, 확인한 날).
+                             이 스크립트는 읽기만 한다.
 
 규칙
   - 키는 .env에서 읽는다. 화면과 파일에 출력하지 않고, 오류 문장에 섞여 나와도 가린다.
@@ -72,6 +78,7 @@ TIMEOUT_SECONDS = 30
 
 CODES_PATH = BASE_DIR / "data" / "법정동코드 전체자료.txt"
 OUT_PATH = BASE_DIR / "data" / "households.csv"
+MANUAL_PATH = BASE_DIR / "data" / "households_manual.csv"
 OUT_COLS = ["gu", "dong", "jibun", "name", "households", "method", "recap_households", "title_households", "collected_on"]
 SOURCE = "건축물대장 (국토교통부 건축HUB)"
 
@@ -325,11 +332,37 @@ def spread_by_gu(keys, limit):
     return picked
 
 
+def apply_manual(rows, manual):
+    """대장으로 비어 버린 곳을 웹 자료로 확인한 값으로 채운 새 목록과 (채운 수, 건너뛴 줄)을 돌려준다.
+
+    대장에 값이 있는 곳은 덮지 않는다. override가 yes인 줄만 덮는다. 파일에 없는 아파트는 건너뛴다.
+    받은 rows는 바꾸지 않는다.
+    """
+    index = {(r["gu"], r["dong"], r["jibun"], r["name"]): i for i, r in enumerate(rows)}
+    merged = [dict(r) for r in rows]
+    filled, skipped = 0, []
+    for m in manual:
+        key = (m["gu"], m["dong"], m["jibun"], m["name"])
+        value = to_int(m.get("households"))
+        if key not in index or value <= 0:
+            skipped.append((key, "households.csv에 없는 아파트" if key not in index else "세대수가 0 이하"))
+            continue
+        row = merged[index[key]]
+        if to_int(row["households"]) and str(m.get("override") or "").strip().lower() != "yes":
+            skipped.append((key, f"대장 값 {row['households']}이 있어 덮지 않음"))
+            continue
+        row["households"], row["method"] = str(value), "manual"
+        filled += 1
+    return merged, filled, skipped
+
+
 def load_into_db(conn, rows, dry_run):
     """파일의 세대수로 apartments.households를 다시 붙인다. 붙인 수와 바뀐 수를 돌려준다.
 
+    data/households_manual.csv가 있으면 비어 버린 곳을 그 값으로 채운다 (apply_manual).
     전부 비운 뒤 다시 붙이므로 몇 번을 돌려도 결과가 같다. dry_run이면 되돌린다.
     """
+    rows, manual_filled, manual_skipped = apply_manual(rows, read_out(MANUAL_PATH))
     cur = conn.cursor()
     before = {(a["gu"], a["dong"], a["jibun"], a["name"]): a["households"] for a in read_apartments(cur)}
     wanted = {}
@@ -364,7 +397,7 @@ def load_into_db(conn, rows, dry_run):
     else:
         conn.commit()
     return {"apartments": len(before), "filled": filled, "changed": changed, "not_in_db": missing,
-            "collection_added": added, "base_date": base}
+            "collection_added": added, "base_date": base, "manual_filled": manual_filled, "manual_skipped": manual_skipped}
 
 
 # ------------------------------------------------------------------
@@ -373,6 +406,10 @@ def load_into_db(conn, rows, dry_run):
 def print_load(result, dry_run):
     word = "넣으면" if dry_run else "넣음"
     print(f"DB {word}: 아파트 {result['apartments']:,}곳 중 세대수 있음 {result['filled']:,}곳, 바뀐 곳 {result['changed']:,}곳")
+    if result["manual_filled"] or result["manual_skipped"]:
+        print(f"  웹 자료로 채운 곳 {result['manual_filled']:,}곳 (data/households_manual.csv)")
+        for key, why in result["manual_skipped"]:
+            print(f"    건너뜀: {' '.join(key)} ({why})")
     if result["not_in_db"]:
         print(f"  파일에는 있지만 DB에 없는 아파트 {result['not_in_db']:,}곳 (load_trades.py를 먼저 돌렸는지 확인)")
     if result["base_date"]:
