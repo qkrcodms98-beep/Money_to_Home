@@ -7,13 +7,15 @@
   <!-- 모든 화면이 common.css를 먼저, 화면의 CSS를 그 뒤에 불러 쓴다. -->
   <link rel="stylesheet" href="css/common.css">
   <!-- ?v= 는 버전 표시다. map.css나 map-view.js를 고치면 숫자를 올린다. 브라우저가 예전 파일을 캐시에서 꺼내 쓰지 않게 한다. -->
+  <link rel="stylesheet" href="css/list.css">
   <link rel="stylesheet" href="css/map.css?v=20261013-8">
+  <link rel="stylesheet" href="css/sheet.css?v=20261013-4">
   <link rel="stylesheet" href="css/region.css?v=20261013-2">
 </head>
 <body class="map-body">
   <!-- P-05 ① 지도 기본. Figma "확정 목업 v3"의 "v3 · P-05 ① 지도 기본" (node 2037:3).
        모바일에는 헤더가 없다. 맨 위는 내 조건 줄이고, 그 아래를 지도가 가득 채운다.
-       담당: 안세환. 목록(list.js, 김목산)과 시나리오 탭(scenario.js, 박채은)은 아래 창이 생기면 각자 파일에서 붙인다. -->
+       담당: 안세환. 목록(list.js, 김목산)과 시나리오 탭(scenario.js, 박채은)은 아래 창의 빈 자리에 각자 파일에서 그린다. -->
 
   <!-- 모바일 화면의 틀. 지금은 모바일(390 × 844)을 먼저 만든다. 화면이 더 커도 이 크기로 가운데에 둔다. -->
   <div class="map-app">
@@ -120,12 +122,83 @@
       <span class="map-scale__bar" id="scale-bar"></span>
     </div>
 
-    <!-- 오른쪽 아래: 목록 보기. 누르면 아래 창(P-06 ⑤)에 목록이 뜬다. 아래 창은 다음 단계에서 만든다. -->
+    <!-- 오른쪽 아래: 목록 보기. 누르면 아래 창 80%에 목록이 뜬다 (P-06 ⑤) -->
     <button type="button" class="list-button" id="list-button">
       <span class="list-button__icon" aria-hidden="true"><span></span><span></span><span></span></span>
       목록 보기
     </button>
   </main>
+
+  <!-- 아래 창 (P-06). 지도(.map-area)와 따로 둔다. 웹 배치에서는 왼쪽 단으로 옮긴다 (와이어프레임 W7 ~ W10).
+       단계(30%, 80%, 전체)는 sheet.js가 .map-app의 data-sheet로 바꾼다. 처음에는 닫혀 있다.
+       구·동 선택 창(z-index 5)은 이 창(z-index 3)보다 위에 뜬다. -->
+  <section class="sheet" id="sheet" aria-label="아래 창" hidden>
+    <!-- 손잡이. 1차에는 누르면 다음 단계로 바뀐다 (끌기는 2차) -->
+    <button type="button" class="sheet__handle" id="sheet-handle" aria-label="창 키우기">
+      <span class="sheet__grip" aria-hidden="true"></span>
+    </button>
+
+    <!-- 목록 (P-06 ⑤). 김목산의 list.js가 이 안에 그린다. -->
+    <div id="apt-list"></div>
+
+    <!-- 아파트 창 (P-06 ⑥ 30%, ⑦ 80%). apartment.js가 채운다. 값은 모두 A-05 응답에 있는 것이다. -->
+    <div class="apt" id="apartment-panel" hidden>
+      <div class="apt__head">
+        <div class="apt__top">
+          <!-- 목록에서 열었으면 "← 치평동 목록"이 오고, 이름과 배지는 다음 줄로 내려간다 -->
+          <div class="apt__lead" id="apt-lead">
+            <button type="button" class="apt__back" id="apt-back" hidden></button>
+            <div class="apt__title" id="apt-title">
+              <h2 class="apt__name" id="apt-name"></h2>
+              <span class="badge" id="apt-badge"></span>
+            </div>
+          </div>
+          <div class="apt__nav">
+            <button type="button" class="apt__nav-button" id="apt-prev" aria-label="이전 아파트">‹</button>
+            <button type="button" class="apt__nav-button" id="apt-next" aria-label="다음 아파트">›</button>
+            <button type="button" class="apt__nav-button apt__nav-button--close" id="apt-close" aria-label="닫기">✕</button>
+          </div>
+        </div>
+        <div class="apt__title-row" id="apt-title-row" hidden></div>
+
+        <!-- 면적 고르기. 처음에는 평균가가 가장 낮은 면적이 골라져 있다 -->
+        <div class="apt__areas">
+          <div class="apt__area-list" id="apt-areas" role="group" aria-label="면적 고르기"></div>
+          <div class="apt__unit" role="group" aria-label="면적 단위">
+            <button type="button" class="apt__unit-option" data-unit="m2" aria-pressed="true">㎡</button>
+            <button type="button" class="apt__unit-option" data-unit="pyeong" aria-pressed="false">평</button>
+          </div>
+        </div>
+
+        <!-- 탭 (80% 이상). 아파트를 열면 아파트 정보 탭이 먼저 보인다 -->
+        <div class="apt__tabs" role="tablist" aria-label="아파트 창">
+          <button type="button" class="apt__tab" role="tab" id="apt-tab-info" aria-controls="apartment-info" aria-selected="true">아파트 정보</button>
+          <button type="button" class="apt__tab" role="tab" id="apt-tab-scenario" aria-controls="scenario-panel" aria-selected="false">시나리오</button>
+        </div>
+      </div>
+
+      <!-- 30%: 평균가와 여유자금 (또는 부족자금) -->
+      <div class="apt__money">
+        <div class="apt__money-item">
+          <p class="apt__label">최근 1년 실거래 평균</p>
+          <p class="apt__value" id="apt-price"></p>
+        </div>
+        <div class="apt__money-item apt__money-item--end">
+          <p class="apt__label" id="apt-basis"></p>
+          <p class="apt__value" id="apt-gap"></p>
+        </div>
+      </div>
+      <p class="apt__hint">위로 올리면 아파트 정보와 시나리오</p>
+
+      <!-- 80% 이상: 탭의 내용 -->
+      <div class="apt__panels">
+        <!-- 아파트 정보 탭 (P-06 ⑦). 아파트 한 곳 API(A-06)를 붙일 때 apartment.js가 채운다 -->
+        <div class="apt__panel" id="apartment-info" role="tabpanel" aria-labelledby="apt-tab-info"></div>
+        <!-- 시나리오 탭 (P-06 ⑧). 박채은의 scenario.js가 이 안에 그린다. 자리 이름은 채은과 맞춘다 -->
+        <div class="apt__panel" id="scenario-panel" role="tabpanel" aria-labelledby="apt-tab-scenario" hidden></div>
+      </div>
+    </div>
+  </section>
 
   <!-- 구·동 선택 (P-05 ⑬). 지역 버튼을 누르면 js/region.js가 이 안에 그린다. -->
   <section class="region-sheet" id="region-sheet" aria-label="지역 선택" hidden></section>
@@ -139,6 +212,9 @@
   <script src="js/guard.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/region.js?v=20261013-3"></script>
-  <script src="js/map-view.js?v=20261013-12"></script>
+  <script src="js/list.js"></script>
+  <script src="js/sheet.js?v=20261013-3"></script>
+  <script src="js/apartment.js?v=20261013-2"></script>
+  <script src="js/map-view.js?v=20261014-1"></script>
 </body>
 </html>
