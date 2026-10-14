@@ -736,12 +736,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  /* 목업의 크기 98 × 36 (왼쪽 282, 아래 17). 아이콘과 글자를 묶어 버튼의 가운데에 둔다.
+  gap: 6px;
+  /* (예전) 목업의 크기 98 × 36 (왼쪽 282, 아래 17). 아이콘과 글자를 묶어 버튼의 가운데에 둔다.
      여백을 따로 주지 않는다. 주면 버튼이 넓어져 축척과 붙어 버린다. */
-  width: 98px;
-  height: 36px;
-  padding: 0;
+  width: auto; /* 햄버거 아이콘과 "목록" 두 글자만큼 */
+  height: 32px;
+  padding: 0 12px;
   border: 0;
   border-radius: var(--radius-card);
   background: var(--color-primary);

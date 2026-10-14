@@ -66,7 +66,7 @@
 }
 
 .sheet--closing {
-  animation: sheet-down var(--sheet-duration) var(--sheet-ease-down) both;
+  animation: sheet-down var(--sheet-duration) var(--sheet-ease-up) both; /* 올라올 때와 같은 빠르기 (2026-10-14) */
 }
 
 @keyframes sheet-up {
@@ -327,6 +327,14 @@
   padding: 4px 0;
   overflow-x: auto;
   scrollbar-width: none;
+  /* 오른쪽 끝을 흐리게 해 면적이 더 있다는 것을 보인다. 끝까지 밀면 아래 빈자리(::after)가 흐린 곳에 와서 마지막 면적이 다 보인다 */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.apt__area-list::after {
+  content: '';
+  flex: 0 0 22px;
 }
 
 .apt__area-list::-webkit-scrollbar {
@@ -458,8 +466,9 @@
   display: flex;
   flex-shrink: 0;
   align-items: flex-end;
+  flex-wrap: wrap; /* 375px 등에서 평균가와 여유·부족 금액이 함께 길면 둘째 것을 다음 줄로 */
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   margin-top: 14px;
   padding: 4px var(--page-padding) 0;
 }
@@ -472,6 +481,7 @@
 }
 
 .apt__money-item--end {
+  margin-left: auto; /* 다음 줄로 내려가도 오른쪽에 붙는다 */
   align-items: flex-end;
   text-align: right;
 }
@@ -486,9 +496,9 @@
 
 .apt__value {
   margin: 0; /* 글자색은 body의 색. 여유·부족 금액은 common.css의 .amount--now 등이 구분 색을 준다 */
-  font-size: var(--text-title);
+  font-size: calc(var(--text-title) * 0.75); /* 24px의 75% = 18px. 금액이 길어도 덜 넘치게 */
   font-weight: var(--font-bold);
-  line-height: var(--line-height-sheet-value);
+  line-height: 26px;
   white-space: nowrap;
 }
 

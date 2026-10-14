@@ -357,3 +357,30 @@
   padding: 0;
   color: inherit;
 }
+
+/* 다른 면적으로 넘길 때: 면적마다 한 장씩 옆으로 늘어놓고 옆으로 민다. 카드 밖은 가린다 */
+.list-card {
+  overflow: hidden;
+}
+
+.list-card__body {
+  overflow: hidden;
+  padding: 0;
+}
+
+.list-card__track {
+  display: flex;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.list-card__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-card__track {
+    transition: none;
+  }
+}
