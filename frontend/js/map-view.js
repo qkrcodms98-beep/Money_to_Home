@@ -92,6 +92,13 @@ const mapState = {
   summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
+  loadedBounds: null, // 영역으로 받았을 때 서버에 보낸 영역 (보이는 영역보다 넓다). 이 안에서 움직이면 다시 받지 않는다
+  preload: null, // 구·동으로 받은 뒤 주변을 미리 받아 둔 것 { bounds, data, key }. 지도를 끌기 시작하면 바로 쓴다
+  byBounds: false, // 아파트를 지도에 보이는 영역으로 받고 있는가 (손으로 지도를 움직인 뒤). 아니면 구·동으로 받는다
+  boundsTimer: null, // 움직임이 멈추기를 기다리는 타이머
+  quietUntil: 0, // 이때(ms)까지의 확대·축소는 코드가 한 것이다. 영역으로 다시 받지 않는다
+  loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
+  loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
 };
 
 // ───────── 카카오맵 불러오기 ─────────
@@ -142,6 +149,9 @@ function createMap(center) {
     renderScale();
     onZoomChanged();
   });
+  // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
+  kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
+  kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
     hideKakaoScale();
@@ -211,6 +221,7 @@ async function moveToMyLocation({ quiet = false } = {}) {
   if (status === 'ok') {
     showMyLocation(position);
     mapState.map.panTo(toLatLng(position));
+    scheduleBoundsLoad(700); // 옮겨 가는 움직임이 끝난 뒤에 그 자리의 아파트를 받는다
     return;
   }
   if (status === 'outside') showToast(MSG.geoOutside);
@@ -470,6 +481,7 @@ function openGroup(group) {
     return;
   }
   mapState.selectedId = shown.id;
+  quietZoom(700);
   map.setLevel(map.getLevel() - 1, { anchor: toLatLng(shown), animate: { duration: 300 } });
 }
 
@@ -505,7 +517,7 @@ function createAreaMarkerElement(group, name, className, onClick) {
 // 동마다, 구마다의 수는 구별·동별 개수 API(A-12)가 준다. 자리도 함께 온다 (A-02와 같은 자리).
 //   - 동 표시: 5개 구의 모든 동을 한 번에 받는다. 지도를 옆 구로 옮겨도 동 표시가 보인다.
 //   - 구 표시: 구 5개를 한 번에 받는다.
-//   - 조건(입력한 값)이 같은 동안에는 한 번 받은 것을 다시 받지 않는다.
+//   - 입력한 값과 조건 창의 조건이 같은 동안에는 한 번 받은 것을 다시 받지 않는다. 바뀌면 resetSummary로 비운다.
 // mapState.summary[level]: null(아직 안 받음), 'loading'(받는 중), 배열(받음)
 
 // A-12의 한 줄을 표시가 쓰는 모양으로. { gu, dong, target, total, latitude, longitude }
@@ -518,11 +530,16 @@ const toAreaGroup = (region) => ({
   longitude: region.longitude,
 });
 
+// 입력한 값이나 조건 창의 조건이 바뀌면 받아 둔 수를 버린다. 다음에 넓게 볼 때 다시 받는다.
+function resetSummary() {
+  mapState.summary = { dong: null, gu: null };
+}
+
 // level('dong' 또는 'gu')의 수를 받아 둔다. 받는 동안에는 표시가 없다가, 오면 그린다.
 async function loadSummary(level) {
   mapState.summary[level] = 'loading';
   try {
-    const data = await api.post('/api/regions/summary', { conditions: guard.conditions(), level });
+    const data = await api.post('/api/regions/summary', withFilters({ conditions: guard.conditions(), level }));
     mapState.summary[level] = data.regions.map(toAreaGroup);
   } catch (error) {
     mapState.summary[level] = null; // 다음에 넓게 볼 때 다시 받는다
@@ -533,6 +550,7 @@ async function loadSummary(level) {
 }
 
 // 동 표시(level 'dong')나 구 표시(level 'gu')를 그린다. 누르면 그 지역으로 확대한다 (FR-MAP-21).
+// 동 표시는 확대한 뒤 그 동의 목록을 30%로 올린다 (P-06 ④).
 function renderAreaMarkers(level) {
   const groups = mapState.summary[level];
   if (groups === null) loadSummary(level);
@@ -545,7 +563,7 @@ function renderAreaMarkers(level) {
         group,
         gu ? group.gu : group.dong,
         gu ? 'dong-marker dong-marker--gu' : 'dong-marker',
-        () => zoomToRegion({ gu: group.gu, dong: group.dong }),
+        () => (gu ? zoomToRegion({ gu: group.gu, dong: null }) : openDong({ gu: group.gu, dong: group.dong })),
       ),
       xAnchor: 0.5,
       yAnchor: 0.5,
@@ -577,12 +595,32 @@ function onZoomChanged() {
   if (!mapState.data) return;
   const next = markerMode();
   const before = mapState.mode;
-  if (next === before) return;
+  // 손으로 확대·축소했는가. 코드가 한 것(지역 이동, 동 표시 누름, 묶음 풀기)은 스스로 자료를 받는다.
+  const byHand = Date.now() >= mapState.quietUntil;
+  if (next === before) {
+    // 말풍선을 보는 채로 확대·축소하면 보이는 영역이 달라진다
+    if (next === 'apartment' && byHand) scheduleBoundsLoad();
+    return;
+  }
+
+  // 동 표시나 구 표시를 보다가 손으로 확대해 말풍선 수준이 되면, 보이는 영역의 아파트를 받는다.
+  if (next === 'apartment' && byHand) {
+    renderMarkers();
+    scheduleBoundsLoad();
+    return;
+  }
+
+  // 말풍선이 사라지는 수준으로 넓게 보면 열려 있는 아파트 창을 닫는다 (고른 말풍선이 없어진다). 목록은 그대로 둔다.
+  if (next !== 'apartment' && sheet.mode === 'apartment') {
+    selectMarker(null);
+    sheet.close();
+  }
 
   // 구 표시를 보다가 가까이 가면, 지도 가운데에서 가장 가까운 구의 아파트를 받아 보여 준다.
   if (before === 'gu') {
     const gu = nearestGu();
     if (gu !== mapState.region.gu || mapState.region.dong !== null) {
+      mapState.byBounds = false;
       mapState.region = { gu, dong: null };
       store.set('map', { ...mapState.region });
       mapState.mode = next;
@@ -592,6 +630,7 @@ function onZoomChanged() {
   }
   // 동 하나를 보다가 넓게 보면 그 구 전체의 아파트를 받아 동 표시를 그린다. 지역 버튼도 "○○구 전체"로 바뀐다.
   if (next !== 'apartment' && mapState.region.dong !== null) {
+    mapState.byBounds = false; // 넓게 볼 때는 구 단위로 받는다
     mapState.region = { gu: mapState.region.gu, dong: null };
     store.set('map', { ...mapState.region });
     if (next === 'dong') {
@@ -629,16 +668,84 @@ const sheetOrder = (current) =>
   mapState.data ? mapState.data.apartments.filter((apartment) => apartment === current || isOnMap(apartment)) : [];
 
 // 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구
-const listPlace = () => (mapState.region ? mapState.region.dong || mapState.region.gu : '');
+const listPlace = () => {
+  if (mapState.byBounds) return '보이는 곳';
+  return mapState.region ? mapState.region.dong || mapState.region.gu : '';
+};
 
 // 목록 (P-06 ⑤). 그리기는 김목산의 list.js. A-05 응답을 받을 때마다 부른다.
 function renderList() {
   if (!mapState.data) return;
-  listView.render(document.getElementById('apt-list'), mapState.data, {
-    where: mapState.region,
+  listView.render(document.getElementById('apt-list'), visibleData(), {
+    where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
+    sort: currentSort(),
+    onSort: changeSort,
     onSelect: openApartmentFromList,
     onClose: () => sheet.close(),
+    ...(currentFilters() ? { onResetFilters: () => applyFilters(null), onChangeFilters: () => openFilters() } : {}),
   });
+}
+
+// ───────── 조건 창 (P-05 ②) ─────────
+// 창은 김목산의 filter.js가 그린다. 여기서는 열고, 고른 조건을 보관하고, 그 조건으로 다시 받는다.
+
+// 칩의 글자. 조건이 있으면 "면적 59~84㎡ ▾"처럼 적고 파랗게 한다. 없으면 "면적 ▾"
+const CHIP_NAMES = { area: '면적', price: '가격', year: '준공 연도' };
+function renderChips() {
+  const filters = currentFilters();
+  const unit = store.get('map').area_unit || 'm2';
+  document.querySelectorAll('.filter-chip[data-filter]').forEach((chip) => {
+    const key = chip.dataset.filter;
+    const label = filters ? filterSheet.label(filters, key, unit) : null;
+    chip.textContent = `${label || CHIP_NAMES[key]} ▾`;
+    chip.classList.toggle('filter-chip--on', Boolean(label));
+  });
+}
+
+// 조건 창을 연다. focus는 누른 칩('area', 'price', 'year'). 지역 선택 창이 열려 있으면 닫는다.
+function openFilters(focus) {
+  regionPicker.close();
+  filterSheet.open(document.getElementById('filter-sheet'), currentFilters(), applyFilters, focus ? { focus } : {});
+}
+
+// 조건을 적용한다 (null이면 초기화). 새로 고쳐도 남도록 store에 둔다. 아파트와 동·구의 수를 다시 받는다.
+function applyFilters(filters) {
+  store.set('map', { filters: filters && !filterSheet.isEmpty(filters) ? filters : null });
+  renderChips();
+  resetSummary();
+  loadData();
+}
+
+// ───────── 시나리오의 "다시 계산" (FR-RESULT-06, 와이어프레임 A3) ─────────
+// 시나리오 탭(박채은의 scenario.js)에서 월 저축액이나 목표 기간을 바꿔 다시 계산하면 'mth:plan-changed'로 알려 준다.
+// 바꾼 값을 입력(저축 계획)에 반영하고, 지도와 목록의 구분, 내 조건 줄, 동·구의 수를 다시 받는다.
+// 로그인한 사용자의 DB 저장은 로그인 화면을 붙일 때 더한다.
+function onPlanChanged(event) {
+  const { monthly_saving: saving, target_years: years } = event.detail || {};
+  if (!Number.isInteger(saving) || !Number.isInteger(years)) return;
+  store.set('input', { monthly_saving: saving, target_years: years });
+  resetSummary();
+  loadData();
+}
+
+// 목록에서 정렬을 고름. 서버가 그 순서로 다시 준다 (FR-APT-07). 새로 고쳐도 고른 정렬이 남는다.
+// 말풍선이 겹칠 때 앞에 오는 것과 ‹ › 로 넘어가는 순서도 이 순서를 따른다.
+function changeSort(sort) {
+  store.set('map', { sort });
+  loadData();
+}
+
+// 동 표시를 누름 → 그 동으로 확대한 뒤 목록 30% (P-06 ④).
+// 확대가 끝난 뒤에 창을 올린다. 그사이 다른 곳으로 옮겼거나 다시 넓게 보고 있으면 올리지 않는다.
+async function openDong({ gu, dong }) {
+  const started = Date.now();
+  await zoomToRegion({ gu, dong });
+  const left = ZOOM_MS + 150 - (Date.now() - started);
+  if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
+  const same = mapState.region.gu === gu && mapState.region.dong === dong;
+  if (!same || mapState.mode !== 'apartment' || !mapState.data) return;
+  selectMarker(null);
+  sheet.show('30', 'list');
 }
 
 // 말풍선을 누름 → 아파트 30% (P-06 ⑥). 지도의 표시를 누르면 늘 30%로 연다 (화면 설계서 7.1).
@@ -648,9 +755,32 @@ function openApartment(apartment) {
   sheet.show('30', 'apartment');
 }
 
+// 이름 검색의 결과를 누름 (P-05 ⑭, FR-MAP-08). apartment는 A-05 응답의 아파트 하나다.
+//   - 보고 있는 지역을 그 아파트의 구·동으로 바꾸고 지도를 옮긴다. 그래야 그 아파트의 말풍선이 지도에 있다.
+//   - 자금이 부족한 아파트면 자금 부족 표시를 켠다. 꺼 두면 찾은 아파트의 말풍선이 보이지 않는다.
+//   - 그 아파트의 창을 30%로 연다. 좌표가 없으면 지도는 그대로 두고 창만 연다 (P-06 ⑱).
+//   - 조건 창의 조건 때문에 그 아파트가 지도에 없으면(검색은 조건을 보지 않는다) 말풍선 없이 창만 연다.
+async function onSearchPick(apartment) {
+  regionPicker.close();
+  filterSheet.close();
+  if (apartment.category === 'lack' && store.get('map').show_lack !== true) {
+    store.set('map', { show_lack: true });
+    renderLackSwitch();
+  }
+  await moveToRegion({ gu: apartment.gu, dong: apartment.dong });
+  const found = mapState.data && mapState.data.apartments.find((item) => item.id === apartment.id);
+  if (found && hasCoord(found)) {
+    openApartment(found);
+    return;
+  }
+  aptPanel.show(found || apartment, 0);
+  selectMarker(null);
+  sheet.show('30', 'apartment');
+}
+
 // 목록 보기 → 목록 80% (P-06 ⑤). 목록은 이미 그려 두었으므로 창만 연다.
 function openList() {
-  if (!mapState.data) return;
+  if (!mapState.data && !mapState.loadFailed) return; // 받지 못했으면 목록 자리에 오류와 "다시 시도"가 있다
   selectMarker(null);
   sheet.show('80', 'list');
 }
@@ -743,13 +873,19 @@ function onSheetChange() {
 // A-05를 새로 받은 뒤 열려 있는 아파트 창을 새 응답에 맞춘다.
 // 새 응답에 같은 아파트가 있으면 그것으로 바꿔 보여 주고, 없으면(다른 지역으로 옮김) 창을 닫는다.
 function syncApartmentSheet() {
-  if (sheet.mode !== 'apartment' || !aptPanel.apartment) return;
+  // 닫히는 중이면 건드리지 않는다. 다시 고르면 닫힌 뒤에도 말풍선이 고른 채로 남는다.
+  if (sheet.mode !== 'apartment' || sheet.phase === 'closing' || !aptPanel.apartment) return;
   const same = mapState.data.apartments.find((item) => item.id === aptPanel.apartment.id);
   if (!same) {
-    sheet.close();
+    // 지도를 움직여 보던 아파트가 화면 밖으로 나갔으면 창은 그대로 둔다. 다른 지역을 고른 것이면 닫는다.
+    if (!mapState.byBounds) sheet.close();
     return;
   }
-  aptPanel.show(same, aptPanel.areaIndex, { listPlace: aptPanel.listPlace ? listPlace() : null });
+  // aptPanel.show는 아파트 정보 탭으로 돌아간다. 보던 탭에 머물도록 값만 바꿔 다시 그린다.
+  aptPanel.apartment = same;
+  if (aptPanel.areaIndex >= same.areas.length) aptPanel.areaIndex = 0;
+  if (aptPanel.listPlace) aptPanel.listPlace = listPlace();
+  aptPanel.render();
   selectMarker(hasCoord(same) ? same.id : null);
 }
 
@@ -787,6 +923,7 @@ function bindEvents() {
     store.set('map', { area_unit: next });
     renderUnitButton();
     renderMarkers();
+    renderChips(); // 면적 조건의 글자가 ㎡와 평으로 바뀐다
     aptPanel.render();
   });
 
@@ -838,9 +975,27 @@ function bindEvents() {
   // 구·동 선택 (P-05 ⑬). 창은 js/region.js가 그린다.
   document.getElementById('region-button').addEventListener('click', () => {
     const sheet = document.getElementById('region-sheet');
-    if (regionPicker.isOpen()) regionPicker.close();
-    else regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
+    if (regionPicker.isOpen()) {
+      regionPicker.close();
+    } else {
+      filterSheet.close(); // 두 창을 함께 띄우지 않는다
+      regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
+    }
   });
+
+  // 조건 칩 → 조건 창 (P-05 ②). 누른 칩의 항목으로 내려가 열린다. 열려 있으면 닫는다.
+  document.querySelectorAll('.filter-chip[data-filter]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (filterSheet.isOpen()) filterSheet.close();
+      else openFilters(chip.dataset.filter);
+    });
+  });
+
+  // 아파트 이름 검색 (P-05 ⑭). 결과는 js/search.js가 #search-results에 그린다.
+  searchView.open(document.getElementById('search-results'), onSearchPick);
+
+  // 시나리오 탭의 "다시 계산"
+  document.addEventListener('mth:plan-changed', onPlanChanged);
 
   // 목록 보기 → 아래 창 80%에 목록 (P-06 ⑤)
   document.getElementById('list-button').addEventListener('click', openList);
@@ -858,10 +1013,6 @@ function bindEvents() {
       renderMarkers();
     },
   });
-
-  // 아직 만들지 않은 동작. 만들 때 여기에 붙인다.
-  //   search-box     아파트 이름 검색, 2차 (P-05 ⑭)
-  //   filter-chip    조건 창, 2차 (P-05 ②)
 }
 
 // ───────── 자료 ─────────
@@ -887,17 +1038,196 @@ function regionCenter({ gu, dong }) {
   return place && hasCoord(place) ? { latitude: place.latitude, longitude: place.longitude } : null;
 }
 
-// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보낸다. 1차에는 filters와 sort를 보내지 않는다.
-// 실패하면 앞의 자료를 그대로 두고 알린다.
-async function loadData() {
+// 목록의 정렬 (A-05의 sort). store의 map.sort에 둔다. 모르는 값이면 구분순이다.
+const SORTS = ['category', 'price_asc', 'price_desc'];
+const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'category');
+
+// 조건 창에서 고른 조건 (A-05, A-12의 filters). store의 map.filters에 둔다. 조건이 하나도 없으면 null
+function currentFilters() {
+  const filters = store.get('map').filters;
+  return filters && !filterSheet.isEmpty(filters) ? filters : null;
+}
+
+// 서버에 보낼 조건. 없으면 filters를 아예 넣지 않는다.
+const withFilters = (body) => (currentFilters() ? { ...body, filters: currentFilters() } : body);
+
+// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보내고, 목록에서 고른 정렬과 조건 창의 조건을 함께 보낸다.
+// 범위는 구·동이거나 지도에 보이는 영역이다 (currentWhere). 실패하면 앞의 자료를 그대로 두고 알린다.
+// ───────── 지도를 움직이면 보이는 영역으로 다시 받기 (FR-MAP-22, A-05 bounds) ─────────
+// 아파트를 받는 범위는 둘 중 하나다.
+//   구·동        : 처음 열 때, 구·동을 골랐을 때, 동 표시나 구 표시를 눌렀을 때, 이름 검색에서 골랐을 때
+//   보이는 영역  : 손으로 지도를 끌거나 확대·축소했을 때, 내 위치로 옮겼을 때 (mapState.byBounds)
+// 영역으로 받는 것은 말풍선이 보이는 수준에서만 한다. 넓게 볼 때의 동·구 표시는 A-12가 따로 준다.
+//
+// 미리 받기: 서버에는 보이는 영역보다 넓게(위아래·좌우로 한 화면씩 더) 보낸다. 그래서 지도를 끌면 주변의 말풍선이 이미 있다.
+//   - 보이는 영역이 받아 둔 영역 안에 여유 있게 있으면 다시 받지 않는다. 가장자리에 가까워지면 그때 새로 받는다.
+//   - 구·동으로 받은 뒤에도 주변을 뒤에서 미리 받아 둔다 (mapState.preload). 처음 끌기 시작할 때 바로 그린다.
+//   - 목록과 개수는 보이는 영역의 아파트만 센다 (visibleData). 말풍선은 받아 둔 것을 모두 그린다.
+// 움직임이 멈추고 0.3초 뒤에 한 번만 받는다. 끄는 동안 계속 부르지 않는다.
+
+const BOUNDS_WAIT = 300;
+const BOUNDS_PAD = 1; // 보이는 영역의 위아래·좌우로 이만큼(화면의 배수) 더 받는다
+const BOUNDS_MARGIN = 0.5; // 받아 둔 영역의 가장자리까지 이만큼(화면의 배수)도 남지 않으면 새로 받는다
+const PRELOAD_WAIT = 1100; // 구·동으로 옮긴 뒤 지도의 움직임이 끝나기를 기다렸다가 주변을 미리 받는다
+const BOUNDS_NAME = '지도에 보이는 곳'; // 영역으로 받았을 때 목록의 머리에 적는 이름
+
+// 지도에 보이는 영역 { south, west, north, east }. 지도가 가려져 크기가 없으면 null
+function mapBounds() {
+  const { map } = mapState;
+  if (!map) return null;
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const area = { south: sw.getLat(), west: sw.getLng(), north: ne.getLat(), east: ne.getLng() };
+  return area.south < area.north && area.west < area.east ? area : null;
+}
+
+// 영역을 위아래·좌우로 넓힌다. ratio는 그 영역 크기의 배수
+function growBounds(area, ratio) {
+  const height = (area.north - area.south) * ratio;
+  const width = (area.east - area.west) * ratio;
+  return { south: area.south - height, west: area.west - width, north: area.north + height, east: area.east + width };
+}
+
+const containsBounds = (outer, inner) =>
+  inner.south >= outer.south && inner.north <= outer.north && inner.west >= outer.west && inner.east <= outer.east;
+
+const insideBounds = (area, apartment) =>
+  hasCoord(apartment) && apartment.latitude >= area.south && apartment.latitude <= area.north &&
+  apartment.longitude >= area.west && apartment.longitude <= area.east;
+
+// 받아 둔 자료가 지금의 입력, 조건, 정렬로 받은 것인지 견주는 글자
+const requestKey = () => JSON.stringify([guard.conditions(), currentFilters(), currentSort()]);
+
+// 목록에 그릴 자료. 영역으로 받았으면 보이는 영역 안의 아파트만 남기고 개수를 다시 센다. 순서는 서버가 준 그대로다.
+function visibleData() {
+  const { data } = mapState;
+  const view = mapState.byBounds ? mapBounds() : null;
+  if (!data || !view) return data;
+  const apartments = data.apartments.filter((apartment) => insideBounds(view, apartment));
+  const counts = { now: 0, within: 0, lack: 0, total: apartments.length };
+  apartments.forEach((apartment) => { counts[apartment.category] += 1; });
+  return { ...data, apartments, counts };
+}
+
+// A-05의 where. 영역으로 받는 중이면 보이는 영역을 넓힌 것, 아니면 구·동 (영역을 알 수 없을 때도 구·동)
+function currentWhere() {
+  const view = mapState.byBounds ? mapBounds() : null;
+  if (view) return { bounds: growBounds(view, BOUNDS_PAD) };
   const { gu, dong } = mapState.region;
-  const where = dong ? { gu, dong } : { gu };
+  return dong ? { gu, dong } : { gu };
+}
+
+// 지도 가운데에서 가장 가까운 동 { gu, dong }. 지역 버튼의 글자에 쓴다 (화면 설계서 6.2). 없으면 null
+function nearestDong() {
+  const center = mapState.map.getCenter();
+  let best = null;
+  for (const region of mapState.regions) {
+    for (const item of region.dongs.filter(hasCoord)) {
+      const distance = (item.latitude - center.getLat()) ** 2 + (item.longitude - center.getLng()) ** 2;
+      if (best === null || distance < best.distance) best = { gu: region.gu, dong: item.dong, distance };
+    }
+  }
+  return best ? { gu: best.gu, dong: best.dong } : null;
+}
+
+// 지금부터 ms 동안의 확대·축소는 코드가 한 것으로 본다.
+function quietZoom(ms) {
+  mapState.quietUntil = Date.now() + ms;
+}
+
+// 구·동으로 받는 쪽으로 돌아간다. 기다리던 영역 받기는 그만둔다.
+function useRegion() {
+  mapState.byBounds = false;
+  mapState.loadedBounds = null;
+  mapState.preload = null;
+  clearTimeout(mapState.boundsTimer);
+}
+
+// 구·동으로 받은 뒤, 지금 보이는 곳의 주변을 뒤에서 미리 받아 둔다. 실패해도 알리지 않는다 (끌 때 다시 받는다).
+function preloadAround() {
+  const mine = mapState.loadSeq;
+  setTimeout(async () => {
+    const view = mapBounds();
+    if (mine !== mapState.loadSeq || mapState.byBounds || markerMode() !== 'apartment' || !view) return;
+    const bounds = growBounds(view, BOUNDS_PAD);
+    const key = requestKey();
+    try {
+      const data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where: { bounds }, sort: currentSort() }));
+      if (mine === mapState.loadSeq && !mapState.byBounds) mapState.preload = { bounds, data, key };
+    } catch (error) {
+      // 미리 받기는 없어도 된다
+    }
+  }, PRELOAD_WAIT);
+}
+
+// 지도를 끌기 시작할 때: 미리 받아 둔 주변이 있으면 바로 그린다. 고른 아파트는 그대로 둔다.
+function adoptPreload() {
+  const { preload } = mapState;
+  if (mapState.byBounds || !preload || markerMode() !== 'apartment' || preload.key !== requestKey()) return;
+  const selected = mapState.selectedId;
+  mapState.byBounds = true;
+  mapState.data = preload.data;
+  mapState.loadedBounds = preload.bounds;
+  mapState.preload = null;
+  mapState.selectedId = preload.data.apartments.some((apartment) => apartment.id === selected) ? selected : null;
+  renderMarkers();
+}
+
+// 움직임이 멈추면 보이는 영역의 아파트를 받는다.
+function scheduleBoundsLoad(wait = BOUNDS_WAIT) {
+  clearTimeout(mapState.boundsTimer);
+  mapState.boundsTimer = setTimeout(loadByBounds, wait);
+}
+
+// 보이는 영역의 아파트를 받는다. 지역 버튼은 지도 가운데의 동 이름으로 바뀐다. 새로 고치면 그 동으로 돌아온다.
+// 받아 둔 영역 안에 여유 있게 있으면 다시 받지 않고 목록만 보이는 곳에 맞춘다.
+function loadByBounds() {
+  const view = mapBounds();
+  if (!mapState.map || markerMode() !== 'apartment' || !view) return;
+  const near = nearestDong();
+  if (near) {
+    mapState.region = near;
+    store.set('map', { ...near });
+  }
+  renderRegionName();
+  const loaded = mapState.byBounds ? mapState.loadedBounds : null;
+  if (loaded && containsBounds(loaded, growBounds(view, BOUNDS_MARGIN))) {
+    renderList();
+    return;
+  }
+  mapState.byBounds = true;
+  loadData();
+}
+
+async function loadData() {
+  const where = currentWhere();
+  const mine = ++mapState.loadSeq;
   try {
-    mapState.data = await api.post('/api/apartments/search', { conditions: guard.conditions(), where });
+    const data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where, sort: currentSort() }));
+    if (mine !== mapState.loadSeq) return; // 그사이 다시 받기 시작했다. 늦게 온 이 응답은 버린다
+    mapState.data = data;
     mapState.selectedId = null;
+    mapState.loadFailed = false;
+    mapState.loadedBounds = where.bounds || null;
+    mapState.preload = null;
+    if (!where.bounds) preloadAround();
   } catch (error) {
+    if (mine !== mapState.loadSeq) return;
     // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
-    showToast(error.status === 422 ? error.detail : MSG.dataFail);
+    const message = error.status === 422 ? error.detail : MSG.dataFail;
+    showToast(message);
+    // 목록 자리에는 오류와 "다시 시도"를 둔다 (김목산의 listView.renderError).
+    // 앞의 자료로 목록을 다시 그리면 머리의 지역 이름과 아파트가 어긋난다. 지도의 말풍선은 앞의 것을 그대로 둔다.
+    mapState.loadFailed = true;
+    listView.renderError(document.getElementById('apt-list'), {
+      message,
+      onRetry: loadData,
+      onClose: () => sheet.close(),
+    });
+    renderCondition();
+    renderMarkers();
+    return;
   }
   renderCondition();
   renderMarkers();
@@ -910,12 +1240,14 @@ async function loadData() {
 function panToRegion() {
   const center = regionCenter(mapState.region);
   if (!mapState.map || !center) return;
+  quietZoom(500);
   mapState.map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
   mapState.map.setCenter(toLatLng(center));
 }
 
 // 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
 async function moveToRegion({ gu, dong }) {
+  useRegion();
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
   renderRegionName();
@@ -933,8 +1265,10 @@ async function zoomToRegion({ gu, dong }) {
     await moveToRegion({ gu, dong }); // 자리를 모르거나 움직임을 줄이도록 설정했으면 바로 옮긴다
     return;
   }
+  useRegion();
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
+  quietZoom(ZOOM_MS + 400);
   const { map } = mapState;
   const target = toLatLng(center);
   const level = dong ? DONG_LEVEL : GU_LEVEL;
@@ -989,6 +1323,7 @@ async function initMap() {
 
   renderUnitButton();
   renderLackSwitch();
+  renderChips();
   renderLegend();
   sheet.init();
   bindEvents();

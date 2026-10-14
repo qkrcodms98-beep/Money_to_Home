@@ -13,7 +13,12 @@
 //     onSort: (sort) => { ... },                     // 정렬을 고름. A-05를 sort로 다시 불러 그린다. 없으면 정렬 버튼이 없다
 //     onSelect: (apartment, areaIndex) => { ... },  // 카드를 누름. 80% 아파트 창을 연다 (세환)
 //     onClose: () => { ... },                        // 닫기
+//     onResetFilters: () => { ... },                 // 결과 없음의 '조건 초기화'. 없으면 버튼이 없다
+//     onChangeFilters: () => { ... },                // 결과 없음의 '조건 바꾸기' (조건 창을 연다). 없으면 버튼이 없다
 //   });
+//
+//   // 불러오지 못했을 때. message가 없으면 "아파트를 불러오지 못했습니다…", onRetry가 있으면 '다시 시도', onClose가 있으면 닫기
+//   listView.renderError(el, { message, onRetry: () => { ... }, onClose: () => { ... } });
 //
 //   // A-05를 불러 그리고, 받은 응답을 돌려준다. 정렬은 store의 map.sort를 쓰고, 바꾸면 알아서 다시 부른다.
 //   const result = await listView.load(el, { gu: '서구', dong: '치평동' }, { onSelect, onClose });
@@ -43,9 +48,27 @@ const LIST_TEXT = {
   noTargetTitle: '이 동에는 지금 조건으로 목표할 수 있는 아파트가 없습니다.',
   noTargetHelp: '저축액이나 목표 기간을 바꾸거나 다른 동을 살펴보세요.',
   noTargetButton: '조건 수정',
+  resetFilters: '조건 초기화',
+  changeFilters: '조건 바꾸기',
+  loadFail: '아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', // 지도 화면과 같은 문장 (와이어프레임 P-04 ⑩)
+  retry: '다시 시도',
   noCoord: '위치 없음',
   overCap: '상한 초과',
 };
+
+// 실거래 수집 기준일 (A-13). 화면을 연 동안 한 번만 받는다. 받지 못하거나 없으면 null
+let listBaseDate = null;
+function listTradesBaseDate() {
+  if (!listBaseDate) {
+    listBaseDate = api.get('/api/data-status')
+      .then((status) => status.trades_base_date)
+      .catch(() => {
+        listBaseDate = null; // 다음에 그릴 때 다시 받아 본다
+        return null;
+      });
+  }
+  return listBaseDate;
+}
 
 // 요소 하나를 만든다. text는 textContent로 넣는다.
 function listEl(tag, className, text) {
@@ -125,30 +148,48 @@ function listHead(result, options) {
   const place = [where.gu, where.dong].filter(Boolean).join(' ');
   const count = `${format.comma(result.counts.total)}곳`;
   // 자리가 모자라면 지역 이름만 말줄임(…)으로 줄이고 "· 22곳"은 남긴다
+  // "· 22곳" 앞의 빈칸은 붙는 빈칸(\u00a0)이다. 보통 빈칸은 flex 안에서 사라진다
   const title = listEl('h2', 'list__title');
-  if (place) title.append(listEl('span', 'list__place', place), listEl('span', 'list__count', ` · ${count}`));
+  if (place) title.append(listEl('span', 'list__place', place), listEl('span', 'list__count', `\u00a0· ${count}`));
   else title.append(listEl('span', 'list__count', count));
   head.append(title);
 
-  // 안내 아이콘 ( ! ). 누르거나 마우스를 올리면 실거래 기록 안내가 뜬다 (FR-COMMON-02)
+  head.append(listInfo());
+
+  if (options.onSort) head.append(listSortMenu(options.sort || 'category', options.onSort));
+
+  head.append(listCloseButton(() => options.onClose && options.onClose()));
+  return head;
+}
+
+function listCloseButton(onClose) {
+  const close = listEl('button', 'list__close', '×');
+  close.type = 'button';
+  close.setAttribute('aria-label', '닫기');
+  close.addEventListener('click', onClose);
+  return close;
+}
+
+// 안내 아이콘 ( ! ). 누르거나 마우스를 올리면 실거래 기록 안내가 뜨고, 바깥을 누르면 닫힌다 (FR-COMMON-02, B5).
+// 문구 끝에 실거래 수집 기준일을 적는다 (FR-DATA-05). 기준일이 없으면 그 문장만 뺀다
+function listInfo() {
   const info = listEl('span', 'list__info-wrap');
   const button = listEl('button', 'list__info', '!');
   button.type = 'button';
   button.setAttribute('aria-label', '안내');
   const tip = listEl('span', 'list__tip', LIST_TEXT.info);
   tip.setAttribute('role', 'tooltip');
+  listTradesBaseDate().then((date) => {
+    if (date) tip.textContent = `${LIST_TEXT.info} 실거래 ${date} 기준.`;
+  });
   button.addEventListener('click', () => info.classList.toggle('list__info-wrap--open'));
+  const onOutside = (event) => {
+    if (!info.isConnected) document.removeEventListener('click', onOutside); // 목록을 다시 그렸으면 치운다
+    else if (!info.contains(event.target)) info.classList.remove('list__info-wrap--open');
+  };
+  document.addEventListener('click', onOutside);
   info.append(button, tip);
-  head.append(info);
-
-  if (options.onSort) head.append(listSortMenu(options.sort || 'category', options.onSort));
-
-  const close = listEl('button', 'list__close', '×');
-  close.type = 'button';
-  close.setAttribute('aria-label', '닫기');
-  close.addEventListener('click', () => options.onClose && options.onClose());
-  head.append(close);
-  return head;
+  return info;
 }
 
 // "정렬: 구분순" 글자 버튼과 작은 선택 창 (B1). 고르면 창을 닫고 onSort(sort)를 부른다
@@ -201,15 +242,21 @@ function listSortMenu(current, onSort) {
   return wrap;
 }
 
-function listEmpty(title, help, buttonText, onButton) {
+// buttons: [{ text, onClick }]. onClick이 없는 버튼은 그리지 않는다
+function listEmpty(title, help, buttons = []) {
   const box = listEl('div', 'list__empty');
   box.append(listEl('p', 'list__empty-title', title));
   box.append(listEl('p', 'list__empty-help', help));
-  if (buttonText) {
-    const button = listEl('button', 'link-button list__empty-button', buttonText);
-    button.type = 'button';
-    button.addEventListener('click', onButton);
-    box.append(button);
+  const shown = buttons.filter((b) => b.onClick);
+  if (shown.length > 0) {
+    const row = listEl('div', 'list__empty-buttons');
+    shown.forEach((b) => {
+      const button = listEl('button', 'link-button list__empty-button', b.text);
+      button.type = 'button';
+      button.addEventListener('click', b.onClick);
+      row.append(button);
+    });
+    box.append(row);
   }
   return box;
 }
@@ -227,9 +274,35 @@ const listView = {
       listView.render(container, result, { ...handlers, where, sort, onSort });
       return result;
     } catch (error) {
-      container.replaceChildren(listEl('p', 'notice notice--error', error.detail));
+      // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다 (지도 화면과 같다)
+      listView.renderError(container, {
+        message: error.status === 422 ? error.detail : LIST_TEXT.loadFail,
+        onRetry: () => listView.load(container, where, handlers).catch(() => {}),
+        onClose: handlers.onClose,
+      });
       throw error;
     }
+  },
+
+  // 불러오지 못함. 빨간 테두리 상자에 문장과 '다시 시도' (P-05 ⑰, 아파트 정보 탭과 같은 모양)
+  renderError(container, { message = LIST_TEXT.loadFail, onRetry, onClose } = {}) {
+    const box = listEl('div', 'notice notice--error list__fail');
+    box.setAttribute('role', 'alert');
+    box.append(listEl('p', 'list__fail-text', message));
+    if (onRetry) {
+      const retry = listEl('button', 'link-button list__fail-retry', LIST_TEXT.retry);
+      retry.type = 'button';
+      retry.addEventListener('click', onRetry);
+      box.append(retry);
+    }
+    const root = listEl('section', 'list');
+    if (onClose) {
+      const head = listEl('header', 'list__head');
+      head.append(listCloseButton(onClose));
+      root.append(head);
+    }
+    root.append(box);
+    container.replaceChildren(root);
   },
 
   // A-05 응답으로 목록을 그린다. options: { where, sort, onSort, onSelect, onClose } (모두 없어도 된다)
@@ -237,9 +310,12 @@ const listView = {
     const root = listEl('section', 'list');
     root.append(listHead(result, options));
 
-    // 결과 없음 (P-05 ⑨, FR-APT-07)
+    // 결과 없음 (P-05 ⑨, FR-APT-07). '조건 초기화', '조건 바꾸기'는 부르는 쪽이 넘겼을 때만
     if (result.counts.total === 0) {
-      root.append(listEmpty(LIST_TEXT.emptyTitle, LIST_TEXT.emptyHelp));
+      root.append(listEmpty(LIST_TEXT.emptyTitle, LIST_TEXT.emptyHelp, [
+        { text: LIST_TEXT.resetFilters, onClick: options.onResetFilters },
+        { text: LIST_TEXT.changeFilters, onClick: options.onChangeFilters },
+      ]));
       container.replaceChildren(root);
       return;
     }
@@ -250,8 +326,8 @@ const listView = {
 
     // 아파트는 있지만 목표할 수 있는 곳이 없음 (A6). '조건 수정'은 저축 계획 단계로 간다
     if (result.counts.now === 0 && result.counts.within === 0) {
-      root.append(listEmpty(LIST_TEXT.noTargetTitle, LIST_TEXT.noTargetHelp, LIST_TEXT.noTargetButton,
-        () => { location.href = 'plan.html'; }));
+      root.append(listEmpty(LIST_TEXT.noTargetTitle, LIST_TEXT.noTargetHelp,
+        [{ text: LIST_TEXT.noTargetButton, onClick: () => { location.href = 'plan.html'; } }]));
     }
 
     // 가격순이면 구분별 제목 없이 서버가 준 순서로 잇는다. 구분은 카드의 배지로만 보인다 (B2)

@@ -9,6 +9,9 @@ uvicorn[standard]==0.54.0
 SQLAlchemy==2.1.4
 PyMySQL==1.2.3
 
+# 회원 비밀번호 해시 (2차)
+bcrypt==5.0.0
+
 # 설정 (.env 읽기)
 python-dotenv==1.2.4
 

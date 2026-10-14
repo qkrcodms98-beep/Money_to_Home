@@ -10,10 +10,7 @@
 //     1차의 여섯 줄: 지번 주소, 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래.
 //     세대수와 가격 범위는 2차, 로드뷰 자리는 3차라 아직 그리지 않는다 (와이어프레임 P-06 ⑦).
 //     값을 모르는 줄(도로명 주소, 준공 연도가 비어 있음)은 그리지 않는다.
-//   시나리오 (P-06 ⑧): 박채은의 scenario.js가 #scenario-panel에 그린다. 이 파일은 부르기만 한다.
-//     scenarioView.render(요소, { apartment, area, conditions })   (scenario.js 맨 위에 적힌 모양)
-//     시나리오 탭이 보일 때만 부른다. 아파트, 면적, 조건이 그대로면 다시 부르지 않는다.
-//     scenarioView가 아직 없으면 아무것도 하지 않는다.
+//   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
 //
 // 30%의 값은 모두 A-05 응답에 있다. 30%에서는 서버를 다시 부르지 않는다.
 // 계산하지 않는다. 배지의 구분과 금액은 서버가 준 값이다 (NFR-13). 글자는 textContent로 넣는다.
@@ -36,13 +33,13 @@ const APT_INFO_FAIL = '아파트를 불러오지 못했습니다. 잠시 후 다
 
 const aptPanel = {
   apartment: null,
+  scenarioKey: null, // 시나리오 탭에 마지막으로 그린 아파트와 면적 ("번호:면적대")
   areaIndex: 0, // 고른 면적. areas는 평균가가 낮은 순이고 첫째가 처음에 골라져 있다 (FR-APT-05)
   listPlace: null,
   handlers: {},
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
   loading: new Set(), // 받는 중인 아파트 번호
   failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
-  scenarioKey: null, // 시나리오 탭에 마지막으로 그린 것 (아파트 번호, 면적대, 조건)
 
   init(handlers) {
     aptPanel.handlers = handlers;
@@ -65,15 +62,11 @@ const aptPanel = {
       tab.addEventListener('click', () => {
         aptPanel.selectTab(tab.id);
         aptPanel.renderInfo();
-        aptPanel.renderScenario();
       });
     });
 
     // 창이 80% 이상으로 커지면 아파트 정보 탭이 보인다. 그때 처음 부른다.
-    sheet.onChange(() => {
-      aptPanel.renderInfo();
-      aptPanel.renderScenario();
-    });
+    sheet.onChange(() => aptPanel.renderInfo());
   },
 
   unit: () => (store.get('map').area_unit === 'pyeong' ? 'pyeong' : 'm2'),
@@ -102,6 +95,23 @@ const aptPanel = {
       tab.setAttribute('aria-selected', String(selected));
       document.getElementById(tab.getAttribute('aria-controls')).hidden = !selected;
     });
+    aptPanel.renderScenario();
+  },
+
+  // ───────── 시나리오 탭 (P-06 ⑧) ─────────
+  // 내용은 박채은의 scenario.js가 그린다. 여기서는 그릴 때를 알려 주기만 한다.
+  //   시나리오 탭을 열 때, 그 탭이 열린 채 면적이나 아파트를 바꿀 때 부른다.
+  //   같은 아파트의 같은 면적이면 다시 부르지 않는다 (탭을 오가도 "다시 계산"한 결과가 남는다).
+  //   scenario.js가 없으면 아무것도 하지 않는다.
+  renderScenario() {
+    const { apartment, areaIndex } = aptPanel;
+    if (!apartment || typeof scenarioView === 'undefined') return;
+    if (document.getElementById('apt-tab-scenario').getAttribute('aria-selected') !== 'true') return;
+    const area = apartment.areas[areaIndex];
+    const key = `${apartment.id}:${area.area_band}`;
+    if (aptPanel.scenarioKey === key) return;
+    aptPanel.scenarioKey = key;
+    scenarioView.render(document.getElementById('scenario-panel'), { apartment, area, conditions: guard.conditions() });
   },
 
   render() {
@@ -161,30 +171,6 @@ const aptPanel = {
 
     aptPanel.renderInfo();
     aptPanel.renderScenario();
-  },
-
-  // ───────── 시나리오 탭 (P-06 ⑧, 박채은의 scenario.js) ─────────
-
-  // 시나리오 탭이 지금 보이는가. 80% 이상이고, 아파트 창이고, 그 탭이 골라져 있을 때
-  scenarioVisible() {
-    return (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment' &&
-      (sheet.stage === '80' || sheet.stage === 'full') &&
-      document.getElementById('apt-tab-scenario').getAttribute('aria-selected') === 'true';
-  },
-
-  // 보일 때만 scenarioView.render를 부른다. 아파트, 면적, 조건이 지난번과 같으면 부르지 않는다
-  // (창의 상태가 바뀔 때마다 불려서, 그대로 두면 같은 계산을 여러 번 부르게 된다).
-  // ㎡/평은 넘기지 않는다. 시나리오 탭에는 면적 글자가 없다 (목업 2037:446).
-  renderScenario() {
-    const { apartment } = aptPanel;
-    if (!apartment || !aptPanel.scenarioVisible()) return;
-    if (typeof scenarioView === 'undefined' || typeof scenarioView.render !== 'function') return;
-    const area = apartment.areas[aptPanel.areaIndex];
-    const conditions = guard.conditions();
-    const key = JSON.stringify([apartment.id, area.area_band, conditions]);
-    if (key === aptPanel.scenarioKey) return;
-    aptPanel.scenarioKey = key;
-    scenarioView.render(document.getElementById('scenario-panel'), { apartment, area, conditions });
   },
 
   // ───────── 아파트 정보 탭 (P-06 ⑦, A-06) ─────────

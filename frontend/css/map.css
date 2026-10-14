@@ -468,6 +468,13 @@
   cursor: pointer;
 }
 
+/* 조건이 걸린 칩. "면적 59~84㎡ ▾" */
+.filter-chip--on {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-now-text);
+}
+
 .filter-chip--switch {
   padding-right: 6px;
 }
