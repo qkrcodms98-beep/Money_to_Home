@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import FRONTEND_DIR
 from backend.errors import register_error_handlers
-from backend.routers import apartment_detail, apartments, auth, loans, plans, profile, scenario, system
+from backend.routers import apartment_detail, apartments, auth, loans, plans, profile, saved_results, scenario, system
 from backend.services import auth as auth_service
 
 app = FastAPI(title="머니 to 홈", version="0.1.0")
@@ -45,6 +45,7 @@ app.include_router(apartments.router)
 app.include_router(apartment_detail.router)
 app.include_router(scenario.router)
 app.include_router(auth.router)
+app.include_router(saved_results.router)
 
 # 화면. API를 모두 등록한 뒤 마지막에 연결한다. /api로 시작하지 않는 주소는 frontend 폴더의 파일을 준다.
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
