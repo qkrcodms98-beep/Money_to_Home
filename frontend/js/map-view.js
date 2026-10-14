@@ -92,6 +92,7 @@ const mapState = {
   summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
+  loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
 };
 
 // ───────── 카카오맵 불러오기 ─────────
@@ -679,7 +680,7 @@ function openApartment(apartment) {
 
 // 목록 보기 → 목록 80% (P-06 ⑤). 목록은 이미 그려 두었으므로 창만 연다.
 function openList() {
-  if (!mapState.data) return;
+  if (!mapState.data && !mapState.loadFailed) return; // 받지 못했으면 목록 자리에 오류와 "다시 시도"가 있다
   selectMarker(null);
   sheet.show('80', 'list');
 }
@@ -930,9 +931,22 @@ async function loadData() {
   try {
     mapState.data = await api.post('/api/apartments/search', { conditions: guard.conditions(), where, sort: currentSort() });
     mapState.selectedId = null;
+    mapState.loadFailed = false;
   } catch (error) {
     // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
-    showToast(error.status === 422 ? error.detail : MSG.dataFail);
+    const message = error.status === 422 ? error.detail : MSG.dataFail;
+    showToast(message);
+    // 목록 자리에는 오류와 "다시 시도"를 둔다 (김목산의 listView.renderError).
+    // 앞의 자료로 목록을 다시 그리면 머리의 지역 이름과 아파트가 어긋난다. 지도의 말풍선은 앞의 것을 그대로 둔다.
+    mapState.loadFailed = true;
+    listView.renderError(document.getElementById('apt-list'), {
+      message,
+      onRetry: loadData,
+      onClose: () => sheet.close(),
+    });
+    renderCondition();
+    renderMarkers();
+    return;
   }
   renderCondition();
   renderMarkers();

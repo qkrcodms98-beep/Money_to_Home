@@ -90,8 +90,9 @@
   display: block;
 }
 
+/* 정렬 버튼 바로 뒤의 닫기는 사이를 띄우지 않는다 (머리의 gap 8px을 되돌린다). 지역 이름이 들어갈 자리를 넓힌다 */
 .list__sort + .list__close {
-  margin-left: 0;
+  margin-left: -8px;
 }
 
 /* 정렬: 테두리 없이 글자만 있는 버튼과 작은 선택 창 (B1) */
@@ -104,7 +105,7 @@
 .list__sort-button {
   min-height: var(--touch-size);
   white-space: nowrap;
-  padding: 0 4px;
+  padding: 0; /* 좌우를 비워 두지 않는다. "남구 봉선동 · 14곳"이 1px 모자라 말줄임되던 것을 막는다 */
   border: 0;
   background: none;
   color: var(--color-text-sub);
@@ -164,6 +165,8 @@
   width: var(--touch-size);
   height: var(--touch-size);
   margin-left: auto;
+  /* ×는 44px 네모의 가운데에 있어 오른쪽에 빈 자리가 남는다. 그만큼 오른쪽으로 내보내 머리의 자리를 넓힌다 */
+  margin-right: -12px;
   padding: 0;
   border: 0;
   background: none;
