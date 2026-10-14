@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/map.css?v=20261014-1">
   <link rel="stylesheet" href="css/sheet.css?v=20261013-4">
   <link rel="stylesheet" href="css/scenario.css?v=20261014-1">
+  <link rel="stylesheet" href="css/search.css?v=20261014-1">
   <link rel="stylesheet" href="css/filter.css?v=20261014-1">
   <link rel="stylesheet" href="css/region.css?v=20261013-2">
 </head>
@@ -47,7 +48,7 @@
       </div>
     </div>
 
-    <!-- 검색 줄: 구·동 선택, 아파트 이름 검색 (검색은 2차) -->
+    <!-- 검색 줄: 구·동 선택, 아파트 이름 검색 -->
     <div class="search-row">
       <button type="button" class="region-button" id="region-button">
         <span class="region-button__name" id="region-name"></span>
@@ -62,6 +63,9 @@
         <input class="search-box__input" type="search" placeholder="아파트 이름 검색" aria-label="아파트 이름 검색">
       </label>
     </div>
+
+    <!-- 이름 검색 결과 (P-05 ⑭, ⑮). 검색창에 글자를 적으면 김목산의 js/search.js가 이 안에 그린다. -->
+    <div id="search-results" hidden></div>
 
     <!-- 조건 칩 줄: 면적, 가격, 준공 연도 (2차), 자금 부족 표시 스위치 -->
     <div class="chip-row">
@@ -218,10 +222,11 @@
   <script src="js/layout.js"></script>
   <script src="js/region.js?v=20261013-3"></script>
   <script src="js/filter.js?v=20261014-1"></script>
+  <script src="js/search.js?v=20261014-1"></script>
   <script src="js/list.js?v=20261014-1"></script>
   <script src="js/sheet.js?v=20261013-3"></script>
   <script src="js/scenario.js?v=20261014-1"></script>
   <script src="js/apartment.js?v=20261014-1"></script>
-  <script src="js/map-view.js?v=20261014-7"></script>
+  <script src="js/map-view.js?v=20261014-8"></script>
 </body>
 </html>
