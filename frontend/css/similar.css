@@ -59,6 +59,12 @@
   line-height: var(--line-height);
 }
 
+/* 카드 안 여백. list.css가 여백을 면적 넘기기 칸(.list-card__slide)으로 옮겨 .list-card__body는 0이다.
+   비슷한 아파트 카드는 면적이 하나라 그 칸이 없으므로 여기서 준다 */
+.similar__card .list-card__body {
+  padding: 14px 16px;
+}
+
 .similar__list {
   display: flex;
   flex-direction: column;
