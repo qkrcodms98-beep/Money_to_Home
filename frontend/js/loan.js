@@ -304,7 +304,8 @@
       return;
     }
     store.set('input', values);
-    location.href = 'plan.html';
+    // 입력 요약의 "수정"으로 왔으면 이 화면만 고치고 요약으로 돌아간다 (팀장)
+    location.href = store.get('place').return_to === 'summary' ? 'summary.html' : 'plan.html';
   }
 
   form.addEventListener('submit', (event) => {

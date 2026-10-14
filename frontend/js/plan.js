@@ -196,7 +196,7 @@
       return;
     }
     store.set('input', values);
-    location.href = 'map.html';
+    location.href = 'summary.html'; // 입력 요약(P-04 ⑤)을 한 번 보고 지도로 간다
   }
 
   // ── 움직임 ───────────────────────────────────────────
