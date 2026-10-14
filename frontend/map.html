@@ -8,9 +8,10 @@
   <link rel="stylesheet" href="css/common.css?v=20261014-1">
   <!-- ?v= 는 버전 표시다. 이 화면이 부르는 CSS나 JS를 고치면 그 파일의 숫자를 올린다. 브라우저가 예전 파일을 캐시에서 꺼내 쓰지 않게 한다. -->
   <link rel="stylesheet" href="css/list.css?v=20261014-1">
-  <link rel="stylesheet" href="css/map.css?v=20261013-8">
+  <link rel="stylesheet" href="css/map.css?v=20261014-1">
   <link rel="stylesheet" href="css/sheet.css?v=20261013-4">
   <link rel="stylesheet" href="css/scenario.css?v=20261014-1">
+  <link rel="stylesheet" href="css/filter.css?v=20261014-1">
   <link rel="stylesheet" href="css/region.css?v=20261013-2">
 </head>
 <body class="map-body">
@@ -204,6 +205,9 @@
   <!-- 구·동 선택 (P-05 ⑬). 지역 버튼을 누르면 js/region.js가 이 안에 그린다. -->
   <section class="region-sheet" id="region-sheet" aria-label="지역 선택" hidden></section>
 
+  <!-- 조건 (P-05 ②). 조건 칩을 누르면 김목산의 js/filter.js가 이 안에 그린다. -->
+  <section class="filter-sheet" id="filter-sheet" aria-label="조건" hidden></section>
+
   </div>
 
   <!-- 공통 JavaScript. 모든 화면이 이 순서로 먼저 불러 쓴다. 그 아래에 화면의 파일을 둔다. -->
@@ -213,10 +217,11 @@
   <script src="js/guard.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/region.js?v=20261013-3"></script>
+  <script src="js/filter.js?v=20261014-1"></script>
   <script src="js/list.js?v=20261014-1"></script>
   <script src="js/sheet.js?v=20261013-3"></script>
   <script src="js/scenario.js?v=20261014-1"></script>
   <script src="js/apartment.js?v=20261014-1"></script>
-  <script src="js/map-view.js?v=20261014-6"></script>
+  <script src="js/map-view.js?v=20261014-7"></script>
 </body>
 </html>

@@ -506,7 +506,7 @@ function createAreaMarkerElement(group, name, className, onClick) {
 // 동마다, 구마다의 수는 구별·동별 개수 API(A-12)가 준다. 자리도 함께 온다 (A-02와 같은 자리).
 //   - 동 표시: 5개 구의 모든 동을 한 번에 받는다. 지도를 옆 구로 옮겨도 동 표시가 보인다.
 //   - 구 표시: 구 5개를 한 번에 받는다.
-//   - 조건(입력한 값)이 같은 동안에는 한 번 받은 것을 다시 받지 않는다.
+//   - 입력한 값과 조건 창의 조건이 같은 동안에는 한 번 받은 것을 다시 받지 않는다. 바뀌면 resetSummary로 비운다.
 // mapState.summary[level]: null(아직 안 받음), 'loading'(받는 중), 배열(받음)
 
 // A-12의 한 줄을 표시가 쓰는 모양으로. { gu, dong, target, total, latitude, longitude }
@@ -519,11 +519,16 @@ const toAreaGroup = (region) => ({
   longitude: region.longitude,
 });
 
+// 입력한 값이나 조건 창의 조건이 바뀌면 받아 둔 수를 버린다. 다음에 넓게 볼 때 다시 받는다.
+function resetSummary() {
+  mapState.summary = { dong: null, gu: null };
+}
+
 // level('dong' 또는 'gu')의 수를 받아 둔다. 받는 동안에는 표시가 없다가, 오면 그린다.
 async function loadSummary(level) {
   mapState.summary[level] = 'loading';
   try {
-    const data = await api.post('/api/regions/summary', { conditions: guard.conditions(), level });
+    const data = await api.post('/api/regions/summary', withFilters({ conditions: guard.conditions(), level }));
     mapState.summary[level] = data.regions.map(toAreaGroup);
   } catch (error) {
     mapState.summary[level] = null; // 다음에 넓게 볼 때 다시 받는다
@@ -648,7 +653,50 @@ function renderList() {
     onSort: changeSort,
     onSelect: openApartmentFromList,
     onClose: () => sheet.close(),
+    ...(currentFilters() ? { onResetFilters: () => applyFilters(null), onChangeFilters: () => openFilters() } : {}),
   });
+}
+
+// ───────── 조건 창 (P-05 ②) ─────────
+// 창은 김목산의 filter.js가 그린다. 여기서는 열고, 고른 조건을 보관하고, 그 조건으로 다시 받는다.
+
+// 칩의 글자. 조건이 있으면 "면적 59~84㎡ ▾"처럼 적고 파랗게 한다. 없으면 "면적 ▾"
+const CHIP_NAMES = { area: '면적', price: '가격', year: '준공 연도' };
+function renderChips() {
+  const filters = currentFilters();
+  const unit = store.get('map').area_unit || 'm2';
+  document.querySelectorAll('.filter-chip[data-filter]').forEach((chip) => {
+    const key = chip.dataset.filter;
+    const label = filters ? filterSheet.label(filters, key, unit) : null;
+    chip.textContent = `${label || CHIP_NAMES[key]} ▾`;
+    chip.classList.toggle('filter-chip--on', Boolean(label));
+  });
+}
+
+// 조건 창을 연다. focus는 누른 칩('area', 'price', 'year'). 지역 선택 창이 열려 있으면 닫는다.
+function openFilters(focus) {
+  regionPicker.close();
+  filterSheet.open(document.getElementById('filter-sheet'), currentFilters(), applyFilters, focus ? { focus } : {});
+}
+
+// 조건을 적용한다 (null이면 초기화). 새로 고쳐도 남도록 store에 둔다. 아파트와 동·구의 수를 다시 받는다.
+function applyFilters(filters) {
+  store.set('map', { filters: filters && !filterSheet.isEmpty(filters) ? filters : null });
+  renderChips();
+  resetSummary();
+  loadData();
+}
+
+// ───────── 시나리오의 "다시 계산" (FR-RESULT-06, 와이어프레임 A3) ─────────
+// 시나리오 탭(박채은의 scenario.js)에서 월 저축액이나 목표 기간을 바꿔 다시 계산하면 'mth:plan-changed'로 알려 준다.
+// 바꾼 값을 입력(저축 계획)에 반영하고, 지도와 목록의 구분, 내 조건 줄, 동·구의 수를 다시 받는다.
+// 로그인한 사용자의 DB 저장은 로그인 화면을 붙일 때 더한다.
+function onPlanChanged(event) {
+  const { monthly_saving: saving, target_years: years } = event.detail || {};
+  if (!Number.isInteger(saving) || !Number.isInteger(years)) return;
+  store.set('input', { monthly_saving: saving, target_years: years });
+  resetSummary();
+  loadData();
 }
 
 // 목록에서 정렬을 고름. 서버가 그 순서로 다시 준다 (FR-APT-07). 새로 고쳐도 고른 정렬이 남는다.
@@ -780,7 +828,11 @@ function syncApartmentSheet() {
     sheet.close();
     return;
   }
-  aptPanel.show(same, aptPanel.areaIndex, { listPlace: aptPanel.listPlace ? listPlace() : null });
+  // aptPanel.show는 아파트 정보 탭으로 돌아간다. 보던 탭에 머물도록 값만 바꿔 다시 그린다.
+  aptPanel.apartment = same;
+  if (aptPanel.areaIndex >= same.areas.length) aptPanel.areaIndex = 0;
+  if (aptPanel.listPlace) aptPanel.listPlace = listPlace();
+  aptPanel.render();
   selectMarker(hasCoord(same) ? same.id : null);
 }
 
@@ -818,6 +870,7 @@ function bindEvents() {
     store.set('map', { area_unit: next });
     renderUnitButton();
     renderMarkers();
+    renderChips(); // 면적 조건의 글자가 ㎡와 평으로 바뀐다
     aptPanel.render();
   });
 
@@ -869,9 +922,24 @@ function bindEvents() {
   // 구·동 선택 (P-05 ⑬). 창은 js/region.js가 그린다.
   document.getElementById('region-button').addEventListener('click', () => {
     const sheet = document.getElementById('region-sheet');
-    if (regionPicker.isOpen()) regionPicker.close();
-    else regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
+    if (regionPicker.isOpen()) {
+      regionPicker.close();
+    } else {
+      filterSheet.close(); // 두 창을 함께 띄우지 않는다
+      regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
+    }
   });
+
+  // 조건 칩 → 조건 창 (P-05 ②). 누른 칩의 항목으로 내려가 열린다. 열려 있으면 닫는다.
+  document.querySelectorAll('.filter-chip[data-filter]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (filterSheet.isOpen()) filterSheet.close();
+      else openFilters(chip.dataset.filter);
+    });
+  });
+
+  // 시나리오 탭의 "다시 계산"
+  document.addEventListener('mth:plan-changed', onPlanChanged);
 
   // 목록 보기 → 아래 창 80%에 목록 (P-06 ⑤)
   document.getElementById('list-button').addEventListener('click', openList);
@@ -892,7 +960,6 @@ function bindEvents() {
 
   // 아직 만들지 않은 동작. 만들 때 여기에 붙인다.
   //   search-box     아파트 이름 검색, 2차 (P-05 ⑭)
-  //   filter-chip    조건 창, 2차 (P-05 ②)
 }
 
 // ───────── 자료 ─────────
@@ -922,14 +989,22 @@ function regionCenter({ gu, dong }) {
 const SORTS = ['category', 'price_asc', 'price_desc'];
 const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'category');
 
-// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보내고, 목록에서 고른 정렬을 함께 보낸다.
-// filters는 조건 창을 붙일 때 더한다.
+// 조건 창에서 고른 조건 (A-05, A-12의 filters). store의 map.filters에 둔다. 조건이 하나도 없으면 null
+function currentFilters() {
+  const filters = store.get('map').filters;
+  return filters && !filterSheet.isEmpty(filters) ? filters : null;
+}
+
+// 서버에 보낼 조건. 없으면 filters를 아예 넣지 않는다.
+const withFilters = (body) => (currentFilters() ? { ...body, filters: currentFilters() } : body);
+
+// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보내고, 목록에서 고른 정렬과 조건 창의 조건을 함께 보낸다.
 // 실패하면 앞의 자료를 그대로 두고 알린다.
 async function loadData() {
   const { gu, dong } = mapState.region;
   const where = dong ? { gu, dong } : { gu };
   try {
-    mapState.data = await api.post('/api/apartments/search', { conditions: guard.conditions(), where, sort: currentSort() });
+    mapState.data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where, sort: currentSort() }));
     mapState.selectedId = null;
     mapState.loadFailed = false;
   } catch (error) {
@@ -1038,6 +1113,7 @@ async function initMap() {
 
   renderUnitButton();
   renderLackSwitch();
+  renderChips();
   renderLegend();
   sheet.init();
   bindEvents();
