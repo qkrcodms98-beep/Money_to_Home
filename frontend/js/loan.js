@@ -260,7 +260,14 @@
 
   // 서버에 계산을 맡긴다 (A-03). 대출 없이 계산이면 부르지 않는다. 늦게 온 응답은 버린다.
   async function calculate() {
-    if (choice === null || choice.loan_choice !== 'product' || isFresh()) return;
+    if (choice === null || choice.loan_choice !== 'product') return;
+    if (isFresh()) {
+      // 이미 계산한 값이다. 앞의 실패 표시를 지우고, 아직 오는 중인 다른 응답은 버린다.
+      calcCount += 1;
+      calcFailed = false;
+      render();
+      return;
+    }
     const asked = { loan_product_id: choice.loan_product_id, repayment_years: choice.repayment_years };
     const mine = ++calcCount;
     calcFailed = false;
