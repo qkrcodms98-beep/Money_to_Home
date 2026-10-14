@@ -35,6 +35,11 @@
   --color-error-text: #d70015;
   --color-error-soft: #fff1f0;
 
+  /* 주의. 막지는 않지만 알아야 하는 안내 (대상 주택 가격 상한 초과 등). Figma 목업 P-06 ⑲의 색 */
+  --color-warning: #ff9500;
+  --color-warning-text: #b86200;
+  --color-warning-soft: #fff4e5;
+
   /* 구분. 팔레트 F 라임 (Figma의 color/now, color/lime/*).
      지금 가능은 파랑, 기간 내 가능은 라임, 자금 부족은 빨강.
      띠와 배지의 바탕은 이름 그대로의 색, 흰 바탕 위의 글자는 -text 색, 옅은 바탕은 -soft 색을 쓴다. */
