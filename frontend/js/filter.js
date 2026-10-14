@@ -1,18 +1,19 @@
 // 조건 창 (P-05 ② 조건). 담당: 김목산
 //
-// 면적(전용), 평균가, 준공 연도의 최소와 최대를 고른다 (FR-APT-03, 09, 10).
+// 면적(전용), 평균가, 준공 연도의 최소와 최대와, 자금 부족 표시를 고른다 (FR-APT-03, 09, 10, FR-MAP-15).
 // 지도 화면에 묶이지 않는다. 그릴 요소를 받아 그 안에만 그린다. 고른 값은 A-05의 filters 모양으로 돌려준다.
 //
 //   <section id="filter-sheet" aria-label="조건" hidden></section>   (map.html. 모양은 filter.css가 붙인다)
 //
-//   filterSheet.open(요소, 지금 조건, (filters) => { ... }, { focus: 'price' });
+//   filterSheet.open(요소, 지금 조건, (filters, { showLack }) => { ... }, { showLack: false });
 //     지금 조건 : A-05의 filters. null이면 조건 없음
 //                 { area_min, area_max, price_min, price_max, built_year_min, built_year_max }
 //                 면적은 면적대(㎡ 정수), 평균가는 원, 준공 연도는 연도. 값이 없으면 null
-//     onApply   : '적용'을 누르면 창을 닫고 한 번 부른다. 여섯 값이 모두 든 filters를 넘긴다 (없는 값은 null)
-//     focus     : 누른 칩. 'area', 'price', 'year' 중 하나면 그 항목만 보이는 창이 열린다 (칩마다 따로 연다).
-//                 제목은 그 항목의 이름("면적 (전용)")이고, '초기화'는 그 항목만 비운다. 다른 항목의 조건은 그대로 돌려준다.
-//                 빼면 세 항목이 다 보이는 창이다 (목록의 '조건 바꾸기' 등)
+//     onApply   : '적용'을 누르면 창을 닫고 한 번 부른다. 여섯 값이 모두 든 filters를 넘긴다 (없는 값은 null).
+//                 둘째 값은 { showLack } — 자금 부족 표시 스위치를 켰는지
+//     showLack  : 자금 부족 표시의 지금 상태. 처음에는 꺼져 있다 (CLAUDE.md). 서버에 보내는 조건이 아니라
+//                 지도에 자금이 부족한 아파트를 그릴지만 정한다. 목록에는 스위치와 상관없이 나온다
+//     focus     : 'area', 'price', 'year' 중 하나면 그 항목으로 내려가 있다 (빼면 맨 위)
 //   filterSheet.close();
 //   filterSheet.isOpen();
 //
@@ -31,6 +32,8 @@ const FILTER_TEXT = {
   area: '면적 (전용)',
   price: '평균가 (천만 원)',
   year: '준공 연도',
+  lack: '자금 부족한 곳도 지도에 보기',
+  lackHelp: '목록에는 항상 나옵니다.',
   min: '최소',
   max: '최대',
   yearMin: '예: 2000',
@@ -63,6 +66,7 @@ const filterSheet = (() => {
   let errors = {}; // area, price, year
   let slider = null;
   let unitButtons = [];
+  let lackSwitch = null; // 자금 부족 표시 스위치 (button role=switch)
   let onKey = null;
 
   function el(tag, className, text) {
@@ -218,13 +222,32 @@ const filterSheet = (() => {
     return box;
   }
 
-  // only: 이 항목만 보인다 ('area', 'price', 'year'). null이면 셋 다
-  function build(current, only) {
+  // 자금 부족 표시 한 줄. 줄 전체를 눌러도 켜고 끈다
+  function lackSection(on) {
+    const box = el('section', 'filter-sheet__section filter-sheet__section--lack');
+    box.dataset.filter = 'lack';
+    lackSwitch = el('button', 'filter-sheet__lack');
+    lackSwitch.type = 'button';
+    lackSwitch.setAttribute('role', 'switch');
+    lackSwitch.setAttribute('aria-checked', String(on));
+    const text = el('span', 'filter-sheet__lack-text');
+    text.append(el('span', 'filter-sheet__label', FILTER_TEXT.lack), el('span', 'filter-sheet__lack-help', FILTER_TEXT.lackHelp));
+    const knob = el('span', 'filter-sheet__switch');
+    knob.setAttribute('aria-hidden', 'true');
+    knob.append(el('span', 'filter-sheet__switch-knob'));
+    lackSwitch.append(text, knob);
+    lackSwitch.addEventListener('click', () => {
+      lackSwitch.setAttribute('aria-checked', String(lackSwitch.getAttribute('aria-checked') !== 'true'));
+    });
+    box.append(lackSwitch);
+    return box;
+  }
+
+  function build(current, showLack) {
     errors = {};
     beforePyeong = null;
     const head = el('header', 'filter-sheet__head');
-    // 칩 하나만 열었으면 그 항목의 이름이 제목이다 ("면적 (전용)"). 항목 안의 이름 줄은 filter.css가 숨긴다
-    head.append(el('h2', 'filter-sheet__title', only ? FILTER_TEXT[only] : FILTER_TEXT.title));
+    head.append(el('h2', 'filter-sheet__title', FILTER_TEXT.title));
     const close = el('button', 'filter-sheet__close', '×');
     close.type = 'button';
     close.setAttribute('aria-label', '닫기');
@@ -291,26 +314,15 @@ const filterSheet = (() => {
     yearBox.append(...rangeRow('year', inputs.built_year_min, inputs.built_year_max));
     [inputs.built_year_min, inputs.built_year_max].forEach((input) => input.addEventListener('input', () => setError('year', null)));
 
-    // 칩 하나만 열었으면 다른 항목은 숨긴다. 숨긴 항목의 입력란에도 지금 조건이 들어 있어 '적용'하면 그대로 돌아간다
     const body = el('div', 'filter-sheet__body');
-    body.append(areaBox, priceBox, yearBox);
-    if (only) {
-      [areaBox, priceBox, yearBox].forEach((box) => { box.hidden = box.dataset.filter !== only; });
-    }
+    body.append(areaBox, priceBox, yearBox, lackSection(showLack));
 
-    const KEYS = {
-      area: ['area_min', 'area_max'],
-      price: ['price_min', 'price_max'],
-      year: ['built_year_min', 'built_year_max'],
-    };
     const reset = el('button', 'button filter-sheet__reset', FILTER_TEXT.reset);
     reset.type = 'button';
     reset.addEventListener('click', () => {
-      // 칩 하나만 열었으면 그 항목만 비운다
-      (only ? [only] : Object.keys(KEYS)).forEach((key) => {
-        KEYS[key].forEach((name) => { inputs[name].value = ''; });
-        setError(key, null);
-      });
+      Object.values(inputs).forEach((input) => { input.value = ''; });
+      ['area', 'price', 'year'].forEach((key) => setError(key, null));
+      lackSwitch.setAttribute('aria-checked', 'false'); // 처음 상태(꺼짐)로
       slider.sync();
     });
     const apply = el('button', 'button button--primary filter-sheet__apply', FILTER_TEXT.apply);
@@ -369,8 +381,9 @@ const filterSheet = (() => {
       return;
     }
     const callback = onApply;
+    const showLack = lackSwitch.getAttribute('aria-checked') === 'true';
     api.close();
-    if (callback) callback(filters);
+    if (callback) callback(filters, { showLack });
   }
 
   let closing = null; // 내려가는 중이면 다 내려간 뒤 비울 타이머
@@ -395,10 +408,14 @@ const filterSheet = (() => {
       container.classList.add('filter-sheet');
       onApply = callback;
       unit = (store.get('map').area_unit === 'pyeong') ? 'pyeong' : 'm2';
-      const only = ['area', 'price', 'year'].includes(options.focus) ? options.focus : null;
-      build(current, only);
-      container.classList.toggle('filter-sheet--single', Boolean(only));
+      build(current, options.showLack === true);
       container.hidden = false;
+
+      // 누른 칩의 항목으로 내려가 있게 한다. 창 안의 목록만 움직인다.
+      // scrollIntoView는 지도 화면 전체까지 밀어 올리므로 쓰지 않는다
+      const focus = options.focus && container.querySelector(`.filter-sheet__section[data-filter="${options.focus}"]`);
+      const body = container.querySelector('.filter-sheet__body');
+      if (focus && body) body.scrollTop = focus.offsetTop - body.offsetTop;
 
       if (onKey) document.removeEventListener('keydown', onKey);
       onKey = (event) => { if (event.key === 'Escape') api.close(); };

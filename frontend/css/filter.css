@@ -115,24 +115,6 @@
   padding-top: 2px;
 }
 
-/* 칩 하나만 연 창. 제목이 그 항목의 이름이라 항목 안의 이름은 숨긴다 (면적의 ㎡/평 버튼은 남긴다) */
-.filter-sheet--single .filter-sheet__label {
-  display: none;
-}
-
-.filter-sheet--single .filter-sheet__label-row {
-  justify-content: flex-end;
-}
-
-/* 평균가와 준공 연도는 이름 줄에 다른 것이 없어 줄째 숨긴다 */
-.filter-sheet--single .filter-sheet__section:not([data-filter='area']) .filter-sheet__label-row {
-  display: none;
-}
-
-.filter-sheet--single .filter-sheet__section:not([data-filter='area']) {
-  padding-top: 8px;
-}
-
 .filter-sheet__label-row {
   display: flex;
   align-items: center;
@@ -145,6 +127,74 @@
   margin: 0;
   font-size: var(--text-body);
   font-weight: var(--font-bold);
+}
+
+/* 자금 부족 표시 한 줄. 줄 전체가 스위치 버튼이다 (누르는 영역 44px 이상) */
+.filter-sheet__section--lack {
+  margin-top: 8px;
+  border-top: 1px solid var(--color-line);
+}
+
+.filter-sheet__lack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.filter-sheet__lack:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.filter-sheet__lack-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-sheet__lack-help {
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+}
+
+/* 스위치 44 × 26 */
+.filter-sheet__switch {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--color-line-strong);
+  transition: background 0.15s ease;
+}
+
+.filter-sheet__switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  transition: transform 0.15s ease;
+}
+
+.filter-sheet__lack[aria-checked='true'] .filter-sheet__switch {
+  background: var(--color-primary);
+}
+
+.filter-sheet__lack[aria-checked='true'] .filter-sheet__switch-knob {
+  transform: translateX(18px);
 }
 
 /* ㎡ / 평. 회색 바탕에 고른 쪽만 흰 칸 */
