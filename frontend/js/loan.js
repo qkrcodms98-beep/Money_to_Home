@@ -70,6 +70,16 @@
     return node;
   }
 
+  // 글자 사이에 용어 설명 ? 를 끼운다 (3차, 와이어프레임 C8). "집값의 70%까지 (?) · 연 4.0%"
+  // glossary.js가 없으면 글자만 둔다.
+  function withTerm(className, before, term, after) {
+    const span = element('span', className);
+    span.append(document.createTextNode(before));
+    if (typeof glossary !== 'undefined') span.append(glossary.button(term));
+    span.append(document.createTextNode(after));
+    return span;
+  }
+
   function productCard(product) {
     const card = element('label', 'loan-card');
     card.dataset.productId = String(product.id);
@@ -90,8 +100,8 @@
     detailInner.append(
       element('span', 'loan-card__institution', product.institution),
       element('span', 'loan-card__limit', `최대 ${format.won(product.max_limit)}`),
-      element('span', 'loan-card__terms', `집값의 ${percent(product.ltv_ratio)}까지 · 연 ${rate(product.annual_rate_pct)}`),
-      element('span', 'loan-card__sub', `대상 주택 ${capText(product.max_house_price)} · 상환 ${yearsText(product.repayment_years_options)}`),
+      withTerm('loan-card__terms', `집값의 ${percent(product.ltv_ratio)}까지`, 'ltv', ` · 연 ${rate(product.annual_rate_pct)}`),
+      withTerm('loan-card__sub', `대상 주택 ${capText(product.max_house_price)}`, 'cap', ` · 상환 ${yearsText(product.repayment_years_options)}`),
     );
     const foot = element('span', 'loan-card__foot');
     const more = element('button', 'loan-card__more', '자세히');
@@ -373,6 +383,9 @@
   }
 
   $('product-retry').addEventListener('click', loadProducts);
+
+  // 결과의 "예상 월 상환액" 옆에 원리금균등 상환 설명 (3차, C8)
+  if (typeof glossary !== 'undefined') $('result-monthly-label').append(glossary.button('repayment'));
 
   // 새로 고치거나 다시 들어왔을 때 보관해 둔 선택으로 시작한다.
   function restore() {
