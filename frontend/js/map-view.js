@@ -726,6 +726,29 @@ function openApartment(apartment) {
   sheet.show('30', 'apartment');
 }
 
+// 이름 검색의 결과를 누름 (P-05 ⑭, FR-MAP-08). apartment는 A-05 응답의 아파트 하나다.
+//   - 보고 있는 지역을 그 아파트의 구·동으로 바꾸고 지도를 옮긴다. 그래야 그 아파트의 말풍선이 지도에 있다.
+//   - 자금이 부족한 아파트면 자금 부족 표시를 켠다. 꺼 두면 찾은 아파트의 말풍선이 보이지 않는다.
+//   - 그 아파트의 창을 30%로 연다. 좌표가 없으면 지도는 그대로 두고 창만 연다 (P-06 ⑱).
+//   - 조건 창의 조건 때문에 그 아파트가 지도에 없으면(검색은 조건을 보지 않는다) 말풍선 없이 창만 연다.
+async function onSearchPick(apartment) {
+  regionPicker.close();
+  filterSheet.close();
+  if (apartment.category === 'lack' && store.get('map').show_lack !== true) {
+    store.set('map', { show_lack: true });
+    renderLackSwitch();
+  }
+  await moveToRegion({ gu: apartment.gu, dong: apartment.dong });
+  const found = mapState.data && mapState.data.apartments.find((item) => item.id === apartment.id);
+  if (found && hasCoord(found)) {
+    openApartment(found);
+    return;
+  }
+  aptPanel.show(found || apartment, 0);
+  selectMarker(null);
+  sheet.show('30', 'apartment');
+}
+
 // 목록 보기 → 목록 80% (P-06 ⑤). 목록은 이미 그려 두었으므로 창만 연다.
 function openList() {
   if (!mapState.data && !mapState.loadFailed) return; // 받지 못했으면 목록 자리에 오류와 "다시 시도"가 있다
@@ -938,6 +961,9 @@ function bindEvents() {
     });
   });
 
+  // 아파트 이름 검색 (P-05 ⑭). 결과는 js/search.js가 #search-results에 그린다.
+  searchView.open(document.getElementById('search-results'), onSearchPick);
+
   // 시나리오 탭의 "다시 계산"
   document.addEventListener('mth:plan-changed', onPlanChanged);
 
@@ -957,9 +983,6 @@ function bindEvents() {
       renderMarkers();
     },
   });
-
-  // 아직 만들지 않은 동작. 만들 때 여기에 붙인다.
-  //   search-box     아파트 이름 검색, 2차 (P-05 ⑭)
 }
 
 // ───────── 자료 ─────────
