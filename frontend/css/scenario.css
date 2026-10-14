@@ -263,3 +263,33 @@
   max-width: calc(var(--page-width) - var(--page-padding) * 2);
   margin: 0 auto;
 }
+
+/* ───────── 결과 저장 (3차, C2) ───────── */
+.scenario__save {
+  height: 48px;
+  margin-top: 24px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-bg);
+}
+
+.scenario__save:disabled {
+  border-color: var(--color-line);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: default;
+}
+
+/* 알림 오른쪽의 "저장한 결과 보기" */
+.scenario__toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scenario__toast-link {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  font-weight: var(--font-bold);
+  text-decoration: underline;
+}

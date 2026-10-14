@@ -1,0 +1,126 @@
+/* 저장한 결과 (P-09, 3차). 담당: 박채은
+   목록(C1)과 열어 보기(C3). 결과 상자와 값 줄은 scenario.css와 sheet.css의 모양을 그대로 쓴다.
+   색과 크기는 common.css의 이름만 쓴다. */
+
+.saved__nav {
+  display: flex;
+  align-items: center;
+  height: var(--progress-height);
+  padding: 0 8px;
+}
+
+.saved {
+  padding-bottom: 32px;
+}
+
+.saved .subtitle {
+  margin-bottom: 24px;
+}
+
+/* ───────── 목록 (C1) ───────── */
+.saved__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved__card {
+  display: block;
+  padding: 16px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.saved__card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.saved__card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.saved__card-name {
+  font-size: var(--text-item);
+  font-weight: var(--font-bold);
+}
+
+.saved__card-date {
+  flex-shrink: 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+}
+
+.saved__card-result {
+  margin: 6px 0 2px;
+  font-size: var(--text-body);
+  font-weight: var(--font-medium);
+}
+
+.saved__card-result .amount--now,
+.saved__card-result .amount--within,
+.saved__card-result .amount--lack {
+  font-weight: var(--font-bold);
+}
+
+.saved__card-conditions {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+}
+
+.saved__empty {
+  margin: 24px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  text-align: center;
+}
+
+/* ───────── 열어 보기 (C3) ───────── */
+.saved__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.saved__name {
+  margin: 0;
+}
+
+.saved__meta {
+  margin: 6px 0 16px;
+  color: var(--color-text-sub);
+  font-size: var(--text-body);
+}
+
+/* 점선 안내 상자 */
+.saved__note {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-card);
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 20px;
+}
+
+.saved__to-map {
+  margin-top: 40px;
+}
+
+.saved__fail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 8px;
+  font-weight: var(--font-bold);
+}

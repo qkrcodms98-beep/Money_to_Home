@@ -18,10 +18,15 @@
 //   목표 기간이 "지금"이면 필요 월 저축액과 허용 상승률 대신 회색 안내 (A1)
 //   평균가가 상품의 대상 주택 가격 상한을 넘으면 안내 (FR-LOAN-14, P-06 ⑲의 문장)
 //   조건 바꿔 보기: 월 저축액, 목표 기간, "다시 계산" (A2 ~ A4)
+//   결과 저장 (3차, C2): A-21. 저장하면 "저장됨 ✓", 아래 알림에 "저장한 결과 보기"
+//     로그인하지 않았으면(401) 저장할 값을 store의 place.pending_save에 남기고 로그인 화면으로 보낸다 (P-07 ③).
+//     로그인한 뒤 지도 화면으로 돌아오면 남긴 값을 저장하고 알린다 (resumePendingSave).
 //   안내 문구: 추정치, 실거래 기록, 적용한 가정 (FR-COMMON-01, 02, 08)
 //
 // 계산하지 않는다. 숫자는 모두 서버가 준 값이다 (NFR-13). 글자는 textContent로 넣는다.
-// "다시 계산"은 이 탭의 결과만 바꾼다. 저장한 입력(store의 input)은 바꾸지 않는다 (남은 작업 계획 B-6).
+// "다시 계산"은 이 탭의 결과를 바꾸고, 바꾼 값 { monthly_saving, target_years }를
+// document의 'mth:plan-changed' 알림으로 내보낸다. 지도 쪽은 팀장이 이 알림을 받아 붙인다 (2026-10-14 팀장 답).
+// 저장한 입력(store의 input)은 여기서 바꾸지 않는다.
 
 const SCENARIO_YEARS = [
   { value: 0, label: '지금' },
@@ -46,7 +51,16 @@ const SCENARIO_TEXT = {
   estimateNone: '가정에 따른 추정치입니다. 판매 중인 매물이 아니라 실거래 기록입니다.',
   assumeLoan: '적용한 가정: 무주택, 자격 충족, 현재 가치 기준, 대표 금리, 기존 대출 없음',
   assumeNone: '적용한 가정: 무주택, 현재 가치 기준, 대출 없이 계산',
+  // 결과 저장 (와이어프레임 C2)
+  save: '결과 저장',
+  saving: '저장하는 중',
+  saved: '저장됨 ✓',
+  savedToast: '결과를 저장했습니다.',
+  savedLink: '저장한 결과 보기',
+  saveFailed: '결과를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
+const SCENARIO_LOGIN_PAGE = 'login.html';
+const SCENARIO_SAVED_PAGE = 'saved.html';
 
 const scenarioView = {
   root: null, // 그리는 자리 (#scenario-panel)
@@ -61,6 +75,8 @@ const scenarioView = {
   errorText: '',
   seq: 0, // 늦게 온 앞의 응답을 버리려고 요청마다 번호를 붙인다
   toastTimer: null,
+  savedKeys: new Set(), // 이번에 저장한 것 ("아파트:면적대:조건"). 같은 것을 두 번 저장하지 않게 버튼을 끈다
+  saving: false,
 
   // ───────── 부르는 쪽이 쓰는 함수 ─────────
 
@@ -141,6 +157,8 @@ const scenarioView = {
       scenarioView.changed = changed;
       scenarioView.result = result;
       scenarioView.status = 'done';
+      // 바뀐 저축 계획을 알린다. 지도·목록·내 조건 줄은 팀장의 map-view.js가 이 알림을 받아 바꾼다
+      document.dispatchEvent(new CustomEvent('mth:plan-changed', { detail: changed }));
     } catch (error) {
       if (seq !== scenarioView.seq) return;
       scenarioView.status = 'done'; // 앞의 결과로 돌아간다
@@ -174,6 +192,7 @@ const scenarioView = {
     parts.push(scenarioView.rows(result));
     if (result.target_years === 0) parts.push(scenarioView.note(SCENARIO_TEXT.goalNow, 'scenario__goal-now'));
     parts.push(scenarioView.changeBox());
+    parts.push(scenarioView.saveButton());
     parts.push(scenarioView.guide(loan.choice === 'product'));
     root.replaceChildren(...parts);
   },
@@ -328,6 +347,68 @@ const scenarioView = {
     return box;
   },
 
+  // ───────── 결과 저장 (3차, A-21) ─────────
+
+  // 저장할 값. 화면의 계산 결과는 보내지 않는다. 서버가 다시 계산해서 저장한다 (API 명세서 3.5)
+  saveBody() {
+    return {
+      conditions: scenarioView.usedConditions(),
+      apartment_id: scenarioView.apartmentId,
+      area_band: scenarioView.area.area_band,
+    };
+  },
+
+  saveKey: (body) => `${body.apartment_id}:${body.area_band}:${JSON.stringify(body.conditions)}`,
+
+  saveButton() {
+    const button = scenarioView.make('button', 'button scenario__save');
+    button.type = 'button';
+    const done = scenarioView.savedKeys.has(scenarioView.saveKey(scenarioView.saveBody()));
+    button.disabled = done || scenarioView.saving || scenarioView.status === 'recalc';
+    button.textContent = done ? SCENARIO_TEXT.saved : (scenarioView.saving ? SCENARIO_TEXT.saving : SCENARIO_TEXT.save);
+    button.addEventListener('click', () => scenarioView.save());
+    return button;
+  },
+
+  async save() {
+    const body = scenarioView.saveBody();
+    scenarioView.saving = true;
+    scenarioView.draw();
+    try {
+      await api.post('/api/saved-results', body);
+      scenarioView.savedKeys.add(scenarioView.saveKey(body));
+      scenarioView.toast(SCENARIO_TEXT.savedToast, { text: SCENARIO_TEXT.savedLink, href: SCENARIO_SAVED_PAGE });
+    } catch (error) {
+      if (error.status === 401) {
+        // 로그인하지 않았다. 저장할 값을 남기고 로그인 화면으로 (P-07 ③). 입력한 값은 그대로 둔다
+        store.set('place', { pending_save: body });
+        location.href = SCENARIO_LOGIN_PAGE;
+        return;
+      }
+      scenarioView.toast(error.status >= 400 && error.status < 500 ? error.detail : SCENARIO_TEXT.saveFailed);
+    } finally {
+      scenarioView.saving = false;
+    }
+    scenarioView.draw();
+  },
+
+  // 로그인하고 지도 화면으로 돌아왔을 때, 로그인 전에 누른 "결과 저장"을 이어서 한다 (P-07 ③)
+  async resumePendingSave() {
+    const body = store.get('place').pending_save;
+    if (!body) return;
+    try {
+      await api.post('/api/saved-results', body);
+      store.set('place', { pending_save: null });
+      scenarioView.savedKeys.add(scenarioView.saveKey(body));
+      scenarioView.toast(SCENARIO_TEXT.savedToast, { text: SCENARIO_TEXT.savedLink, href: SCENARIO_SAVED_PAGE });
+      if (scenarioView.root && scenarioView.result) scenarioView.draw();
+    } catch (error) {
+      if (error.status === 401) return; // 아직 로그인하지 않았다. 남겨 둔다
+      store.set('place', { pending_save: null });
+      scenarioView.toast(SCENARIO_TEXT.saveFailed);
+    }
+  },
+
   // 안내 문구 (FR-COMMON-01, 02, 08)
   guide(withLoan) {
     const box = scenarioView.make('div', 'notice scenario__guide');
@@ -361,8 +442,8 @@ const scenarioView = {
     return scenarioView.make('p', `notice ${className}`, text);
   },
 
-  // 화면 아래 검은 알림. 4초 뒤 사라진다 (A4)
-  toast(text) {
+  // 화면 아래 검은 알림. 4초 뒤 사라진다 (A4). link가 있으면 오른쪽에 글자 링크를 둔다 (C2)
+  toast(text, link = null) {
     let bar = document.getElementById('scenario-toast');
     if (!bar) {
       bar = scenarioView.make('p', 'snackbar scenario__toast');
@@ -370,7 +451,12 @@ const scenarioView = {
       bar.setAttribute('role', 'alert');
       document.body.append(bar);
     }
-    bar.textContent = text;
+    bar.replaceChildren(scenarioView.make('span', 'scenario__toast-text', text));
+    if (link) {
+      const anchor = scenarioView.make('a', 'scenario__toast-link', link.text);
+      anchor.href = link.href;
+      bar.append(anchor);
+    }
     bar.hidden = false;
     clearTimeout(scenarioView.toastTimer);
     scenarioView.toastTimer = setTimeout(() => {
@@ -390,3 +476,8 @@ const scenarioView = {
     return node;
   },
 };
+
+// 지도 화면(시나리오 탭이 있는 화면)이 열리면 로그인 전에 누른 "결과 저장"을 이어서 한다.
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('scenario-panel')) scenarioView.resumePendingSave();
+});
