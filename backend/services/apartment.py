@@ -3,6 +3,8 @@
 routers/apartments.py가 부른다. 저장은 하지 않는다 (읽기만 한다).
 요청에 든 값만 쓴다. 로그인 정보와 profiles 표를 읽지 않는다 (NFR-18).
 """
+from decimal import Decimal
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -85,13 +87,93 @@ def _in_range(value, low, high) -> bool:
     return (low is None or value >= low) and (high is None or value <= high)
 
 
+def _basis(db: Session, conditions) -> dict:
+    """조건으로 정해지는 값. 상품, 현재 보유자산, 목표 기간, 자기자금(C-03), 목표 가능 가격(C-08)."""
+    product = _product_for(db, conditions)
+    current = conditions.current_assets
+    years = conditions.target_years
+    own = calc.own_funds(current, calc.accumulated_saving(conditions.monthly_saving, years))
+    return {"product": product, "current": current, "years": years, "own": own,
+            "target": calc.target_price(own, product)}
+
+
+def _with_built_year(query, filters):
+    """준공 연도 조건. 조건이 있으면 준공 연도를 모르는 아파트는 빠진다."""
+    if filters is not None and filters.built_year_min is not None:
+        query = query.where(Apartment.built_year >= filters.built_year_min)
+    if filters is not None and filters.built_year_max is not None:
+        query = query.where(Apartment.built_year <= filters.built_year_max)
+    return query
+
+
+def _item(apt, filters, basis) -> dict | None:
+    """아파트 한 곳의 A-05 모양. 조건에 맞는 면적이 없으면 None.
+
+    면적대와 평균가 조건은 면적마다 본다. areas는 평균가가 낮은 순이고, 아파트의 구분은 첫째 면적의 구분이다.
+    """
+    product, current, years, own = basis["product"], basis["current"], basis["years"], basis["own"]
+    cap = product["max_house_price"] if product else None
+    areas = []
+    for price in sorted(apt.prices, key=lambda p: (p.avg_price, p.area_band)):
+        if filters is not None and not (
+            _in_range(price.area_band, filters.area_min, filters.area_max)
+            and _in_range(price.avg_price, filters.price_min, filters.price_max)
+        ):
+            continue
+        loan = calc.loan_amount(price.avg_price, product)
+        areas.append({
+            "area_band": price.area_band,
+            "exclusive_area": float(price.exclusive_area),
+            "supply_area": None if price.supply_area is None else float(price.supply_area),
+            "avg_price": price.avg_price,
+            "trade_count": price.trade_count,
+            "category": calc.category(current, own, loan, price.avg_price, years),
+            "shortage": calc.shortage(price.avg_price, own, loan),
+            "loan_amount": loan,
+            "over_price_cap": cap is not None and price.avg_price > cap,
+        })
+    if not areas:
+        return None
+    return {
+        "id": apt.id,
+        "name": apt.name,
+        "gu": apt.gu,
+        "dong": apt.dong,
+        "latitude": _coord(apt.latitude),
+        "longitude": _coord(apt.longitude),
+        "built_year": apt.built_year,
+        "households": apt.households,
+        "category": areas[0]["category"],
+        "areas": areas,
+    }
+
+
+def _counts(categories) -> dict:
+    """구분별 아파트 수와 전체 수."""
+    counts = {key: 0 for key in CATEGORY_ORDER}
+    for category in categories:
+        counts[category] += 1
+    counts["total"] = sum(counts.values())
+    return counts
+
+
 def search(
-    db: Session, conditions, gu: str | None, dong: str | None, filters=None, sort: str = "category", keyword: str | None = None
+    db: Session,
+    conditions,
+    gu: str | None,
+    dong: str | None,
+    filters=None,
+    sort: str = "category",
+    keyword: str | None = None,
+    bounds=None,
 ) -> dict:
     """A-05 아파트 찾기. 계산은 services/calc.py의 함수만 부른다 (NFR-13).
 
-    - 범위: keyword가 있으면 광주 5개 구 전체에서 이름에 그 글자가 든 아파트, 없으면 gu와 dong (dong이 없으면 구 전체).
-    - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다.
+    - 범위: 셋 중 하나
+      gu와 dong : 그 구와 동 (dong이 없으면 구 전체)
+      bounds    : 지도에 보이는 영역. 위도가 south ~ north, 경도가 west ~ east인 아파트 (양 끝 포함, FR-MAP-01, 22)
+      keyword   : 광주 5개 구 전체에서 이름에 그 글자가 든 아파트
+    - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다. 다만 bounds로 찾을 때는 나오지 않는다 (명세서 Q-8).
     - filters: 면적대와 평균가는 면적마다, 준공 연도는 아파트마다 본다 (FR-APT-03, 09, 10).
       조건에 맞는 면적이 하나도 없는 아파트는 빠진다. 준공 연도 조건이 있으면 준공 연도를 모르는 아파트는 빠진다.
     - areas는 조건에 맞는 면적만, 평균가가 낮은 순이고, 아파트의 구분은 첫째 면적의 구분이다.
@@ -101,61 +183,25 @@ def search(
       값이 같으면 아파트 번호 순이다. areas의 순서(평균가 낮은 순)는 sort와 상관없이 같다.
     - counts는 아파트 단위로 센다. 자금이 부족한 아파트도 항상 준다.
     """
-    product = _product_for(db, conditions)
-    current = conditions.current_assets
-    years = conditions.target_years
-    own = calc.own_funds(current, calc.accumulated_saving(conditions.monthly_saving, years))
-    target = calc.target_price(own, product)
+    basis = _basis(db, conditions)
+    target = basis["target"]
 
     query = select(Apartment).options(selectinload(Apartment.prices))
     if keyword is not None:
         # %와 _도 글자 그대로 찾는다 (autoescape)
         query = query.where(Apartment.name.contains(keyword, autoescape=True))
+    elif bounds is not None:
+        # 좌표 칸이 DECIMAL이라 Decimal로 바꿔 비교한다 (경계의 값이 소수 오차로 빠지지 않게).
+        # 좌표가 없는 아파트는 BETWEEN에 걸리지 않아 저절로 빠진다
+        south, west, north, east = (Decimal(str(v)) for v in (bounds.south, bounds.west, bounds.north, bounds.east))
+        query = query.where(Apartment.latitude.between(south, north), Apartment.longitude.between(west, east))
     else:
         query = query.where(Apartment.gu == gu)
         if dong:
             query = query.where(Apartment.dong == dong)
-    if filters is not None and filters.built_year_min is not None:
-        query = query.where(Apartment.built_year >= filters.built_year_min)
-    if filters is not None and filters.built_year_max is not None:
-        query = query.where(Apartment.built_year <= filters.built_year_max)
+    query = _with_built_year(query, filters)
 
-    items = []
-    for apt in db.scalars(query).all():
-        areas = []
-        for price in sorted(apt.prices, key=lambda p: (p.avg_price, p.area_band)):
-            if filters is not None and not (
-                _in_range(price.area_band, filters.area_min, filters.area_max)
-                and _in_range(price.avg_price, filters.price_min, filters.price_max)
-            ):
-                continue
-            loan = calc.loan_amount(price.avg_price, product)
-            cap = product["max_house_price"] if product else None
-            areas.append({
-                "area_band": price.area_band,
-                "exclusive_area": float(price.exclusive_area),
-                "supply_area": None if price.supply_area is None else float(price.supply_area),
-                "avg_price": price.avg_price,
-                "trade_count": price.trade_count,
-                "category": calc.category(current, own, loan, price.avg_price, years),
-                "shortage": calc.shortage(price.avg_price, own, loan),
-                "loan_amount": loan,
-                "over_price_cap": cap is not None and price.avg_price > cap,
-            })
-        if not areas:
-            continue
-        items.append({
-            "id": apt.id,
-            "name": apt.name,
-            "gu": apt.gu,
-            "dong": apt.dong,
-            "latitude": _coord(apt.latitude),
-            "longitude": _coord(apt.longitude),
-            "built_year": apt.built_year,
-            "households": apt.households,
-            "category": areas[0]["category"],
-            "areas": areas,
-        })
+    items = [item for apt in db.scalars(query).all() if (item := _item(apt, filters, basis)) is not None]
 
     if sort == "price_asc":
         items.sort(key=lambda a: (a["areas"][0]["avg_price"], a["id"]))
@@ -163,9 +209,57 @@ def search(
         items.sort(key=lambda a: (-a["areas"][0]["avg_price"], a["id"]))
     else:
         items.sort(key=lambda a: (CATEGORY_ORDER[a["category"]], abs(a["areas"][0]["avg_price"] - target), a["id"]))
-    counts = {key: sum(1 for a in items if a["category"] == key) for key in CATEGORY_ORDER}
-    counts["total"] = len(items)
-    return {"target_price": target, "own_funds": own, "counts": counts, "apartments": items}
+    counts = _counts(a["category"] for a in items)
+    return {"target_price": target, "own_funds": basis["own"], "counts": counts, "apartments": items}
+
+
+def regions_summary(db: Session, conditions, level: str, gu: str | None, filters=None) -> dict:
+    """A-12 구별·동별 개수. 지도를 넓게 볼 때의 구 표시와 동 표시에 쓴다 (FR-MAP-20, 21, 31).
+
+    - level이 gu면 구마다, dong이면 동마다 하나. dong일 때 gu가 있으면 그 구의 동만, 없으면 5개 구의 모든 동.
+      level이 gu일 때 gu는 쓰지 않는다.
+    - 구분은 A-05와 같다 (조건에 맞는 면적 가운데 가장 싼 면적의 구분, 명세서 부록 C). 아파트마다 한 번만 센다.
+    - target_count는 목표할 수 있는 아파트 수 (지금 + 기간 내).
+    - 지역은 A-02와 같다. 평균가가 있는 아파트가 있는 구·동은 모두 내고, 조건 때문에 0곳이어도 빼지 않는다
+      (화면은 0곳을 점선으로 그린다). 위치도 A-02처럼 그 지역 아파트 좌표의 평균이라 조건을 바꿔도 움직이지 않는다.
+    - 구와 동은 가나다순이다.
+    """
+    basis = _basis(db, conditions)
+    by_gu = level == "gu"
+    only_gu = gu if not by_gu else None
+
+    # 지역과 위치: A-02와 같은 SQL로 구한다 (평균가가 있는 아파트 좌표의 평균)
+    columns = [Apartment.gu] if by_gu else [Apartment.gu, Apartment.dong]
+    place = select(*columns, func.avg(Apartment.latitude), func.avg(Apartment.longitude)).where(
+        Apartment.id.in_(select(ApartmentPrice.apartment_id).distinct())
+    )
+    if only_gu is not None:
+        place = place.where(Apartment.gu == only_gu)
+    places = {tuple(row[:-2]): (row[-2], row[-1]) for row in db.execute(place.group_by(*columns)).all()}
+
+    # 구분: A-05와 같은 함수(_item)로 아파트마다 매기고 지역별로 센다
+    query = _with_built_year(select(Apartment).options(selectinload(Apartment.prices)), filters)
+    if only_gu is not None:
+        query = query.where(Apartment.gu == only_gu)
+    categories: dict[tuple, list] = {key: [] for key in places}
+    for apt in db.scalars(query).all():
+        item = _item(apt, filters, basis)
+        if item is not None:
+            categories[(apt.gu,) if by_gu else (apt.gu, apt.dong)].append(item["category"])
+
+    result = []
+    for key in sorted(places):
+        lat, lng = places[key]
+        counts = _counts(categories[key])
+        result.append({
+            "gu": key[0],
+            "dong": None if by_gu else key[1],
+            "latitude": _coord(lat),
+            "longitude": _coord(lng),
+            "target_count": counts[calc.NOW] + counts[calc.WITHIN],
+            "counts": counts,
+        })
+    return {"target_price": basis["target"], "level": level, "regions": result}
 
 
 def _latest_base_date(db: Session, dataset: str):

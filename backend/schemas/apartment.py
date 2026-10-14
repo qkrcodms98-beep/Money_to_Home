@@ -2,13 +2,14 @@
 
 - A-02 구와 동의 목록: RegionsOut
 - A-05 아파트 찾기: SearchIn, SearchOut
+- A-12 구별·동별 개수: SummaryIn, SummaryOut
 - A-13 수집 기준일: DataStatusOut
 - Conditions는 API 명세서 2.2의 조건 묶음이다. A-07(시나리오) 등도 같은 모양으로 받는다.
 """
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, StrictInt, field_validator, model_validator
+from pydantic import BaseModel, StrictFloat, StrictInt, field_validator, model_validator
 
 from backend.errors import MSG_INVALID, MSG_MISSING
 from backend.schemas.common import check_asset, check_monthly_saving, check_target_years
@@ -71,15 +72,35 @@ class Conditions(BaseModel):
 # ------------------------------------------------------------------
 # A-05 아파트 찾기
 # ------------------------------------------------------------------
+MSG_BOUNDS = "지도 영역을 다시 확인해 주세요."
+
+
+class Bounds(BaseModel):
+    """지도에 보이는 영역 (위도와 경도). 남쪽이 북쪽보다, 서쪽이 동쪽보다 작아야 한다 (명세서 5장)."""
+
+    south: StrictFloat
+    west: StrictFloat
+    north: StrictFloat
+    east: StrictFloat
+
+    @model_validator(mode="after")
+    def check_order(self):
+        if not (self.south < self.north and self.west < self.east):
+            raise ValueError(MSG_BOUNDS)
+        return self
+
+
 class Where(BaseModel):
-    """찾을 범위. 둘 중 하나만 보낸다 (bounds는 2차에 더한다).
+    """찾을 범위. 셋 중 하나만 보낸다.
 
     - { "gu": "서구", "dong": "치평동" } 구와 동. dong을 빼면 구 전체
+    - { "bounds": { "south": 35.14, "west": 126.83, "north": 35.16, "east": 126.86 } } 지도에 보이는 영역
     - { "keyword": "호반" } 아파트 이름에 이 글자가 든 곳. 광주 5개 구 전체에서 찾는다 (FR-MAP-08)
     """
 
     gu: str | None = None
     dong: str | None = None
+    bounds: Bounds | None = None
     keyword: str | None = None
 
     @field_validator("keyword")
@@ -95,10 +116,11 @@ class Where(BaseModel):
 
     @model_validator(mode="after")
     def check_one_kind(self):
-        if self.keyword is None and self.gu is None:
+        kinds = sum(value is not None for value in (self.gu, self.bounds, self.keyword))
+        if kinds == 0:
             raise ValueError(MSG_MISSING)
-        if self.keyword is not None and (self.gu is not None or self.dong is not None):
-            raise ValueError(MSG_INVALID)  # 구·동과 이름을 함께 보내면 어느 쪽으로 찾을지 알 수 없다
+        if kinds > 1 or (self.dong is not None and self.gu is None):
+            raise ValueError(MSG_INVALID)  # 둘 이상을 함께 보내면 어느 쪽으로 찾을지 알 수 없다
         return self
 
 
@@ -181,6 +203,34 @@ class SearchOut(BaseModel):
 
 
 # ------------------------------------------------------------------
+# A-12 구별·동별 개수
+# ------------------------------------------------------------------
+class SummaryIn(BaseModel):
+    """A-12 요청"""
+
+    conditions: Conditions
+    level: Literal["gu", "dong"]  # gu: 구마다 하나, dong: 동마다 하나
+    gu: str | None = None  # level이 dong일 때 어느 구의 동을 볼지. 빼면 5개 구의 모든 동
+    filters: Filters | None = None  # A-05와 같다
+
+
+class RegionSummary(BaseModel):
+    gu: str
+    dong: str | None  # level이 gu면 null
+    latitude: float | None  # 그 지역 아파트 좌표의 평균 (A-02와 같다). 좌표가 없으면 null
+    longitude: float | None
+    target_count: int  # 목표할 수 있는 아파트 수. 지금 가능 + 기간 내 가능
+    counts: Counts  # 아파트 단위로 센다
+
+
+class SummaryOut(BaseModel):
+    """A-12 응답"""
+
+    target_price: int
+    level: Literal["gu", "dong"]
+    regions: list[RegionSummary]
+
+
 # A-13 수집 기준일
 # ------------------------------------------------------------------
 class DataStatusOut(BaseModel):

@@ -391,3 +391,141 @@ def test_data_status_gives_latest_date_per_dataset(client, db):
     db.commit()
     # 자료마다 가장 최근에 남긴 줄의 기준일 (DB 설계서 3.7). 좌표의 기준일은 보여 주지 않는다
     assert client.get("/api/data-status").json() == {"trades_base_date": "2026-10-07", "households_base_date": "2026-08-31"}
+
+
+# A-12 구별·동별 개수 (2차)
+# ------------------------------------------------------------------
+@pytest.fixture
+def two_gu(db, chipyeong):
+    """서구(치평동 다섯 곳, 광천동 한 곳)에 더해 북구 운암동 한 곳 (예시 조건으로 지금 가능)."""
+    unam = _priced(31, "운암동", "운암아파트", [(59, 100_000_000)], "35.1800000", "126.8800000", 2010)
+    unam.gu = "북구"
+    db.add(unam)
+    db.commit()
+
+
+def _summary(client, level, gu=None, filters=None, **changes):
+    body = {"conditions": {**EXAMPLE, **changes}, "level": level}
+    if gu is not None:
+        body["gu"] = gu
+    if filters is not None:
+        body["filters"] = filters
+    return client.post("/api/regions/summary", json=body)
+
+
+def test_summary_by_dong(client, two_gu):
+    body = _summary(client, "dong", gu="서구").json()
+    assert body["target_price"] == 366_666_666
+    assert body["level"] == "dong"
+    gwangcheon, chipyeong = body["regions"]  # 가나다순
+    assert (chipyeong["gu"], chipyeong["dong"]) == ("서구", "치평동")
+    # 나 지금, 마·가 기간 내, 다·라 부족. 평균가가 없는 사아파트는 세지 않는다
+    assert chipyeong["counts"] == {"now": 1, "within": 2, "lack": 2, "total": 5}
+    assert chipyeong["target_count"] == 3
+    # 좌표가 있는 가·다·라·마의 평균. 좌표가 없는 나는 위치에 들어가지 않는다
+    assert chipyeong["latitude"] == pytest.approx(35.1505)
+    assert chipyeong["longitude"] == pytest.approx(126.8495)
+    assert gwangcheon["counts"] == {"now": 0, "within": 1, "lack": 0, "total": 1}
+    assert gwangcheon["latitude"] is None and gwangcheon["longitude"] is None
+
+
+def test_summary_dong_without_gu_gives_all_dongs(client, two_gu):
+    regions = _summary(client, "dong").json()["regions"]
+    assert [(r["gu"], r["dong"]) for r in regions] == [("북구", "운암동"), ("서구", "광천동"), ("서구", "치평동")]
+
+
+def test_summary_by_gu(client, two_gu):
+    body = _summary(client, "gu", gu="서구").json()  # level이 gu면 gu는 쓰지 않는다
+    assert [(r["gu"], r["dong"]) for r in body["regions"]] == [("북구", None), ("서구", None)]
+    seo = body["regions"][1]
+    assert seo["counts"] == {"now": 1, "within": 3, "lack": 2, "total": 6}
+    assert seo["target_count"] == 4
+
+
+def test_summary_counts_match_search(client, two_gu):
+    dongs = _summary(client, "dong", gu="서구", target_years=0).json()["regions"]
+    searched = _search(client, where={"gu": "서구"}, target_years=0).json()["counts"]
+    for key in ("now", "within", "lack", "total"):
+        assert sum(r["counts"][key] for r in dongs) == searched[key]
+
+
+def test_summary_keeps_zero_regions_with_filters(client, two_gu):
+    regions = _summary(client, "dong", gu="서구", filters={"area_min": 100}).json()["regions"]
+    gwangcheon, chipyeong = regions
+    assert chipyeong["counts"] == {"now": 0, "within": 0, "lack": 1, "total": 1}  # 가아파트 114㎡만
+    assert chipyeong["target_count"] == 0
+    assert gwangcheon["counts"]["total"] == 0  # 0곳이어도 빼지 않는다 (화면은 점선)
+    assert gwangcheon["latitude"] is None
+
+
+def test_summary_built_year_filter(client, two_gu):
+    regions = _summary(client, "gu", filters={"built_year_min": 2006}).json()["regions"]
+    assert [r["counts"]["total"] for r in regions] == [1, 2]  # 북구 운암(2010), 서구 다(2015)·라(2020)
+
+
+@pytest.mark.parametrize("body, field, detail", [
+    ({"level": "city"}, "level", "입력한 값을 다시 확인해 주세요."),
+    ({}, "level", "필요한 값이 빠졌습니다."),
+    ({"level": "dong", "filters": {"price_min": 2, "price_max": 1}}, "filters", "조건의 최소와 최대를 다시 확인해 주세요."),
+    ({"level": "gu", "conditions": {**EXAMPLE, "target_years": 7}}, "target_years", "목표 기간을 다시 골라 주세요."),
+    ({"level": "gu", "conditions": {**EXAMPLE, "loan_product_id": 999}}, "loan_product_id", "대출 상품과 상환 기간을 골라 주세요."),
+])
+def test_summary_invalid(client, two_gu, body, field, detail):
+    res = client.post("/api/regions/summary", json={"conditions": EXAMPLE, **body})
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}
+
+
+def test_summary_empty_db(client, products):
+    assert _summary(client, "gu").json()["regions"] == []
+
+
+# ------------------------------------------------------------------
+# A-05 지도 영역 (where.bounds, 2차)
+# ------------------------------------------------------------------
+def _bounds(client, south, west, north, east, **kw):
+    return _search(client, where={"bounds": {"south": south, "west": west, "north": north, "east": east}}, **kw)
+
+
+def test_bounds_keeps_apartments_inside(client, chipyeong):
+    body = _bounds(client, 35.1495, 126.849, 35.1515, 126.8515).json()
+    assert [a["id"] for a in body["apartments"]] == [13, 14]  # 다(35.150, 126.850), 라(35.151, 126.851)
+    assert body["counts"] == {"now": 0, "within": 0, "lack": 2, "total": 2}
+
+
+def test_bounds_includes_edges(client, chipyeong):
+    # 가(35.149, 126.845)와 다(35.150, 126.850)가 영역의 모서리에 있다
+    assert [a["id"] for a in _bounds(client, 35.149, 126.845, 35.15, 126.85).json()["apartments"]] == [11, 13]
+
+
+def test_bounds_drops_apartments_without_coordinates(client, chipyeong):
+    ids = [a["id"] for a in _bounds(client, 35, 126, 36, 127).json()["apartments"]]
+    assert ids == [15, 11, 13, 14]  # 좌표가 없는 나(치평동), 바(광천동)는 나오지 않는다 (명세서 Q-8)
+
+
+def test_bounds_with_filters_and_sort(client, chipyeong):
+    ids = [a["id"] for a in _bounds(client, 35, 126, 36, 127, filters={"price_max": 450_000_000}, sort="price_asc").json()["apartments"]]
+    assert ids == [11, 15, 13]  # 가 3억, 마 3.6억, 다 4.5억. 라(7억)는 빠진다
+
+
+def test_bounds_outside_gives_empty_list(client, chipyeong):
+    res = _bounds(client, 37.5, 127.0, 37.6, 127.1)
+    assert res.status_code == 200
+    assert res.json()["counts"]["total"] == 0
+
+
+@pytest.mark.parametrize("where, field, detail", [
+    ({"bounds": {"south": 35.16, "west": 126.83, "north": 35.14, "east": 126.86}}, "bounds", "지도 영역을 다시 확인해 주세요."),
+    ({"bounds": {"south": 35.14, "west": 126.86, "north": 35.16, "east": 126.83}}, "bounds", "지도 영역을 다시 확인해 주세요."),
+    ({"bounds": {"south": 35.15, "west": 126.83, "north": 35.15, "east": 126.86}}, "bounds", "지도 영역을 다시 확인해 주세요."),
+    ({"bounds": {"south": 35.14, "west": 126.83, "north": 35.16}}, "east", "필요한 값이 빠졌습니다."),
+    ({"bounds": {"south": "35.14", "west": 126.83, "north": 35.16, "east": 126.86}}, "south", "숫자만 입력할 수 있습니다."),
+    ({"bounds": {"south": 35.14, "west": True, "north": 35.16, "east": 126.86}}, "west", "숫자만 입력할 수 있습니다."),
+    ({"bounds": {"south": 35.14, "west": 126.83, "north": 35.16, "east": 126.86}, "gu": "서구"}, "where", "입력한 값을 다시 확인해 주세요."),
+    ({"bounds": {"south": 35.14, "west": 126.83, "north": 35.16, "east": 126.86}, "keyword": "호반"}, "where", "입력한 값을 다시 확인해 주세요."),
+    ({"bounds": {"south": 35.14, "west": 126.83, "north": 35.16, "east": 126.86}, "dong": "치평동"}, "where", "입력한 값을 다시 확인해 주세요."),
+])
+def test_invalid_bounds(client, chipyeong, where, field, detail):
+    res = _search(client, where=where)
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}
