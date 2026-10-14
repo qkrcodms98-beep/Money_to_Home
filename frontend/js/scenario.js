@@ -21,7 +21,9 @@
 //   안내 문구: 추정치, 실거래 기록, 적용한 가정 (FR-COMMON-01, 02, 08)
 //
 // 계산하지 않는다. 숫자는 모두 서버가 준 값이다 (NFR-13). 글자는 textContent로 넣는다.
-// "다시 계산"은 이 탭의 결과만 바꾼다. 저장한 입력(store의 input)은 바꾸지 않는다 (남은 작업 계획 B-6).
+// "다시 계산"은 이 탭의 결과를 바꾸고, 바꾼 값 { monthly_saving, target_years }를
+// document의 'mth:plan-changed' 알림으로 내보낸다. 지도 쪽은 팀장이 이 알림을 받아 붙인다 (2026-10-14 팀장 답).
+// 저장한 입력(store의 input)은 여기서 바꾸지 않는다.
 
 const SCENARIO_YEARS = [
   { value: 0, label: '지금' },
@@ -141,6 +143,8 @@ const scenarioView = {
       scenarioView.changed = changed;
       scenarioView.result = result;
       scenarioView.status = 'done';
+      // 바뀐 저축 계획을 알린다. 지도·목록·내 조건 줄은 팀장의 map-view.js가 이 알림을 받아 바꾼다
+      document.dispatchEvent(new CustomEvent('mth:plan-changed', { detail: changed }));
     } catch (error) {
       if (seq !== scenarioView.seq) return;
       scenarioView.status = 'done'; // 앞의 결과로 돌아간다
