@@ -33,6 +33,7 @@ const APT_INFO_FAIL = '아파트를 불러오지 못했습니다. 잠시 후 다
 
 const aptPanel = {
   apartment: null,
+  scenarioKey: null, // 시나리오 탭에 마지막으로 그린 아파트와 면적 ("번호:면적대")
   areaIndex: 0, // 고른 면적. areas는 평균가가 낮은 순이고 첫째가 처음에 골라져 있다 (FR-APT-05)
   listPlace: null,
   handlers: {},
@@ -94,6 +95,23 @@ const aptPanel = {
       tab.setAttribute('aria-selected', String(selected));
       document.getElementById(tab.getAttribute('aria-controls')).hidden = !selected;
     });
+    aptPanel.renderScenario();
+  },
+
+  // ───────── 시나리오 탭 (P-06 ⑧) ─────────
+  // 내용은 박채은의 scenario.js가 그린다. 여기서는 그릴 때를 알려 주기만 한다.
+  //   시나리오 탭을 열 때, 그 탭이 열린 채 면적이나 아파트를 바꿀 때 부른다.
+  //   같은 아파트의 같은 면적이면 다시 부르지 않는다 (탭을 오가도 "다시 계산"한 결과가 남는다).
+  //   scenario.js가 없으면 아무것도 하지 않는다.
+  renderScenario() {
+    const { apartment, areaIndex } = aptPanel;
+    if (!apartment || typeof scenarioView === 'undefined') return;
+    if (document.getElementById('apt-tab-scenario').getAttribute('aria-selected') !== 'true') return;
+    const area = apartment.areas[areaIndex];
+    const key = `${apartment.id}:${area.area_band}`;
+    if (aptPanel.scenarioKey === key) return;
+    aptPanel.scenarioKey = key;
+    scenarioView.render(document.getElementById('scenario-panel'), { apartment, area, conditions: guard.conditions() });
   },
 
   render() {
@@ -152,6 +170,7 @@ const aptPanel = {
     gap.textContent = area.shortage > 0 ? `부족 ${format.won(area.shortage)}` : `여유 ${format.won(-area.shortage)}`;
 
     aptPanel.renderInfo();
+    aptPanel.renderScenario();
   },
 
   // ───────── 아파트 정보 탭 (P-06 ⑦, A-06) ─────────
