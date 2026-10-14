@@ -22,6 +22,8 @@
 //     로그인하지 않았으면(401) 저장할 값을 store의 place.pending_save에 남기고 로그인 화면으로 보낸다 (P-07 ③).
 //     로그인한 뒤 지도 화면으로 돌아오면 남긴 값을 저장하고 알린다 (resumePendingSave).
 //   안내 문구: 추정치, 실거래 기록, 적용한 가정 (FR-COMMON-01, 02, 08)
+//   용어 설명 (3차, C8): js/glossary.js를 불러온 화면이면 예상 월 상환액(원리금균등 상환), 허용 상승률,
+//     식의 자기자금, 상한 초과 안내(대상 주택 가격 상한) 옆에 ? 를 붙인다
 //
 // 계산하지 않는다. 숫자는 모두 서버가 준 값이다 (NFR-13). 글자는 textContent로 넣는다.
 // "다시 계산"은 이 탭의 결과를 바꾸고, 바꾼 값 { monthly_saving, target_years }를
@@ -60,6 +62,8 @@ const SCENARIO_TEXT = {
   saveFailed: '결과를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };
 const SCENARIO_LOGIN_PAGE = 'login.html';
+// 값 줄 가운데 용어 설명(? 버튼)을 붙이는 줄 (요구사항 부록 C의 용어). 허용 상승률은 따로 붙인다
+const SCENARIO_TERMS = { '예상 월 상환액': 'repayment' };
 const SCENARIO_SAVED_PAGE = 'saved.html';
 
 const scenarioView = {
@@ -221,7 +225,9 @@ const scenarioView = {
     const formula = lack
       ? [price, own, borrowed].filter(Boolean).join(' − ')
       : `${[own, borrowed].filter(Boolean).join(' + ')} − ${price}`;
-    box.append(scenarioView.make('p', 'scenario__formula', formula));
+    const formulaLine = scenarioView.make('p', 'scenario__formula', formula);
+    if (years !== 0) scenarioView.addTerm(formulaLine, 'ownFunds'); // 식에 "자기자금"이 나올 때
+    box.append(formulaLine);
 
     // 부족하면 필요 월 저축액 (P-06 ⑳). "지금"이거나 여유가 있으면 서버가 null을 준다
     if (result.required_monthly_saving !== null) {
@@ -257,28 +263,38 @@ const scenarioView = {
 
     const list = scenarioView.make('dl', 'apt-info scenario__rows');
     if (scenarioView.status === 'recalc') list.classList.add('scenario__rows--busy');
-    lines.forEach(([label, value]) => list.append(scenarioView.row(label, value)));
+    lines.forEach(([label, value]) => list.append(scenarioView.row(label, value, SCENARIO_TERMS[label])));
 
     // 허용 상승률 (C-12). 서버가 null을 주면(음수, "지금") 줄을 그리지 않는다 (P-06 ⑳, A1)
     if (result.allowed_growth_rate !== null) {
       const rate = result.allowed_growth_rate.toFixed(1);
-      const row = scenarioView.row('허용 상승률', `연 ${rate}%까지`);
+      const row = scenarioView.row('허용 상승률', `연 ${rate}%까지`, 'growth');
       row.append(scenarioView.make('p', 'scenario__growth-help', `집값이 연 ${rate}% 넘게 오르지 않으면 목표할 수 있습니다.`));
       list.append(row);
     }
     return list;
   },
 
-  row(label, value) {
+  // term이 있으면 이름 옆에 용어 설명 ? 를 붙인다 (3차, C8)
+  row(label, value, term) {
     const row = scenarioView.make('div', 'apt-info__row');
-    row.append(scenarioView.make('dt', 'apt-info__label', label), scenarioView.make('dd', 'apt-info__value', value));
+    const name = scenarioView.make('dt', 'apt-info__label', label);
+    if (term) scenarioView.addTerm(name, term);
+    row.append(name, scenarioView.make('dd', 'apt-info__value', value));
     return row;
+  },
+
+  // 용어 설명 ? 버튼 (js/glossary.js). 그 파일을 불러온 화면에서만 붙는다
+  addTerm(element, term) {
+    if (typeof glossary !== 'undefined') element.append(glossary.button(term));
   },
 
   // 대상 주택 가격 상한 초과 (FR-LOAN-14). 문장은 와이어프레임 P-06 ⑲와 같다. 계산에서는 빼지 않는다
   capNotice(loan) {
     const text = `평균가가 선택한 상품의 대상 주택 가격 상한(${scenarioView.money(loan.max_house_price)})을 넘습니다. 계산에는 그대로 포함했습니다.`;
-    return scenarioView.note(text, 'scenario__cap');
+    const note = scenarioView.note(text, 'scenario__cap');
+    scenarioView.addTerm(note, 'cap');
+    return note;
   },
 
   // 조건 바꿔 보기 (월 저축액, 목표 기간, 다시 계산)
