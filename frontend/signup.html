@@ -10,7 +10,8 @@
 <body data-page="signup">
   <!-- P-08 회원가입. 담당: 김목산. Figma "확정 목업 v3"의 P-08, 와이어프레임 설명서 11장.
        아이디 → 비밀번호 → 비밀번호 확인을 차례로 묻는다. 실명과 연락처는 받지 않는다.
-       가입을 마치면 바로 로그인된 상태가 된다 (FR-USER-01). 수집 항목 동의(3차)는 아직 없다. -->
+       가입을 마치면 바로 로그인된 상태가 된다 (FR-USER-01).
+       가입 전 확인(P-08 ⑥)에서 수집 항목과 목적에 동의해야 '가입하기'가 켜진다 (3차, FR-USER-05). -->
   <div class="top-space"></div>
 
   <nav class="progress auth-nav" aria-label="뒤로">
@@ -60,6 +61,18 @@
                  autocomplete="new-password" aria-describedby="signup-confirm-message">
         </div>
         <p class="auth__message" id="signup-confirm-message" role="alert"></p>
+      </div>
+
+      <!-- P-08 ⑥ 수집 항목과 목적. 가입 전 확인 단계에서만 보인다 -->
+      <div class="auth__consent" id="signup-consent" hidden>
+        <label class="auth__check">
+          <input class="auth__checkbox" id="signup-agreed" type="checkbox" aria-describedby="signup-consent-text">
+          <span class="auth__consent-title">수집 항목과 목적에 동의합니다</span>
+        </label>
+        <p class="auth__consent-text" id="signup-consent-text">
+          수집 항목: 아이디, 비밀번호, 입력한 재무정보와 저축 계획<br>
+          목적: 다음에 이어서 볼 수 있게 저장
+        </p>
       </div>
     </main>
 

@@ -10,7 +10,7 @@
 <body data-page="login">
   <!-- P-07 로그인. 담당: 김목산. Figma "확정 목업 v3"의 P-07, 와이어프레임 설명서 10장.
        로그인하지 않아도 입력, 계산, 탐색은 모두 된다. 로그인은 저장에만 필요하다 (FR-USER-20).
-       아이디 기억하기(3차)는 아직 없다. -->
+       아이디 기억하기(3차, FR-USER-18): 켜고 로그인하면 아이디만 쿠키에 남겨 다음에 채워 준다. -->
   <div class="top-space"></div>
 
   <nav class="progress auth-nav" aria-label="뒤로">
@@ -44,6 +44,11 @@
           <span id="login-message" role="alert"></span>
         </div>
       </div>
+
+      <label class="auth__check auth__remember">
+        <input class="auth__checkbox" id="login-remember" type="checkbox">
+        <span>아이디 기억하기</span>
+      </label>
     </main>
 
     <div class="bottom-action">

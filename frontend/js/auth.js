@@ -3,8 +3,9 @@
 // login.html, signup.html이 함께 쓴다. body의 data-page로 어느 화면인지 정한다.
 //   로그인     : A-16 POST /api/auth/login        { login_id, password }  → 200 { login_id }
 //   아이디 확인 : A-14 POST /api/auth/login-id/check { login_id }         → 200 { available: true }, 쓰는 중이면 409
-//   회원가입   : A-15 POST /api/auth/signup       { login_id, password, password_confirm } → 201 { login_id }
-// 로그인 상태는 서버가 쿠키로 둔다. 화면은 아이디도 비밀번호도 브라우저 저장소에 두지 않는다.
+//   회원가입   : A-15 POST /api/auth/signup       { login_id, password, password_confirm, agreed } → 201 { login_id }
+// 로그인 상태는 서버가 쿠키로 둔다. 비밀번호는 어디에도 남기지 않는다.
+// 아이디 기억하기(3차, FR-USER-18)를 켜고 로그인했을 때만 아이디를 쿠키(REMEMBER_COOKIE)에 남긴다.
 //
 // 아이디와 비밀번호의 규칙은 서버(schemas/auth.py)와 같다. 서버도 같은 규칙으로 다시 확인한다.
 // 문장은 API 명세서 5장과 와이어프레임의 것을 그대로 쓴다.
@@ -17,6 +18,29 @@ const AUTH_TEXT = {
   signupNetwork: '가입하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.',
   passwordDiffer: '비밀번호가 서로 다릅니다.', // FR-USER-04
   passwordSame: '비밀번호가 같습니다',
+};
+
+// 아이디 기억하기 쿠키. 아이디만 둔다. 끄고 로그인하면 지운다
+const REMEMBER_COOKIE = 'mth_remember_id';
+const REMEMBER_DAYS = 30;
+
+const rememberedId = {
+  get() {
+    const pair = document.cookie.split('; ').find((item) => item.startsWith(`${REMEMBER_COOKIE}=`));
+    if (!pair) return '';
+    try {
+      return decodeURIComponent(pair.slice(REMEMBER_COOKIE.length + 1));
+    } catch (error) {
+      return '';
+    }
+  },
+  set(loginId) {
+    const maxAge = REMEMBER_DAYS * 24 * 60 * 60;
+    document.cookie = `${REMEMBER_COOKIE}=${encodeURIComponent(loginId)}; max-age=${maxAge}; path=/; SameSite=Lax`;
+  },
+  clear() {
+    document.cookie = `${REMEMBER_COOKIE}=; max-age=0; path=/; SameSite=Lax`;
+  },
 };
 
 const SIGNUP_STEPS = {
@@ -91,7 +115,15 @@ function initLogin() {
   const message = document.getElementById('login-message');
   const snackbar = document.getElementById('login-error');
   const submit = document.getElementById('login-submit');
+  const remember = document.getElementById('login-remember');
   let sending = false;
+
+  // 기억한 아이디가 있으면 채우고 체크 상자를 켜 둔다 (FR-USER-18)
+  const savedId = rememberedId.get();
+  if (savedId) {
+    idInput.value = savedId;
+    remember.checked = true;
+  }
 
   // 시나리오 탭에서 "결과 저장"을 누르고 넘어왔는가 (P-07 ③). 저장할 값은 박채은의 scenario.js가 남기고 지운다.
   // 그때는 안내를 보이고, 로그인하면 지도로 돌아가 저장을 이어 간다
@@ -115,6 +147,9 @@ function initLogin() {
     update();
     try {
       await api.post('/api/auth/login', { login_id: idInput.value, password: passwordInput.value });
+      // 로그인에 성공했을 때만 기억한다. 꺼져 있으면 전에 기억한 아이디도 지운다
+      if (remember.checked) rememberedId.set(idInput.value);
+      else rememberedId.clear();
       // 저장하려다 왔으면 지도로(저장은 scenario.js가 이어서 한다), 아니면 시작 화면의 로그인 상태로 (P-01 ②, ③)
       location.href = pendingSave ? 'map.html' : 'index.html';
       return;
@@ -129,7 +164,7 @@ function initLogin() {
   });
 
   update();
-  idInput.focus();
+  (savedId ? passwordInput : idInput).focus();
 }
 
 // ───────── P-08 회원가입 ─────────
@@ -140,6 +175,8 @@ function initSignup() {
   const submit = document.getElementById('signup-submit');
   const snackbar = document.getElementById('signup-error');
   const loginLink = document.getElementById('signup-login');
+  const consent = document.getElementById('signup-consent');
+  const agreed = document.getElementById('signup-agreed');
 
   const id = {
     field: document.getElementById('signup-id-field'),
@@ -186,6 +223,7 @@ function initSignup() {
     id.rules.hidden = next !== 'id';
     password.rules.hidden = next !== 'password';
     loginLink.hidden = next !== 'ready';
+    consent.hidden = next !== 'ready'; // 수집 항목과 목적은 가입 전 확인에서 보인다 (P-08 ⑥)
 
     if (next !== before) {
       const focus = { id: id.input, password: password.input, confirm: confirm.input }[next];
@@ -200,7 +238,7 @@ function initSignup() {
     if (step === 'id') ok = allOk(idRules(id.input.value)) && id.message.textContent === '';
     if (step === 'password') ok = allOk(passwordRules(password.input.value));
     if (step === 'confirm') ok = false;
-    if (step === 'ready') ok = true;
+    if (step === 'ready') ok = agreed.checked; // 동의해야 '가입하기'가 켜진다 (FR-USER-05)
     submit.disabled = sending || !ok;
   }
 
@@ -249,6 +287,11 @@ function initSignup() {
     if (step === 'confirm' && !allOk(passwordRules(password.input.value))) setStep('password');
   });
 
+  agreed.addEventListener('change', () => {
+    showSnackbar(snackbar, null);
+    update();
+  });
+
   confirm.input.addEventListener('input', () => {
     showSnackbar(snackbar, null);
     checkConfirm();
@@ -284,6 +327,7 @@ function initSignup() {
           login_id: id.input.value,
           password: password.input.value,
           password_confirm: confirm.input.value,
+          agreed: agreed.checked,
         });
         showDone(user.login_id);
         return;
