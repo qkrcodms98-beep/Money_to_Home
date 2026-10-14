@@ -68,6 +68,8 @@ const MSG = {
   geoOutside: '현재 위치가 광주 5개 구 밖입니다. 지도를 옮기지 않았습니다.',
   // 와이어프레임에 없는 경우(위치를 찾지 못함, 위치 기능이 없는 브라우저). 가장 가까운 문장을 따랐다.
   geoFail: '현재 위치를 찾지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  planSaved: '바꾼 저축 계획을 저장했습니다.', // 와이어프레임 A3
+  planSaveFail: '저장하지 못했습니다.', // 화면 설계서 7장의 4 (다시 계산했을 때의 갱신)
 };
 const TOAST_MS = 3000;
 
@@ -719,13 +721,35 @@ function applyFilters(filters) {
 // ───────── 시나리오의 "다시 계산" (FR-RESULT-06, 와이어프레임 A3) ─────────
 // 시나리오 탭(박채은의 scenario.js)에서 월 저축액이나 목표 기간을 바꿔 다시 계산하면 'mth:plan-changed'로 알려 준다.
 // 바꾼 값을 입력(저축 계획)에 반영하고, 지도와 목록의 구분, 내 조건 줄, 동·구의 수를 다시 받는다.
-// 로그인한 사용자의 DB 저장은 로그인 화면을 붙일 때 더한다.
-function onPlanChanged(event) {
+// 로그인했으면 바꾼 저축 계획을 DB에도 저장하고 알린다. 로그인하지 않았으면 알림 없이 브라우저에만 둔다 (와이어프레임 A3).
+// 저장은 화면을 바꾼 뒤에 하고, 실패해도 화면을 되돌리지 않는다 (화면 설계서 7장의 4).
+async function onPlanChanged(event) {
   const { monthly_saving: saving, target_years: years } = event.detail || {};
   if (!Number.isInteger(saving) || !Number.isInteger(years)) return;
   store.set('input', { monthly_saving: saving, target_years: years });
   resetSummary();
-  loadData();
+  await loadData();
+  try {
+    const saved = await account.save('/api/profile/plan', { monthly_saving: saving, target_years: years });
+    if (saved) showToast(MSG.planSaved);
+  } catch (error) {
+    showToast(error.status === 422 ? error.detail : MSG.planSaveFail);
+  }
+}
+
+// 내 조건 줄의 "로그인" (P-05 ①). 로그인했으면 "로그아웃"이 되고, 누르면 로그아웃한다.
+async function renderLoginLink() {
+  const link = document.getElementById('login-link');
+  const loginId = await account.me();
+  link.textContent = loginId ? '로그아웃' : '로그인';
+  link.dataset.loggedIn = String(Boolean(loginId));
+}
+
+async function onLoginLink(event) {
+  if (event.currentTarget.dataset.loggedIn !== 'true') return; // 로그인 화면으로 간다 (href)
+  event.preventDefault();
+  await account.logout();
+  renderLoginLink();
 }
 
 // 목록에서 정렬을 고름. 서버가 그 순서로 다시 준다 (FR-APT-07). 새로 고쳐도 고른 정렬이 남는다.
@@ -993,6 +1017,9 @@ function bindEvents() {
 
   // 아파트 이름 검색 (P-05 ⑭). 결과는 js/search.js가 #search-results에 그린다.
   searchView.open(document.getElementById('search-results'), onSearchPick);
+
+  // 내 조건 줄의 로그인·로그아웃
+  document.getElementById('login-link').addEventListener('click', onLoginLink);
 
   // 시나리오 탭의 "다시 계산"
   document.addEventListener('mth:plan-changed', onPlanChanged);
@@ -1324,6 +1351,7 @@ async function initMap() {
   renderUnitButton();
   renderLackSwitch();
   renderChips();
+  renderLoginLink();
   renderLegend();
   sheet.init();
   bindEvents();

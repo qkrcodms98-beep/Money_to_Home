@@ -182,7 +182,7 @@
     errorBar.hidden = true;
     render();
     try {
-      await api.put('/api/profile/plan', values);
+      await account.save('/api/profile/plan', values); // 로그인했을 때만 저장한다 (account.js)
     } catch (error) {
       busy = false;
       if (error.status === 422 && error.field === 'monthly_saving') {

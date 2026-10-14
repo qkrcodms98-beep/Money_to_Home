@@ -294,7 +294,7 @@
     errorBar.hidden = true;
     render();
     try {
-      await api.put('/api/profile/loan', values);
+      await account.save('/api/profile/loan', values); // 로그인했을 때만 저장한다 (account.js, 팀장)
     } catch (error) {
       busy = false;
       // 재무정보가 서버에 없을 때처럼 서버가 이유를 알려 주면 그 문장을, 아니면 저장 실패 문장을 보여 준다.
