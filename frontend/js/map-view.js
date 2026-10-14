@@ -92,6 +92,10 @@ const mapState = {
   summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
+  byBounds: false, // 아파트를 지도에 보이는 영역으로 받고 있는가 (손으로 지도를 움직인 뒤). 아니면 구·동으로 받는다
+  boundsTimer: null, // 움직임이 멈추기를 기다리는 타이머
+  quietUntil: 0, // 이때(ms)까지의 확대·축소는 코드가 한 것이다. 영역으로 다시 받지 않는다
+  loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
 };
 
@@ -143,6 +147,8 @@ function createMap(center) {
     renderScale();
     onZoomChanged();
   });
+  // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
+  kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
     hideKakaoScale();
@@ -212,6 +218,7 @@ async function moveToMyLocation({ quiet = false } = {}) {
   if (status === 'ok') {
     showMyLocation(position);
     mapState.map.panTo(toLatLng(position));
+    scheduleBoundsLoad(700); // 옮겨 가는 움직임이 끝난 뒤에 그 자리의 아파트를 받는다
     return;
   }
   if (status === 'outside') showToast(MSG.geoOutside);
@@ -471,6 +478,7 @@ function openGroup(group) {
     return;
   }
   mapState.selectedId = shown.id;
+  quietZoom(700);
   map.setLevel(map.getLevel() - 1, { anchor: toLatLng(shown), animate: { duration: 300 } });
 }
 
@@ -584,7 +592,20 @@ function onZoomChanged() {
   if (!mapState.data) return;
   const next = markerMode();
   const before = mapState.mode;
-  if (next === before) return;
+  // 손으로 확대·축소했는가. 코드가 한 것(지역 이동, 동 표시 누름, 묶음 풀기)은 스스로 자료를 받는다.
+  const byHand = Date.now() >= mapState.quietUntil;
+  if (next === before) {
+    // 말풍선을 보는 채로 확대·축소하면 보이는 영역이 달라진다
+    if (next === 'apartment' && byHand) scheduleBoundsLoad();
+    return;
+  }
+
+  // 동 표시나 구 표시를 보다가 손으로 확대해 말풍선 수준이 되면, 보이는 영역의 아파트를 받는다.
+  if (next === 'apartment' && byHand) {
+    renderMarkers();
+    scheduleBoundsLoad();
+    return;
+  }
 
   // 말풍선이 사라지는 수준으로 넓게 보면 열려 있는 아파트 창을 닫는다 (고른 말풍선이 없어진다). 목록은 그대로 둔다.
   if (next !== 'apartment' && sheet.mode === 'apartment') {
@@ -596,6 +617,7 @@ function onZoomChanged() {
   if (before === 'gu') {
     const gu = nearestGu();
     if (gu !== mapState.region.gu || mapState.region.dong !== null) {
+      mapState.byBounds = false;
       mapState.region = { gu, dong: null };
       store.set('map', { ...mapState.region });
       mapState.mode = next;
@@ -605,6 +627,7 @@ function onZoomChanged() {
   }
   // 동 하나를 보다가 넓게 보면 그 구 전체의 아파트를 받아 동 표시를 그린다. 지역 버튼도 "○○구 전체"로 바뀐다.
   if (next !== 'apartment' && mapState.region.dong !== null) {
+    mapState.byBounds = false; // 넓게 볼 때는 구 단위로 받는다
     mapState.region = { gu: mapState.region.gu, dong: null };
     store.set('map', { ...mapState.region });
     if (next === 'dong') {
@@ -642,13 +665,16 @@ const sheetOrder = (current) =>
   mapState.data ? mapState.data.apartments.filter((apartment) => apartment === current || isOnMap(apartment)) : [];
 
 // 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구
-const listPlace = () => (mapState.region ? mapState.region.dong || mapState.region.gu : '');
+const listPlace = () => {
+  if (mapState.byBounds) return '보이는 곳';
+  return mapState.region ? mapState.region.dong || mapState.region.gu : '';
+};
 
 // 목록 (P-06 ⑤). 그리기는 김목산의 list.js. A-05 응답을 받을 때마다 부른다.
 function renderList() {
   if (!mapState.data) return;
   listView.render(document.getElementById('apt-list'), mapState.data, {
-    where: mapState.region,
+    where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
     sort: currentSort(),
     onSort: changeSort,
     onSelect: openApartmentFromList,
@@ -848,7 +874,8 @@ function syncApartmentSheet() {
   if (sheet.mode !== 'apartment' || sheet.phase === 'closing' || !aptPanel.apartment) return;
   const same = mapState.data.apartments.find((item) => item.id === aptPanel.apartment.id);
   if (!same) {
-    sheet.close();
+    // 지도를 움직여 보던 아파트가 화면 밖으로 나갔으면 창은 그대로 둔다. 다른 지역을 고른 것이면 닫는다.
+    if (!mapState.byBounds) sheet.close();
     return;
   }
   // aptPanel.show는 아파트 정보 탭으로 돌아간다. 보던 탭에 머물도록 값만 바꿔 다시 그린다.
@@ -1022,15 +1049,90 @@ function currentFilters() {
 const withFilters = (body) => (currentFilters() ? { ...body, filters: currentFilters() } : body);
 
 // 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보내고, 목록에서 고른 정렬과 조건 창의 조건을 함께 보낸다.
-// 실패하면 앞의 자료를 그대로 두고 알린다.
-async function loadData() {
+// 범위는 구·동이거나 지도에 보이는 영역이다 (currentWhere). 실패하면 앞의 자료를 그대로 두고 알린다.
+// ───────── 지도를 움직이면 보이는 영역으로 다시 받기 (FR-MAP-22, A-05 bounds) ─────────
+// 아파트를 받는 범위는 둘 중 하나다.
+//   구·동        : 처음 열 때, 구·동을 골랐을 때, 동 표시나 구 표시를 눌렀을 때, 이름 검색에서 골랐을 때
+//   보이는 영역  : 손으로 지도를 끌거나 확대·축소했을 때, 내 위치로 옮겼을 때 (mapState.byBounds)
+// 영역으로 받는 것은 말풍선이 보이는 수준에서만 한다. 넓게 볼 때의 동·구 표시는 A-12가 따로 준다.
+// 움직임이 멈추고 0.3초 뒤에 한 번만 받는다. 끄는 동안 계속 부르지 않는다.
+
+const BOUNDS_WAIT = 300;
+const BOUNDS_NAME = '지도에 보이는 곳'; // 영역으로 받았을 때 목록의 머리에 적는 이름
+
+// 지도에 보이는 영역 { south, west, north, east }. 지도가 가려져 크기가 없으면 null
+function mapBounds() {
+  const { map } = mapState;
+  if (!map) return null;
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const area = { south: sw.getLat(), west: sw.getLng(), north: ne.getLat(), east: ne.getLng() };
+  return area.south < area.north && area.west < area.east ? area : null;
+}
+
+// A-05의 where. 영역으로 받는 중이면 보이는 영역, 아니면 구·동 (영역을 알 수 없을 때도 구·동)
+function currentWhere() {
+  const bounds = mapState.byBounds ? mapBounds() : null;
+  if (bounds) return { bounds };
   const { gu, dong } = mapState.region;
-  const where = dong ? { gu, dong } : { gu };
+  return dong ? { gu, dong } : { gu };
+}
+
+// 지도 가운데에서 가장 가까운 동 { gu, dong }. 지역 버튼의 글자에 쓴다 (화면 설계서 6.2). 없으면 null
+function nearestDong() {
+  const center = mapState.map.getCenter();
+  let best = null;
+  for (const region of mapState.regions) {
+    for (const item of region.dongs.filter(hasCoord)) {
+      const distance = (item.latitude - center.getLat()) ** 2 + (item.longitude - center.getLng()) ** 2;
+      if (best === null || distance < best.distance) best = { gu: region.gu, dong: item.dong, distance };
+    }
+  }
+  return best ? { gu: best.gu, dong: best.dong } : null;
+}
+
+// 지금부터 ms 동안의 확대·축소는 코드가 한 것으로 본다.
+function quietZoom(ms) {
+  mapState.quietUntil = Date.now() + ms;
+}
+
+// 구·동으로 받는 쪽으로 돌아간다. 기다리던 영역 받기는 그만둔다.
+function useRegion() {
+  mapState.byBounds = false;
+  clearTimeout(mapState.boundsTimer);
+}
+
+// 움직임이 멈추면 보이는 영역의 아파트를 받는다.
+function scheduleBoundsLoad(wait = BOUNDS_WAIT) {
+  clearTimeout(mapState.boundsTimer);
+  mapState.boundsTimer = setTimeout(loadByBounds, wait);
+}
+
+// 보이는 영역의 아파트를 받는다. 지역 버튼은 지도 가운데의 동 이름으로 바뀐다. 새로 고치면 그 동으로 돌아온다.
+function loadByBounds() {
+  if (!mapState.map || markerMode() !== 'apartment' || !mapBounds()) return;
+  mapState.byBounds = true;
+  const near = nearestDong();
+  if (near) {
+    mapState.region = near;
+    store.set('map', { ...near });
+  }
+  renderRegionName();
+  loadData();
+}
+
+async function loadData() {
+  const where = currentWhere();
+  const mine = ++mapState.loadSeq;
   try {
-    mapState.data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where, sort: currentSort() }));
+    const data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where, sort: currentSort() }));
+    if (mine !== mapState.loadSeq) return; // 그사이 다시 받기 시작했다. 늦게 온 이 응답은 버린다
+    mapState.data = data;
     mapState.selectedId = null;
     mapState.loadFailed = false;
   } catch (error) {
+    if (mine !== mapState.loadSeq) return;
     // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
     const message = error.status === 422 ? error.detail : MSG.dataFail;
     showToast(message);
@@ -1057,12 +1159,14 @@ async function loadData() {
 function panToRegion() {
   const center = regionCenter(mapState.region);
   if (!mapState.map || !center) return;
+  quietZoom(500);
   mapState.map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
   mapState.map.setCenter(toLatLng(center));
 }
 
 // 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
 async function moveToRegion({ gu, dong }) {
+  useRegion();
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
   renderRegionName();
@@ -1080,8 +1184,10 @@ async function zoomToRegion({ gu, dong }) {
     await moveToRegion({ gu, dong }); // 자리를 모르거나 움직임을 줄이도록 설정했으면 바로 옮긴다
     return;
   }
+  useRegion();
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
+  quietZoom(ZOOM_MS + 400);
   const { map } = mapState;
   const target = toLatLng(center);
   const level = dong ? DONG_LEVEL : GU_LEVEL;
