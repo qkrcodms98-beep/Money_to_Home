@@ -96,15 +96,16 @@ function listCard(apartment, handlers) {
 
   let index = 0; // 보고 있는 면적. 첫째가 평균가가 가장 낮은 면적이다 (FR-APT-05)
 
-  const draw = () => {
-    const area = apartment.areas[index];
+  // 면적마다 한 장. 옆으로 늘어놓고 카드 밖은 가린다. 넘기면 옆으로 밀려 다음 면적이 들어온다 (list.css)
+  const track = listEl('div', 'list-card__track');
+  body.append(track);
+  apartment.areas.forEach((area) => {
     const areaGroup = LIST_GROUPS.find((g) => g.key === area.category);
-    body.replaceChildren();
-
+    const slide = listEl('div', 'list-card__slide');
     const head = listEl('div', 'list-card__head');
     head.append(listEl('h3', 'list-card__name', apartment.name));
     head.append(listEl('span', `badge badge--${area.category}`, areaGroup.badge));
-    body.append(head);
+    slide.append(head);
 
     const meta = listEl('p', 'list-card__meta', `${format.area(area.supply_area, area.exclusive_area)} · 거래 ${format.comma(area.trade_count)}건`);
     if (apartment.latitude === null || apartment.longitude === null) {
@@ -114,9 +115,16 @@ function listCard(apartment, handlers) {
     if (area.over_price_cap) {
       meta.append(listEl('span', 'list-card__tag list-card__tag--cap', LIST_TEXT.overCap));
     }
-    body.append(meta);
-    body.append(listMoneyLine(area));
-    body.setAttribute('aria-label', `${apartment.name}, ${areaGroup.badge}`);
+    slide.append(meta);
+    slide.append(listMoneyLine(area));
+    track.append(slide);
+  });
+
+  const show = () => {
+    const area = apartment.areas[index];
+    const areaGroup = LIST_GROUPS.find((g) => g.key === area.category);
+    track.style.transform = `translateX(${-100 * index}%)`;
+    body.setAttribute('aria-label', `${apartment.name}, ${format.area(area.supply_area, area.exclusive_area)}, ${areaGroup.badge}`);
   };
 
   body.addEventListener('click', () => handlers.onSelect && handlers.onSelect(apartment, index));
@@ -131,17 +139,13 @@ function listCard(apartment, handlers) {
     next.addEventListener('click', () => {
       index = (index + 1) % apartment.areas.length;
       page.textContent = `${index + 1}/${apartment.areas.length}`;
-      draw();
-      // 다음 면적이 오른쪽에서 밀려 들어오는 것처럼 보이게 한다 (list.css의 list-card__body--slide)
-      body.classList.remove('list-card__body--slide');
-      void body.offsetWidth;
-      body.classList.add('list-card__body--slide');
+      show();
     });
     page.textContent = `1/${apartment.areas.length}`;
     card.append(next);
   }
 
-  draw();
+  show();
   card.dataset.category = group.key;
   return card;
 }

@@ -843,7 +843,7 @@ function selectedApartment() {
 // 고른 아파트를 지도의 가운데에 둔다. 옮겼으면 true. 전체 단계에서는 지도가 가려지므로 하지 않는다.
 function centerSelected({ smooth = false } = {}) {
   const apartment = selectedApartment();
-  if (!mapState.map || !apartment || sheet.stage === 'full') return false;
+  if (!mapState.map || !apartment) return false; // 전체 단계에서도 창 뒤의 지도 가운데에 둔다. 닫으면 그 자리가 보인다
   if (smooth) mapState.map.panTo(toLatLng(apartment));
   else mapState.map.setCenter(toLatLng(apartment));
   return true;
@@ -855,10 +855,11 @@ function centerSelected({ smooth = false } = {}) {
 function panToRemaining() {
   const { map } = mapState;
   const apartment = selectedApartment();
-  if (!map || !apartment || sheet.stage === 'full') return;
+  if (!map || !apartment) return;
   const box = document.getElementById('kakao-map');
   const areaHeight = document.querySelector('.map-area').clientHeight;
-  const targetY = (areaHeight - sheet.targetHeight()) / 2;
+  // 전체 단계면 지도가 창 뒤에 다 있으므로 지도의 가운데. 그 밖에는 창을 뺀 남은 영역의 가운데
+  const targetY = sheet.stage === 'full' ? box.clientHeight / 2 : (areaHeight - sheet.targetHeight()) / 2;
   const point = map.getProjection().containerPointFromCoords(toLatLng(apartment));
   map.panBy(point.x - box.clientWidth / 2, point.y - targetY);
 }

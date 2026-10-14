@@ -66,7 +66,7 @@
 }
 
 .sheet--closing {
-  animation: sheet-down var(--sheet-duration) var(--sheet-ease-down) both;
+  animation: sheet-down var(--sheet-duration) var(--sheet-ease-up) both; /* 올라올 때와 같은 빠르기 (2026-10-14) */
 }
 
 @keyframes sheet-up {
