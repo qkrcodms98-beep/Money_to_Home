@@ -73,6 +73,8 @@ const scenarioView = {
       scenarioView.apartmentId = apartment.id;
       scenarioView.changed = null;
       scenarioView.result = null;
+      const bar = document.getElementById('scenario-toast');
+      if (bar) bar.hidden = true; // 앞 아파트의 알림은 지운다
     }
     const used = scenarioView.usedConditions();
     scenarioView.draft = { saving: String(format.wonToMan(used.monthly_saving)), years: used.target_years };
