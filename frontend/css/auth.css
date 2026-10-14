@@ -166,3 +166,53 @@
 .auth-done .subtitle {
   margin-top: 10px;
 }
+
+/* 체크 상자 줄. "아이디 기억하기"(P-07 ①), "수집 항목과 목적에 동의합니다"(P-08 ⑥).
+   글자까지 눌러도 켜지고, 누르는 영역은 44px 이상이다 */
+.auth__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.auth__checkbox {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.auth__checkbox:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.auth__remember {
+  margin-top: 16px;
+}
+
+/* P-08 ⑥ 수집 항목과 목적의 회색 상자 */
+.auth__consent {
+  margin-top: 20px;
+  padding: 4px 14px 14px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
+}
+
+.auth__consent-title {
+  font-weight: var(--font-bold);
+}
+
+.auth__consent-text {
+  margin: 0 0 0 30px; /* 체크 상자(20) + 간격(10) 만큼 들여 글자 줄과 맞춘다 */
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 20px;
+  word-break: keep-all; /* 좁으면 낱말 단위로 줄을 바꾼다 */
+}
