@@ -92,6 +92,8 @@ const mapState = {
   summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
+  loadedBounds: null, // 영역으로 받았을 때 서버에 보낸 영역 (보이는 영역보다 넓다). 이 안에서 움직이면 다시 받지 않는다
+  preload: null, // 구·동으로 받은 뒤 주변을 미리 받아 둔 것 { bounds, data, key }. 지도를 끌기 시작하면 바로 쓴다
   byBounds: false, // 아파트를 지도에 보이는 영역으로 받고 있는가 (손으로 지도를 움직인 뒤). 아니면 구·동으로 받는다
   boundsTimer: null, // 움직임이 멈추기를 기다리는 타이머
   quietUntil: 0, // 이때(ms)까지의 확대·축소는 코드가 한 것이다. 영역으로 다시 받지 않는다
@@ -148,6 +150,7 @@ function createMap(center) {
     onZoomChanged();
   });
   // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
+  kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
   kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
@@ -673,7 +676,7 @@ const listPlace = () => {
 // 목록 (P-06 ⑤). 그리기는 김목산의 list.js. A-05 응답을 받을 때마다 부른다.
 function renderList() {
   if (!mapState.data) return;
-  listView.render(document.getElementById('apt-list'), mapState.data, {
+  listView.render(document.getElementById('apt-list'), visibleData(), {
     where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
     sort: currentSort(),
     onSort: changeSort,
@@ -1055,9 +1058,17 @@ const withFilters = (body) => (currentFilters() ? { ...body, filters: currentFil
 //   구·동        : 처음 열 때, 구·동을 골랐을 때, 동 표시나 구 표시를 눌렀을 때, 이름 검색에서 골랐을 때
 //   보이는 영역  : 손으로 지도를 끌거나 확대·축소했을 때, 내 위치로 옮겼을 때 (mapState.byBounds)
 // 영역으로 받는 것은 말풍선이 보이는 수준에서만 한다. 넓게 볼 때의 동·구 표시는 A-12가 따로 준다.
+//
+// 미리 받기: 서버에는 보이는 영역보다 넓게(위아래·좌우로 한 화면씩 더) 보낸다. 그래서 지도를 끌면 주변의 말풍선이 이미 있다.
+//   - 보이는 영역이 받아 둔 영역 안에 여유 있게 있으면 다시 받지 않는다. 가장자리에 가까워지면 그때 새로 받는다.
+//   - 구·동으로 받은 뒤에도 주변을 뒤에서 미리 받아 둔다 (mapState.preload). 처음 끌기 시작할 때 바로 그린다.
+//   - 목록과 개수는 보이는 영역의 아파트만 센다 (visibleData). 말풍선은 받아 둔 것을 모두 그린다.
 // 움직임이 멈추고 0.3초 뒤에 한 번만 받는다. 끄는 동안 계속 부르지 않는다.
 
 const BOUNDS_WAIT = 300;
+const BOUNDS_PAD = 1; // 보이는 영역의 위아래·좌우로 이만큼(화면의 배수) 더 받는다
+const BOUNDS_MARGIN = 0.5; // 받아 둔 영역의 가장자리까지 이만큼(화면의 배수)도 남지 않으면 새로 받는다
+const PRELOAD_WAIT = 1100; // 구·동으로 옮긴 뒤 지도의 움직임이 끝나기를 기다렸다가 주변을 미리 받는다
 const BOUNDS_NAME = '지도에 보이는 곳'; // 영역으로 받았을 때 목록의 머리에 적는 이름
 
 // 지도에 보이는 영역 { south, west, north, east }. 지도가 가려져 크기가 없으면 null
@@ -1071,10 +1082,38 @@ function mapBounds() {
   return area.south < area.north && area.west < area.east ? area : null;
 }
 
-// A-05의 where. 영역으로 받는 중이면 보이는 영역, 아니면 구·동 (영역을 알 수 없을 때도 구·동)
+// 영역을 위아래·좌우로 넓힌다. ratio는 그 영역 크기의 배수
+function growBounds(area, ratio) {
+  const height = (area.north - area.south) * ratio;
+  const width = (area.east - area.west) * ratio;
+  return { south: area.south - height, west: area.west - width, north: area.north + height, east: area.east + width };
+}
+
+const containsBounds = (outer, inner) =>
+  inner.south >= outer.south && inner.north <= outer.north && inner.west >= outer.west && inner.east <= outer.east;
+
+const insideBounds = (area, apartment) =>
+  hasCoord(apartment) && apartment.latitude >= area.south && apartment.latitude <= area.north &&
+  apartment.longitude >= area.west && apartment.longitude <= area.east;
+
+// 받아 둔 자료가 지금의 입력, 조건, 정렬로 받은 것인지 견주는 글자
+const requestKey = () => JSON.stringify([guard.conditions(), currentFilters(), currentSort()]);
+
+// 목록에 그릴 자료. 영역으로 받았으면 보이는 영역 안의 아파트만 남기고 개수를 다시 센다. 순서는 서버가 준 그대로다.
+function visibleData() {
+  const { data } = mapState;
+  const view = mapState.byBounds ? mapBounds() : null;
+  if (!data || !view) return data;
+  const apartments = data.apartments.filter((apartment) => insideBounds(view, apartment));
+  const counts = { now: 0, within: 0, lack: 0, total: apartments.length };
+  apartments.forEach((apartment) => { counts[apartment.category] += 1; });
+  return { ...data, apartments, counts };
+}
+
+// A-05의 where. 영역으로 받는 중이면 보이는 영역을 넓힌 것, 아니면 구·동 (영역을 알 수 없을 때도 구·동)
 function currentWhere() {
-  const bounds = mapState.byBounds ? mapBounds() : null;
-  if (bounds) return { bounds };
+  const view = mapState.byBounds ? mapBounds() : null;
+  if (view) return { bounds: growBounds(view, BOUNDS_PAD) };
   const { gu, dong } = mapState.region;
   return dong ? { gu, dong } : { gu };
 }
@@ -1100,7 +1139,39 @@ function quietZoom(ms) {
 // 구·동으로 받는 쪽으로 돌아간다. 기다리던 영역 받기는 그만둔다.
 function useRegion() {
   mapState.byBounds = false;
+  mapState.loadedBounds = null;
+  mapState.preload = null;
   clearTimeout(mapState.boundsTimer);
+}
+
+// 구·동으로 받은 뒤, 지금 보이는 곳의 주변을 뒤에서 미리 받아 둔다. 실패해도 알리지 않는다 (끌 때 다시 받는다).
+function preloadAround() {
+  const mine = mapState.loadSeq;
+  setTimeout(async () => {
+    const view = mapBounds();
+    if (mine !== mapState.loadSeq || mapState.byBounds || markerMode() !== 'apartment' || !view) return;
+    const bounds = growBounds(view, BOUNDS_PAD);
+    const key = requestKey();
+    try {
+      const data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where: { bounds }, sort: currentSort() }));
+      if (mine === mapState.loadSeq && !mapState.byBounds) mapState.preload = { bounds, data, key };
+    } catch (error) {
+      // 미리 받기는 없어도 된다
+    }
+  }, PRELOAD_WAIT);
+}
+
+// 지도를 끌기 시작할 때: 미리 받아 둔 주변이 있으면 바로 그린다. 고른 아파트는 그대로 둔다.
+function adoptPreload() {
+  const { preload } = mapState;
+  if (mapState.byBounds || !preload || markerMode() !== 'apartment' || preload.key !== requestKey()) return;
+  const selected = mapState.selectedId;
+  mapState.byBounds = true;
+  mapState.data = preload.data;
+  mapState.loadedBounds = preload.bounds;
+  mapState.preload = null;
+  mapState.selectedId = preload.data.apartments.some((apartment) => apartment.id === selected) ? selected : null;
+  renderMarkers();
 }
 
 // 움직임이 멈추면 보이는 영역의 아파트를 받는다.
@@ -1110,15 +1181,22 @@ function scheduleBoundsLoad(wait = BOUNDS_WAIT) {
 }
 
 // 보이는 영역의 아파트를 받는다. 지역 버튼은 지도 가운데의 동 이름으로 바뀐다. 새로 고치면 그 동으로 돌아온다.
+// 받아 둔 영역 안에 여유 있게 있으면 다시 받지 않고 목록만 보이는 곳에 맞춘다.
 function loadByBounds() {
-  if (!mapState.map || markerMode() !== 'apartment' || !mapBounds()) return;
-  mapState.byBounds = true;
+  const view = mapBounds();
+  if (!mapState.map || markerMode() !== 'apartment' || !view) return;
   const near = nearestDong();
   if (near) {
     mapState.region = near;
     store.set('map', { ...near });
   }
   renderRegionName();
+  const loaded = mapState.byBounds ? mapState.loadedBounds : null;
+  if (loaded && containsBounds(loaded, growBounds(view, BOUNDS_MARGIN))) {
+    renderList();
+    return;
+  }
+  mapState.byBounds = true;
   loadData();
 }
 
@@ -1131,6 +1209,9 @@ async function loadData() {
     mapState.data = data;
     mapState.selectedId = null;
     mapState.loadFailed = false;
+    mapState.loadedBounds = where.bounds || null;
+    mapState.preload = null;
+    if (!where.bounds) preloadAround();
   } catch (error) {
     if (mine !== mapState.loadSeq) return;
     // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
