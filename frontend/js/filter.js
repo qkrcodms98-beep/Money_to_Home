@@ -20,14 +20,14 @@
 //   filterSheet.label(filters, 'year')         // "준공 2020~"
 //   filterSheet.isEmpty(filters)               // 조건이 하나도 없으면 true
 //
-// 금액은 원 정수로 돌려준다. 만 원은 입력란에서만 쓴다 (CLAUDE.md 3).
+// 금액은 원 정수로 돌려준다. 천만 원은 평균가 입력란에서만 쓴다 (CLAUDE.md 3).
 // 평은 면적을 보여 줄 때만 쓴다. 돌려주는 값은 늘 ㎡의 면적대다.
 // 서버에서 온 글자는 없다. 글자는 모두 textContent로 넣는다.
 
 const FILTER_TEXT = {
   title: '조건',
   area: '면적 (전용)',
-  price: '평균가 (만 원)',
+  price: '평균가 (천만 원)',
   year: '준공 연도',
   min: '최소',
   max: '최대',
@@ -47,6 +47,11 @@ const FILTER_AREA = {
 };
 
 const PYEONG_M2 = 3.3058; // 평 환산 (요구사항 부록 C, format.pyeong과 같은 값)
+
+// 평균가 입력란의 단위. 천만 원이다. 10을 넣으면 1억 원 (1억을 10000으로 적지 않게)
+const PRICE_UNIT = 10000000;
+
+const FILTER_CLOSE_MS = 300; // 닫힐 때 내려가는 시간. filter.css의 filter-sheet-down과 같다
 
 const filterSheet = (() => {
   let container = null;
@@ -149,7 +154,22 @@ const filterSheet = (() => {
 
   function setError(key, message) {
     errors[key].textContent = message || '';
+    errors[key].classList.remove('filter-sheet__error--read');
     errors[key].parentElement.classList.toggle('filter-sheet__section--error', Boolean(message));
+    if (key === 'price' && !message) paintPriceRead();
+  }
+
+  // 평균가 입력란 아래에 넣은 값을 원으로 읽어 준다. "1억 원 ~ 3억 원". 오류 문구가 없을 때만 그 자리에
+  function paintPriceRead() {
+    const a = readNumber(inputs.price_min);
+    const b = readNumber(inputs.price_max);
+    if (Number.isNaN(a) || Number.isNaN(b) || (a === null && b === null)) {
+      errors.price.textContent = '';
+      return;
+    }
+    const won = (v) => (v === null ? '' : format.won(v * PRICE_UNIT));
+    errors.price.textContent = `${won(a)} ~ ${won(b)}`.trim();
+    errors.price.classList.add('filter-sheet__error--read');
   }
 
   // ㎡ / 평 고르기. 바꾸면 입력란의 숫자도 그 단위로 바꾼다.
@@ -210,15 +230,16 @@ const filterSheet = (() => {
     inputs = {
       area_min: numberInput(FILTER_TEXT.min, '면적 최소'),
       area_max: numberInput(FILTER_TEXT.max, '면적 최대'),
-      price_min: numberInput(FILTER_TEXT.min, '평균가 최소 (만 원)'),
-      price_max: numberInput(FILTER_TEXT.max, '평균가 최대 (만 원)'),
+      price_min: numberInput(FILTER_TEXT.min, '평균가 최소 (천만 원)'),
+      price_max: numberInput(FILTER_TEXT.max, '평균가 최대 (천만 원)'),
       built_year_min: numberInput(FILTER_TEXT.yearMin, '준공 연도 시작'),
       built_year_max: numberInput(FILTER_TEXT.yearMax, '준공 연도 끝'),
     };
     inputs.built_year_min.maxLength = 4;
     inputs.built_year_max.maxLength = 4;
 
-    // 지금 조건을 입력란에 넣는다. 면적은 고른 단위로, 금액은 만 원으로 (원 미만은 없다. 만 원 미만은 버린다)
+    // 지금 조건을 입력란에 넣는다. 면적은 고른 단위로, 금액은 천만 원으로.
+    // 천만 원으로 나눠떨어지지 않는 값(예전에 만 원으로 넣은 것)은 범위가 좁아지지 않게 최소는 내리고 최대는 올린다
     const put = (input, value) => { input.value = value === null || value === undefined ? '' : value; };
     const f = current || {};
     const area = (v) => (v === null || v === undefined ? null : unit === 'pyeong' ? toPyeong(v) : v);
@@ -228,8 +249,8 @@ const filterSheet = (() => {
       const text = (v) => (v === null || v === undefined ? '' : String(v));
       beforePyeong = { m2: [text(f.area_min), text(f.area_max)], pyeong: [inputs.area_min.value, inputs.area_max.value] };
     }
-    put(inputs.price_min, f.price_min === null || f.price_min === undefined ? null : Math.floor(f.price_min / 10000));
-    put(inputs.price_max, f.price_max === null || f.price_max === undefined ? null : Math.floor(f.price_max / 10000));
+    put(inputs.price_min, f.price_min === null || f.price_min === undefined ? null : Math.floor(f.price_min / PRICE_UNIT));
+    put(inputs.price_max, f.price_max === null || f.price_max === undefined ? null : Math.ceil(f.price_max / PRICE_UNIT));
     put(inputs.built_year_min, f.built_year_min);
     put(inputs.built_year_max, f.built_year_max);
 
@@ -260,6 +281,7 @@ const filterSheet = (() => {
     const priceBox = section('price', FILTER_TEXT.price);
     priceBox.append(...rangeRow('price', inputs.price_min, inputs.price_max));
     [inputs.price_min, inputs.price_max].forEach((input) => input.addEventListener('input', () => setError('price', null)));
+    paintPriceRead();
 
     const yearBox = section('year', FILTER_TEXT.year);
     yearBox.append(...rangeRow('year', inputs.built_year_min, inputs.built_year_max));
@@ -316,8 +338,8 @@ const filterSheet = (() => {
     return {
       area_min: untouched ? m2(beforePyeong.m2[0]) : areaMin === null ? null : pyeong ? pyeongToMin(areaMin) : areaMin,
       area_max: untouched ? m2(beforePyeong.m2[1]) : areaMax === null ? null : pyeong ? pyeongToMax(areaMax) : areaMax,
-      price_min: priceMin === null ? null : priceMin * 10000,
-      price_max: priceMax === null ? null : priceMax * 10000,
+      price_min: priceMin === null ? null : priceMin * PRICE_UNIT,
+      price_max: priceMax === null ? null : priceMax * PRICE_UNIT,
       built_year_min: yearMin,
       built_year_max: yearMax,
     };
@@ -335,9 +357,24 @@ const filterSheet = (() => {
     if (callback) callback(filters);
   }
 
+  let closing = null; // 내려가는 중이면 다 내려간 뒤 비울 타이머
+
+  // 다 내려간 창을 숨기고 비운다
+  function finishClose() {
+    clearTimeout(closing);
+    closing = null;
+    container.classList.remove('filter-sheet--closing');
+    container.hidden = true;
+    container.replaceChildren();
+  }
+
   const api = {
     open(target, current, callback, options = {}) {
-      if (container && container !== target) api.close();
+      if (container && container !== target) {
+        api.close();
+        finishClose();
+      }
+      if (closing) finishClose(); // 내려가는 중에 다시 열면 바로 새로 연다
       container = target;
       container.classList.add('filter-sheet');
       onApply = callback;
@@ -345,25 +382,33 @@ const filterSheet = (() => {
       build(current);
       container.hidden = false;
 
-      // 누른 칩의 항목으로 내려가 있게 한다
+      // 누른 칩의 항목으로 내려가 있게 한다. 창 안의 목록만 움직인다.
+      // scrollIntoView는 지도 화면 전체까지 밀어 올리므로 쓰지 않는다
       const focus = options.focus && container.querySelector(`.filter-sheet__section[data-filter="${options.focus}"]`);
-      if (focus) focus.scrollIntoView({ block: 'nearest' });
+      const body = container.querySelector('.filter-sheet__body');
+      if (focus && body) body.scrollTop = focus.offsetTop - body.offsetTop;
 
       if (onKey) document.removeEventListener('keydown', onKey);
       onKey = (event) => { if (event.key === 'Escape') api.close(); };
       document.addEventListener('keydown', onKey);
     },
 
+    // 아래로 내려간 뒤 사라진다. 움직임을 줄이는 설정이면 바로 사라진다
     close() {
-      if (!container) return;
-      container.hidden = true;
-      container.replaceChildren();
+      if (!container || container.hidden || closing) return;
       onApply = null;
       if (onKey) document.removeEventListener('keydown', onKey);
       onKey = null;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        finishClose();
+        return;
+      }
+      container.classList.add('filter-sheet--closing');
+      closing = setTimeout(finishClose, FILTER_CLOSE_MS);
     },
 
-    isOpen: () => Boolean(container) && !container.hidden,
+    // 내려가는 중이면 닫힌 것으로 본다
+    isOpen: () => Boolean(container) && !container.hidden && !closing,
 
     isEmpty: (filters) => !filters || Object.values(filters).every((value) => value === null || value === undefined),
 
