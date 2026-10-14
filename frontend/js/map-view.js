@@ -52,6 +52,8 @@ const ZOOM_MS = 600; // 동 표시를 눌렀을 때 그 동으로 확대되는 �
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 const MIN_LEVEL = 1;
+const TAP_MOVE_PX = 6; // 누른 채 이만큼 넘게 움직였으면 누른 것이 아니라 끈 것이다
+const TAP_GUARD_MS = 400; // 말풍선을 누른 뒤 이 안에 오는 지도의 click은 말풍선의 것이다
 const MY_LOCATION_LEVEL = 3; // 내 위치로 갈 때의 확대 수준. 아파트 단지 몇 개가 보인다
 const MAX_LEVEL = 9; // 광주 5개 구가 한 화면에 들어오는 정도
 
@@ -100,6 +102,7 @@ const mapState = {
   byBounds: false, // 아파트를 지도에 보이는 영역으로 받고 있는가 (손으로 지도를 움직인 뒤). 아니면 구·동으로 받는다
   boundsTimer: null, // 움직임이 멈추기를 기다리는 타이머
   quietUntil: 0, // 이때(ms)까지의 확대·축소는 코드가 한 것이다. 영역으로 다시 받지 않는다
+  tappedAt: 0, // 지도 위 표시를 마지막으로 누른 때 (ms)
   loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
 };
@@ -153,8 +156,11 @@ function createMap(center) {
     onZoomChanged();
   });
   // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
-  kakao.maps.event.addListener(map, 'dragstart', adoptPreload);
-  kakao.maps.event.addListener(map, 'click', () => closeOverlays()); // 지도를 누르면 지도 위의 창을 닫는다 // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
+  kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
+  // 지도를 누르면 지도 위의 창을 닫는다. 말풍선을 누른 직후의 click은 말풍선의 것이라 넘긴다 (onTap)
+  kakao.maps.event.addListener(map, 'click', () => {
+    if (Date.now() - mapState.tappedAt > TAP_GUARD_MS) closeOverlays();
+  });
   kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
@@ -338,6 +344,25 @@ function createMarkerShape() {
   return svg;
 }
 
+// 지도 위 표시(말풍선, 동·구 표시)를 눌렀을 때만 handler를 부른다.
+// 표시 위를 잡고 끌면 지도가 움직이고(clickable: false), 손을 뗄 때 나는 click은 끈 것이라 넘긴다.
+function onTap(element, handler) {
+  let start = null;
+  const tap = (event) => {
+    mapState.tappedAt = Date.now();
+    handler(event);
+  };
+  // 손가락·마우스: 누른 자리에서 떼면 누름. 지도가 터치를 가져가 click이 안 나는 휴대폰도 있어 pointerup으로 본다
+  element.addEventListener('pointerdown', (event) => { start = { x: event.clientX, y: event.clientY }; });
+  element.addEventListener('pointerup', (event) => {
+    const moved = !start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_MOVE_PX;
+    start = null;
+    if (!moved) tap(event);
+  });
+  // 키보드(Enter, Space)로 누름. 이때는 detail이 0이다
+  element.addEventListener('click', (event) => { if (event.detail === 0) tap(event); });
+}
+
 // 말풍선 하나 (button). 모양은 map.css의 .marker. 꼬리 끝이 아파트의 자리가 되도록 CSS가 옮긴다.
 function createMarkerElement(apartment, unit, group = [apartment]) {
   const area = firstArea(apartment);
@@ -366,10 +391,10 @@ function createMarkerElement(apartment, unit, group = [apartment]) {
     more.textContent = `+${group.length - 1}`;
     button.append(more);
     button.setAttribute('aria-label', `${button.getAttribute('aria-label')}, 겹친 아파트 ${group.length - 1}곳 더`);
-    button.addEventListener('click', () => openGroup(group));
+    onTap(button, () => openGroup(group));
     return button;
   }
-  button.addEventListener('click', () => openApartment(apartment));
+  onTap(button, () => openApartment(apartment));
   return button;
 }
 
@@ -407,7 +432,7 @@ function renderMarkers() {
       xAnchor: 0,
       yAnchor: 0,
       zIndex: apartment.id === mapState.selectedId ? 3 : 2,
-      clickable: true, // 말풍선을 눌러도 지도가 클릭으로 받지 않는다
+      clickable: false, // 말풍선 위를 잡고 끌어도 지도가 움직인다. 누름은 onTap이 가린다
     });
     overlay.setMap(map);
     overlay.apartmentId = apartment.id;
@@ -515,7 +540,7 @@ function createAreaMarkerElement(group, name, className, onClick) {
   count.className = 'dong-marker__count';
   count.textContent = format.comma(group.target); // 숫자만 크게 적는다. "곳"은 읽어 주는 글(aria-label)에만 둔다
   button.append(nameText, count);
-  button.addEventListener('click', onClick);
+  onTap(button, onClick);
   return button;
 }
 
@@ -574,7 +599,7 @@ function renderAreaMarkers(level) {
       xAnchor: 0.5,
       yAnchor: 0.5,
       zIndex: 2,
-      clickable: true,
+      clickable: false, // 말풍선과 같다 (onTap)
     });
     overlay.setMap(mapState.map);
     return overlay;
