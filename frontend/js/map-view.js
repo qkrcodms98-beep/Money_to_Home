@@ -89,7 +89,7 @@ const mapState = {
   toastTimer: null,
   mode: 'apartment', // 지금 그리는 표시. 'apartment'(말풍선), 'dong'(동 표시), 'gu'(구 표시)
   level: null, // 말풍선을 마지막으로 그렸을 때의 확대 수준. 달라지면 겹침을 다시 본다
-  guSummary: null, // 구마다의 목표할 수 있는 아파트 수. 처음 넓게 볼 때 한 번 받는다
+  summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
 };
@@ -370,11 +370,11 @@ function renderMarkers() {
   mapState.level = map.getLevel();
   renderRegionName();
   if (mapState.mode === 'gu') {
-    renderGuMarkers();
+    renderAreaMarkers('gu');
     return;
   }
   if (mapState.mode === 'dong') {
-    renderDongMarkers();
+    renderAreaMarkers('dong');
     return;
   }
 
@@ -484,27 +484,6 @@ function markerMode() {
   return level >= DONG_MARKER_LEVEL ? 'dong' : 'apartment';
 }
 
-// 받은 아파트를 동으로 묶는다. [{ gu, dong, target, total, latitude, longitude }]
-function groupByDong() {
-  const groups = new Map();
-  for (const apartment of mapState.data.apartments) {
-    const key = `${apartment.gu} ${apartment.dong}`;
-    if (!groups.has(key)) groups.set(key, { gu: apartment.gu, dong: apartment.dong, target: 0, total: 0, points: [] });
-    const group = groups.get(key);
-    group.total += 1;
-    if (apartment.category !== 'lack') group.target += 1;
-    if (hasCoord(apartment)) group.points.push(apartment);
-  }
-  return [...groups.values()].map((group) => {
-    // 자리는 A-02가 준 그 동의 위치다. 없으면 받은 아파트 좌표의 평균으로 한다.
-    const center = regionCenter(group) || (group.points.length ? {
-      latitude: group.points.reduce((sum, a) => sum + a.latitude, 0) / group.points.length,
-      longitude: group.points.reduce((sum, a) => sum + a.longitude, 0) / group.points.length,
-    } : null);
-    return { ...group, ...center };
-  });
-}
-
 // 동 표시와 구 표시의 요소. 동그라미 안에 이름과 숫자
 function createAreaMarkerElement(group, name, className, onClick) {
   const button = document.createElement('button');
@@ -522,15 +501,52 @@ function createAreaMarkerElement(group, name, className, onClick) {
   return button;
 }
 
-// 누르면 그 동으로 확대한다 (FR-MAP-21). 30% 창은 아래 창을 만들 때 붙인다.
-const createDongMarkerElement = (group) =>
-  createAreaMarkerElement(group, group.dong, 'dong-marker', () => zoomToRegion({ gu: group.gu, dong: group.dong }));
+// ───────── 동 표시와 구 표시의 수 (A-12) ─────────
+// 동마다, 구마다의 수는 구별·동별 개수 API(A-12)가 준다. 자리도 함께 온다 (A-02와 같은 자리).
+//   - 동 표시: 5개 구의 모든 동을 한 번에 받는다. 지도를 옆 구로 옮겨도 동 표시가 보인다.
+//   - 구 표시: 구 5개를 한 번에 받는다.
+//   - 조건(입력한 값)이 같은 동안에는 한 번 받은 것을 다시 받지 않는다.
+// mapState.summary[level]: null(아직 안 받음), 'loading'(받는 중), 배열(받음)
 
-function renderDongMarkers() {
-  mapState.markers = groupByDong().filter(hasCoord).map((group) => {
+// A-12의 한 줄을 표시가 쓰는 모양으로. { gu, dong, target, total, latitude, longitude }
+const toAreaGroup = (region) => ({
+  gu: region.gu,
+  dong: region.dong,
+  target: region.target_count,
+  total: region.counts.total,
+  latitude: region.latitude,
+  longitude: region.longitude,
+});
+
+// level('dong' 또는 'gu')의 수를 받아 둔다. 받는 동안에는 표시가 없다가, 오면 그린다.
+async function loadSummary(level) {
+  mapState.summary[level] = 'loading';
+  try {
+    const data = await api.post('/api/regions/summary', { conditions: guard.conditions(), level });
+    mapState.summary[level] = data.regions.map(toAreaGroup);
+  } catch (error) {
+    mapState.summary[level] = null; // 다음에 넓게 볼 때 다시 받는다
+    showToast(error.status === 422 ? error.detail : MSG.dataFail);
+    return;
+  }
+  if (mapState.mode === level) renderMarkers();
+}
+
+// 동 표시(level 'dong')나 구 표시(level 'gu')를 그린다. 누르면 그 지역으로 확대한다 (FR-MAP-21).
+function renderAreaMarkers(level) {
+  const groups = mapState.summary[level];
+  if (groups === null) loadSummary(level);
+  if (!Array.isArray(groups)) return;
+  const gu = level === 'gu';
+  mapState.markers = groups.filter(hasCoord).map((group) => {
     const overlay = new kakao.maps.CustomOverlay({
       position: toLatLng(group),
-      content: createDongMarkerElement(group),
+      content: createAreaMarkerElement(
+        group,
+        gu ? group.gu : group.dong,
+        gu ? 'dong-marker dong-marker--gu' : 'dong-marker',
+        () => zoomToRegion({ gu: group.gu, dong: group.dong }),
+      ),
       xAnchor: 0.5,
       yAnchor: 0.5,
       zIndex: 2,
@@ -541,47 +557,9 @@ function renderDongMarkers() {
   });
 }
 
-// 확대 수준이 바뀌어 말풍선과 동 표시가 서로 바뀔 때 다시 그린다.
-// 동 하나를 보다가 넓게 보면 그 구 전체의 아파트를 받아 동 표시를 그린다. 지역 버튼도 "○○구 전체"로 바뀐다.
 // ───────── 더 넓게 볼 때: 구 표시 (P-05 ⑪) ─────────
 // 동 표시도 서로 겹칠 만큼 넓게 보면 구마다 표시 하나로 묶는다. "광산구 / 216"
 // 숫자는 그 구에서 목표할 수 있는 아파트 수(지금 가능 + 기간 내 가능)다. 누르면 동 표시와 똑같이 그 구로 확대한다.
-
-// 구마다의 수를 받는다. 구별 개수 API(A-12)가 아직 없어 구마다 A-05를 한 번씩 부른다. 한 번 받으면 다시 받지 않는다.
-async function loadGuSummary() {
-  const conditions = guard.conditions();
-  const results = await Promise.all(mapState.regions.map((region) =>
-    api.post('/api/apartments/search', { conditions, where: { gu: region.gu } })
-      .then((data) => ({ gu: region.gu, dong: null, target: data.counts.now + data.counts.within, total: data.counts.total })),
-  ));
-  mapState.guSummary = results.map((item) => ({ ...item, ...regionCenter(item) }));
-}
-
-function renderGuMarkers() {
-  if (mapState.guSummary === null) {
-    // 처음 넓게 볼 때 받는다. 받는 동안에는 표시가 없다가, 오면 그린다.
-    mapState.guSummary = [];
-    loadGuSummary()
-      .then(() => { if (mapState.mode === 'gu') renderMarkers(); })
-      .catch(() => {
-        mapState.guSummary = null;
-        showToast(MSG.dataFail);
-      });
-    return;
-  }
-  mapState.markers = mapState.guSummary.filter(hasCoord).map((group) => {
-    const overlay = new kakao.maps.CustomOverlay({
-      position: toLatLng(group),
-      content: createAreaMarkerElement(group, group.gu, 'dong-marker dong-marker--gu', () => zoomToRegion({ gu: group.gu, dong: null })),
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 2,
-      clickable: true,
-    });
-    overlay.setMap(mapState.map);
-    return overlay;
-  });
-}
 
 // 지도 가운데에서 가장 가까운 구. 구 표시를 보다가 손으로 확대했을 때 어느 구를 보여 줄지 정한다.
 function nearestGu() {
