@@ -93,6 +93,11 @@ function initLogin() {
   const submit = document.getElementById('login-submit');
   let sending = false;
 
+  // 시나리오 탭에서 "결과 저장"을 누르고 넘어왔는가 (P-07 ③). 저장할 값은 박채은의 scenario.js가 남기고 지운다.
+  // 그때는 안내를 보이고, 로그인하면 지도로 돌아가 저장을 이어 간다
+  const pendingSave = Boolean(store.get('place').pending_save);
+  document.getElementById('login-pending').hidden = !pendingSave;
+
   // 두 값을 모두 넣어야 켜진다 (P-07 ①)
   const update = () => {
     submit.disabled = sending || idInput.value === '' || passwordInput.value === '';
@@ -110,7 +115,8 @@ function initLogin() {
     update();
     try {
       await api.post('/api/auth/login', { login_id: idInput.value, password: passwordInput.value });
-      location.href = 'index.html'; // 시작 화면의 로그인 상태 (P-01 ②, ③)
+      // 저장하려다 왔으면 지도로(저장은 scenario.js가 이어서 한다), 아니면 시작 화면의 로그인 상태로 (P-01 ②, ③)
+      location.href = pendingSave ? 'map.html' : 'index.html';
       return;
     } catch (error) {
       // 넣은 값은 지우지 않는다. 어느 쪽이 틀렸는지 구분하지 않는다 (P-07 ②)
@@ -291,13 +297,14 @@ function initSignup() {
   });
 
   // P-08 ⑦ 가입 완료. 가입과 함께 로그인되었다.
-  // '시작하기'는 재무정보로 간다. 입력하던 값이 이 탭에 남아 있으면 그 자리로 간다
+  // '시작하기'는 재무정보로 간다. 입력하던 값이 이 탭에 남아 있으면 그 자리로 간다.
+  // 결과를 저장하려다 로그인 화면을 거쳐 가입했으면 지도로 돌아가 저장을 이어 간다 (P-07 ③)
   function showDone(loginId) {
     form.hidden = true;
     document.querySelector('.auth-nav').hidden = true;
     document.getElementById('signup-done-text').textContent =
       `${loginId}님, 이제 입력한 정보를 저장해 다음에 이어서 볼 수 있습니다.`;
-    document.getElementById('signup-start').href = guard.resumePage();
+    document.getElementById('signup-start').href = store.get('place').pending_save ? 'map.html' : guard.resumePage();
     document.getElementById('signup-done').hidden = false;
     document.getElementById('signup-start').focus();
   }

@@ -10,7 +10,7 @@
 <body data-page="login">
   <!-- P-07 로그인. 담당: 김목산. Figma "확정 목업 v3"의 P-07, 와이어프레임 설명서 10장.
        로그인하지 않아도 입력, 계산, 탐색은 모두 된다. 로그인은 저장에만 필요하다 (FR-USER-20).
-       아이디 기억하기(3차)와 저장하려다 넘어온 경우의 안내(P-07 ③, 3차)는 아직 없다. -->
+       아이디 기억하기(3차)는 아직 없다. -->
   <div class="top-space"></div>
 
   <nav class="progress auth-nav" aria-label="뒤로">
@@ -19,6 +19,8 @@
 
   <form id="login-form" class="form-page auth" novalidate>
     <main class="page">
+      <!-- P-07 ③ 저장하려다 넘어온 경우. 시나리오 탭의 "결과 저장"이 store place.pending_save를 남기고 보냈을 때만 보인다 -->
+      <p class="notice auth__pending" id="login-pending" role="status" hidden>결과를 저장하려면 로그인이 필요합니다. 입력한 값은 이 기기에 그대로 남아 있습니다.</p>
       <header class="form-page__head auth__head">
         <h1 class="title">로그인</h1>
         <p class="subtitle">저장한 정보를 이어서 볼 수 있습니다.</p>

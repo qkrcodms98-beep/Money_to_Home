@@ -17,6 +17,11 @@
   padding-bottom: 24px;
 }
 
+/* P-07 ③ 저장하려다 넘어온 경우의 회색 상자. 제목 위에 둔다 */
+.auth__pending {
+  margin-bottom: 20px;
+}
+
 /* 아이디와 비밀번호는 입력 화면의 숫자보다 조금 작게 */
 .auth__input {
   font-size: var(--text-title);
