@@ -74,6 +74,80 @@
   padding-bottom: 94px;
 }
 
+/* P-01 ⑤ 로그인 시간이 끝남. 로고 자리의 회색 안내 */
+.start__expired {
+  margin-bottom: 24px;
+}
+
+/* P-01 ② 저장한 정보. 회색 상자 안에 이름과 값 한 줄씩 */
+.saved-box {
+  margin: 28px 0 0;
+  padding: 4px 18px;
+  border-radius: var(--radius-card);
+  background: var(--color-bg-sub);
+}
+
+.saved-box__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+}
+
+.saved-box__row + .saved-box__row {
+  border-top: 1px solid var(--color-line);
+}
+
+.saved-box dt {
+  color: var(--color-text-sub);
+  font-size: var(--text-label);
+}
+
+.saved-box dd {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: var(--font-bold);
+  text-align: right;
+}
+
+/* P-01 ④ 불러오지 못함 */
+.start__error {
+  margin-top: 28px;
+}
+
+/* 아래 고정 영역의 글자 버튼들 */
+.start__restart {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+  text-decoration: underline;
+}
+
+.start__auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 8px 0 0;
+}
+
+.start__auth .link-button {
+  text-decoration: underline;
+}
+
+.start__divider {
+  width: 1px;
+  height: 12px;
+  background: var(--color-line-strong);
+}
+
+.start__hint {
+  margin: 4px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-badge);
+  text-align: center;
+}
+
 @media (max-height: 760px) {
   .start-layout .bottom-action {
     padding-bottom: 20px;

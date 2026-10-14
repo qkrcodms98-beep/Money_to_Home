@@ -5,7 +5,7 @@
 - A-10 PUT /api/profile/loan    : 대출 선택 저장
 - A-11 PUT /api/profile/plan    : 저축 계획 저장
 
-1차에는 테스트 사용자 한 명의 값을 읽고 쓴다. 누구의 값인지는 deps.py가 정한다.
+로그인한 회원의 값을 읽고 쓴다. 로그인하지 않았으면 401이다. 누구의 값인지는 deps.py가 정한다.
 router는 요청을 받아 services의 함수를 부르고 응답을 만든다. DB를 다루는 일은 backend/services/profile.py에 있다.
 """
 from fastapi import APIRouter, Depends

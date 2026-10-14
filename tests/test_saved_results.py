@@ -26,6 +26,12 @@ def _priced(id, name, bands):
     return apt
 
 
+
+@pytest.fixture
+def client(anon_client):
+    """이 파일의 테스트는 로그인하지 않은 브라우저에서 시작한다 (가입과 로그인을 직접 한다)."""
+    return anon_client
+
 @pytest.fixture
 def apartments(db, products):
     db.add_all([
