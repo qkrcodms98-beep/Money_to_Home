@@ -16,7 +16,15 @@
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
   color: var(--color-text);
   font-family: var(--font-family);
-  animation: filter-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* 아래에서 천천히 미끄러져 올라온다. 지도 위에 떠 있을 뿐 지도와 다른 요소의 자리는 바꾸지 않는다 */
+  animation: filter-sheet-up 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+  will-change: transform;
+}
+
+/* 닫을 때는 아래로 내려간다 (filter.js의 FILTER_CLOSE_MS와 같은 시간) */
+.filter-sheet--closing {
+  animation: filter-sheet-down 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
 }
 
 .filter-sheet[hidden] {
@@ -32,8 +40,18 @@
   }
 }
 
+@keyframes filter-sheet-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .filter-sheet {
+  .filter-sheet,
+  .filter-sheet--closing {
     animation: none;
   }
 }
@@ -253,6 +271,11 @@
   color: var(--color-error-text);
   font-size: var(--text-help);
   line-height: 19px;
+}
+
+/* 평균가를 원으로 읽어 주는 글자. "1억 원 ~ 3억 원" */
+.filter-sheet__error--read {
+  color: var(--color-text-sub);
 }
 
 .filter-sheet__section--error .filter-sheet__input {
