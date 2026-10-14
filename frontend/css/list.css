@@ -357,3 +357,29 @@
   padding: 0;
   color: inherit;
 }
+
+/* 다른 면적으로 넘길 때: 오른쪽에서 밀려 들어온다 (카드 밖으로는 보이지 않는다) */
+.list-card {
+  overflow: hidden;
+}
+
+.list-card__body--slide {
+  animation: list-card-slide 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes list-card-slide {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-card__body--slide {
+    animation: none;
+  }
+}

@@ -52,6 +52,7 @@ const ZOOM_MS = 600; // 동 표시를 눌렀을 때 그 동으로 확대되는 �
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 const MIN_LEVEL = 1;
+const MY_LOCATION_LEVEL = 3; // 내 위치로 갈 때의 확대 수준. 아파트 단지 몇 개가 보인다
 const MAX_LEVEL = 9; // 광주 5개 구가 한 화면에 들어오는 정도
 
 // 광주 5개 구를 감싼 사각형. 현재 위치가 이 밖이면 지도를 옮기지 않는다 (FR-MAP-24).
@@ -152,7 +153,8 @@ function createMap(center) {
     onZoomChanged();
   });
   // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
-  kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
+  kakao.maps.event.addListener(map, 'dragstart', adoptPreload);
+  kakao.maps.event.addListener(map, 'click', () => closeOverlays()); // 지도를 누르면 지도 위의 창을 닫는다 // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
   kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
@@ -222,8 +224,10 @@ async function moveToMyLocation({ quiet = false } = {}) {
   const { status, position } = await askPosition();
   if (status === 'ok') {
     showMyLocation(position);
-    mapState.map.panTo(toLatLng(position));
-    scheduleBoundsLoad(700); // 옮겨 가는 움직임이 끝난 뒤에 그 자리의 아파트를 받는다
+    // 천천히 옮겨 가지 않고 화면이 바뀌듯 한 번에 그 자리로 간다. 아파트가 보이는 수준까지 가까이
+    mapState.map.setCenter(toLatLng(position));
+    mapState.map.setLevel(MY_LOCATION_LEVEL);
+    scheduleBoundsLoad(100); // 그 자리의 아파트를 받는다
     return;
   }
   if (status === 'outside') showToast(MSG.geoOutside);
@@ -759,7 +763,7 @@ function changeSort(sort) {
   loadData();
 }
 
-// 동 표시를 누름 → 그 동으로 확대한 뒤 목록 30% (P-06 ④).
+// 동 표시를 누름 → 그 동으로 확대한다. 목록은 저절로 올리지 않는다 (2026-10-14에 정함).
 // 확대가 끝난 뒤에 창을 올린다. 그사이 다른 곳으로 옮겼거나 다시 넓게 보고 있으면 올리지 않는다.
 async function openDong({ gu, dong }) {
   const started = Date.now();
@@ -768,8 +772,7 @@ async function openDong({ gu, dong }) {
   if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
   const same = mapState.region.gu === gu && mapState.region.dong === dong;
   if (!same || mapState.mode !== 'apartment' || !mapState.data) return;
-  selectMarker(null);
-  sheet.show('30', 'list');
+  selectMarker(null); // 목록은 저절로 올리지 않는다. "목록" 버튼으로 연다
 }
 
 // 말풍선을 누름 → 아파트 30% (P-06 ⑥). 지도의 표시를 누르면 늘 30%로 연다 (화면 설계서 7.1).
@@ -1017,6 +1020,14 @@ function bindEvents() {
 
   // 아파트 이름 검색 (P-05 ⑭). 결과는 js/search.js가 #search-results에 그린다.
   searchView.open(document.getElementById('search-results'), onSearchPick);
+
+  // 지도 위에 뜬 창(아래 창, 조건, 지역 선택)은 그 밖을 누르면 닫힌다. 닫기를 누르지 않아도 된다.
+  //   지도를 누름: 카카오맵의 click (끌기 뒤에는 나지 않고, 말풍선을 누를 때도 나지 않는다)
+  //   그 밖의 빈 곳을 누름: 버튼, 링크, 입력란, 창 안을 누른 것은 빼고
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('button, a, input, label, #kakao-map, #sheet, #filter-sheet, #region-sheet, #search-results')) return;
+    closeOverlays();
+  });
 
   // 내 조건 줄의 로그인·로그아웃
   document.getElementById('login-link').addEventListener('click', onLoginLink);
@@ -1280,6 +1291,16 @@ async function moveToRegion({ gu, dong }) {
   renderRegionName();
   panToRegion();
   await loadData();
+}
+
+// 지도 위에 뜬 창을 모두 닫는다 (지도나 빈 곳을 눌렀을 때)
+function closeOverlays() {
+  if (sheet.phase !== 'closed') {
+    selectMarker(null);
+    sheet.close();
+  }
+  filterSheet.close();
+  regionPicker.close();
 }
 
 // 동 표시나 구 표시를 눌렀을 때: 그 지역이 화면 가운데로 오면서 함께 확대된다 (FR-MAP-21).

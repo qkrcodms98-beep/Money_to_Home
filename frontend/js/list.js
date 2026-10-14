@@ -132,6 +132,10 @@ function listCard(apartment, handlers) {
       index = (index + 1) % apartment.areas.length;
       page.textContent = `${index + 1}/${apartment.areas.length}`;
       draw();
+      // 다음 면적이 오른쪽에서 밀려 들어오는 것처럼 보이게 한다 (list.css의 list-card__body--slide)
+      body.classList.remove('list-card__body--slide');
+      void body.offsetWidth;
+      body.classList.add('list-card__body--slide');
     });
     page.textContent = `1/${apartment.areas.length}`;
     card.append(next);
