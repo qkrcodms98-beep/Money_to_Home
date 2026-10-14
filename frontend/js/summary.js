@@ -8,6 +8,13 @@
 
 (() => {
   if (!guard.requireInput()) return;
+
+  // "수정"을 누르면 그 화면만 고치고 "다음"을 누르면 이 화면으로 돌아온다 (profile.js, loan.js, plan.js가 본다).
+  // 이 화면에 오면 표시를 지운다.
+  store.set('place', { return_to: null });
+  document.querySelectorAll('.summary-card__edit').forEach((link) => {
+    link.addEventListener('click', () => store.set('place', { return_to: 'summary' }));
+  });
   const input = store.get('input');
   const $ = (id) => document.getElementById(id);
   const yearsText = (years) => (years === 0 ? '지금' : `${years}년`);
