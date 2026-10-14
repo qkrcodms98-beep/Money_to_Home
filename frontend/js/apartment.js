@@ -10,6 +10,8 @@
 //     1차의 여섯 줄: 지번 주소, 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래.
 //     세대수와 가격 범위는 2차, 로드뷰 자리는 3차라 아직 그리지 않는다 (와이어프레임 P-06 ⑦).
 //     값을 모르는 줄(도로명 주소, 준공 연도가 비어 있음)은 그리지 않는다.
+//   좌표가 없는 아파트 (P-06 ⑱, 목업 4009:492): 이름과 배지 옆에 "위치 없음"을 붙이고,
+//     아파트 정보 탭의 맨 위에 점선 안내를 둔다. 목록에서 열었을 때만 생긴다 (지도에는 표시가 없다).
 //   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
 //
 // 30%의 값은 모두 A-05 응답에 있다. 30%에서는 서버를 다시 부르지 않는다.
@@ -30,6 +32,13 @@
 const APT_CATEGORY_NAMES = { now: '지금 가능', within: '기간 내 가능', lack: '자금 부족' };
 // 불러오지 못했을 때. 지도 화면의 문장과 같다 (와이어프레임 P-04 ⑩). 아래에 "다시 시도"를 둔다 (P-05 ⑰과 같은 모양)
 const APT_INFO_FAIL = '아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+// 좌표가 없는 아파트 (와이어프레임 P-06 ⑱의 문장 그대로)
+const APT_NO_COORD = '위치 없음';
+const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 표시하지 못했습니다. 지도는 그대로 두었습니다.';
+
+const aptHasCoord = (apartment) =>
+  apartment.latitude !== null && apartment.latitude !== undefined &&
+  apartment.longitude !== null && apartment.longitude !== undefined;
 
 const aptPanel = {
   apartment: null,
@@ -136,6 +145,7 @@ const aptPanel = {
     const badge = document.getElementById('apt-badge');
     badge.className = `badge badge--${area.category}`; // 고른 면적의 구분
     badge.textContent = APT_CATEGORY_NAMES[area.category];
+    aptPanel.renderNoCoordTag();
 
     // 이전·다음
     const order = handlers.order(apartment);
@@ -173,6 +183,30 @@ const aptPanel = {
     aptPanel.renderScenario();
   },
 
+  // ───────── 좌표가 없는 아파트 (P-06 ⑱) ─────────
+
+  // 이름과 배지 옆의 "위치 없음". 처음 쓸 때 한 번 만들어 이름 줄에 붙이고, 아파트마다 보이고 숨긴다.
+  renderNoCoordTag() {
+    let tag = document.getElementById('apt-no-coord');
+    if (!tag) {
+      tag = document.createElement('span');
+      tag.id = 'apt-no-coord';
+      tag.className = 'apt__tag';
+      tag.textContent = APT_NO_COORD;
+      document.getElementById('apt-title').append(tag);
+    }
+    tag.hidden = aptHasCoord(aptPanel.apartment);
+  },
+
+  // 아파트 정보 탭 맨 위의 점선 안내. 좌표가 있으면 null
+  noCoordNotice() {
+    if (aptHasCoord(aptPanel.apartment)) return null;
+    const box = document.createElement('p');
+    box.className = 'apt-info__notice';
+    box.textContent = APT_NO_COORD_NOTICE;
+    return box;
+  },
+
   // ───────── 아파트 정보 탭 (P-06 ⑦, A-06) ─────────
 
   // 아파트 정보 탭이 지금 보이는가. 80% 이상이고, 아파트 창이고, 그 탭이 골라져 있을 때
@@ -187,16 +221,18 @@ const aptPanel = {
     const { apartment } = aptPanel;
     if (!apartment || !aptPanel.infoVisible()) return;
     const panel = document.getElementById('apartment-info');
+    const notice = aptPanel.noCoordNotice(); // 좌표가 없으면 맨 위에 (받는 중에도 보인다)
+    const show = (content) => panel.replaceChildren(...[notice, content].filter(Boolean));
     const detail = aptPanel.details.get(apartment.id);
     if (detail) {
-      panel.replaceChildren(aptPanel.infoRows(detail));
+      show(aptPanel.infoRows(detail));
       return;
     }
     if (aptPanel.failed.has(apartment.id)) {
-      panel.replaceChildren(aptPanel.infoFail(apartment.id));
+      show(aptPanel.infoFail(apartment.id));
       return;
     }
-    panel.replaceChildren(); // 받는 동안은 비워 둔다
+    show(null); // 받는 동안은 안내만 두고 비워 둔다
     aptPanel.loadDetail(apartment.id);
   },
 
