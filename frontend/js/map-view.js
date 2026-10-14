@@ -533,6 +533,7 @@ async function loadSummary(level) {
 }
 
 // 동 표시(level 'dong')나 구 표시(level 'gu')를 그린다. 누르면 그 지역으로 확대한다 (FR-MAP-21).
+// 동 표시는 확대한 뒤 그 동의 목록을 30%로 올린다 (P-06 ④).
 function renderAreaMarkers(level) {
   const groups = mapState.summary[level];
   if (groups === null) loadSummary(level);
@@ -545,7 +546,7 @@ function renderAreaMarkers(level) {
         group,
         gu ? group.gu : group.dong,
         gu ? 'dong-marker dong-marker--gu' : 'dong-marker',
-        () => zoomToRegion({ gu: group.gu, dong: group.dong }),
+        () => (gu ? zoomToRegion({ gu: group.gu, dong: null }) : openDong({ gu: group.gu, dong: group.dong })),
       ),
       xAnchor: 0.5,
       yAnchor: 0.5,
@@ -578,6 +579,12 @@ function onZoomChanged() {
   const next = markerMode();
   const before = mapState.mode;
   if (next === before) return;
+
+  // 말풍선이 사라지는 수준으로 넓게 보면 열려 있는 아파트 창을 닫는다 (고른 말풍선이 없어진다). 목록은 그대로 둔다.
+  if (next !== 'apartment' && sheet.mode === 'apartment') {
+    selectMarker(null);
+    sheet.close();
+  }
 
   // 구 표시를 보다가 가까이 가면, 지도 가운데에서 가장 가까운 구의 아파트를 받아 보여 준다.
   if (before === 'gu') {
@@ -636,9 +643,31 @@ function renderList() {
   if (!mapState.data) return;
   listView.render(document.getElementById('apt-list'), mapState.data, {
     where: mapState.region,
+    sort: currentSort(),
+    onSort: changeSort,
     onSelect: openApartmentFromList,
     onClose: () => sheet.close(),
   });
+}
+
+// 목록에서 정렬을 고름. 서버가 그 순서로 다시 준다 (FR-APT-07). 새로 고쳐도 고른 정렬이 남는다.
+// 말풍선이 겹칠 때 앞에 오는 것과 ‹ › 로 넘어가는 순서도 이 순서를 따른다.
+function changeSort(sort) {
+  store.set('map', { sort });
+  loadData();
+}
+
+// 동 표시를 누름 → 그 동으로 확대한 뒤 목록 30% (P-06 ④).
+// 확대가 끝난 뒤에 창을 올린다. 그사이 다른 곳으로 옮겼거나 다시 넓게 보고 있으면 올리지 않는다.
+async function openDong({ gu, dong }) {
+  const started = Date.now();
+  await zoomToRegion({ gu, dong });
+  const left = ZOOM_MS + 150 - (Date.now() - started);
+  if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
+  const same = mapState.region.gu === gu && mapState.region.dong === dong;
+  if (!same || mapState.mode !== 'apartment' || !mapState.data) return;
+  selectMarker(null);
+  sheet.show('30', 'list');
 }
 
 // 말풍선을 누름 → 아파트 30% (P-06 ⑥). 지도의 표시를 누르면 늘 30%로 연다 (화면 설계서 7.1).
@@ -743,7 +772,8 @@ function onSheetChange() {
 // A-05를 새로 받은 뒤 열려 있는 아파트 창을 새 응답에 맞춘다.
 // 새 응답에 같은 아파트가 있으면 그것으로 바꿔 보여 주고, 없으면(다른 지역으로 옮김) 창을 닫는다.
 function syncApartmentSheet() {
-  if (sheet.mode !== 'apartment' || !aptPanel.apartment) return;
+  // 닫히는 중이면 건드리지 않는다. 다시 고르면 닫힌 뒤에도 말풍선이 고른 채로 남는다.
+  if (sheet.mode !== 'apartment' || sheet.phase === 'closing' || !aptPanel.apartment) return;
   const same = mapState.data.apartments.find((item) => item.id === aptPanel.apartment.id);
   if (!same) {
     sheet.close();
@@ -887,13 +917,18 @@ function regionCenter({ gu, dong }) {
   return place && hasCoord(place) ? { latitude: place.latitude, longitude: place.longitude } : null;
 }
 
-// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보낸다. 1차에는 filters와 sort를 보내지 않는다.
+// 목록의 정렬 (A-05의 sort). store의 map.sort에 둔다. 모르는 값이면 구분순이다.
+const SORTS = ['category', 'price_asc', 'price_desc'];
+const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'category');
+
+// 지금 지역의 아파트를 받는다 (A-05). 조건은 입력한 값 그대로 보내고, 목록에서 고른 정렬을 함께 보낸다.
+// filters는 조건 창을 붙일 때 더한다.
 // 실패하면 앞의 자료를 그대로 두고 알린다.
 async function loadData() {
   const { gu, dong } = mapState.region;
   const where = dong ? { gu, dong } : { gu };
   try {
-    mapState.data = await api.post('/api/apartments/search', { conditions: guard.conditions(), where });
+    mapState.data = await api.post('/api/apartments/search', { conditions: guard.conditions(), where, sort: currentSort() });
     mapState.selectedId = null;
   } catch (error) {
     // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
