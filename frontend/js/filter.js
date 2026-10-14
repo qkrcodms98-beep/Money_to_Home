@@ -10,7 +10,9 @@
 //                 { area_min, area_max, price_min, price_max, built_year_min, built_year_max }
 //                 면적은 면적대(㎡ 정수), 평균가는 원, 준공 연도는 연도. 값이 없으면 null
 //     onApply   : '적용'을 누르면 창을 닫고 한 번 부른다. 여섯 값이 모두 든 filters를 넘긴다 (없는 값은 null)
-//     focus     : 누른 칩. 'area', 'price', 'year' 중 하나면 그 항목으로 내려가 있다
+//     focus     : 누른 칩. 'area', 'price', 'year' 중 하나면 그 항목만 보이는 창이 열린다 (칩마다 따로 연다).
+//                 제목은 그 항목의 이름("면적 (전용)")이고, '초기화'는 그 항목만 비운다. 다른 항목의 조건은 그대로 돌려준다.
+//                 빼면 세 항목이 다 보이는 창이다 (목록의 '조건 바꾸기' 등)
 //   filterSheet.close();
 //   filterSheet.isOpen();
 //
@@ -216,11 +218,13 @@ const filterSheet = (() => {
     return box;
   }
 
-  function build(current) {
+  // only: 이 항목만 보인다 ('area', 'price', 'year'). null이면 셋 다
+  function build(current, only) {
     errors = {};
     beforePyeong = null;
     const head = el('header', 'filter-sheet__head');
-    head.append(el('h2', 'filter-sheet__title', FILTER_TEXT.title));
+    // 칩 하나만 열었으면 그 항목의 이름이 제목이다 ("면적 (전용)"). 항목 안의 이름 줄은 filter.css가 숨긴다
+    head.append(el('h2', 'filter-sheet__title', only ? FILTER_TEXT[only] : FILTER_TEXT.title));
     const close = el('button', 'filter-sheet__close', '×');
     close.type = 'button';
     close.setAttribute('aria-label', '닫기');
@@ -287,14 +291,26 @@ const filterSheet = (() => {
     yearBox.append(...rangeRow('year', inputs.built_year_min, inputs.built_year_max));
     [inputs.built_year_min, inputs.built_year_max].forEach((input) => input.addEventListener('input', () => setError('year', null)));
 
+    // 칩 하나만 열었으면 다른 항목은 숨긴다. 숨긴 항목의 입력란에도 지금 조건이 들어 있어 '적용'하면 그대로 돌아간다
     const body = el('div', 'filter-sheet__body');
     body.append(areaBox, priceBox, yearBox);
+    if (only) {
+      [areaBox, priceBox, yearBox].forEach((box) => { box.hidden = box.dataset.filter !== only; });
+    }
 
+    const KEYS = {
+      area: ['area_min', 'area_max'],
+      price: ['price_min', 'price_max'],
+      year: ['built_year_min', 'built_year_max'],
+    };
     const reset = el('button', 'button filter-sheet__reset', FILTER_TEXT.reset);
     reset.type = 'button';
     reset.addEventListener('click', () => {
-      Object.values(inputs).forEach((input) => { input.value = ''; });
-      ['area', 'price', 'year'].forEach((key) => setError(key, null));
+      // 칩 하나만 열었으면 그 항목만 비운다
+      (only ? [only] : Object.keys(KEYS)).forEach((key) => {
+        KEYS[key].forEach((name) => { inputs[name].value = ''; });
+        setError(key, null);
+      });
       slider.sync();
     });
     const apply = el('button', 'button button--primary filter-sheet__apply', FILTER_TEXT.apply);
@@ -379,14 +395,10 @@ const filterSheet = (() => {
       container.classList.add('filter-sheet');
       onApply = callback;
       unit = (store.get('map').area_unit === 'pyeong') ? 'pyeong' : 'm2';
-      build(current);
+      const only = ['area', 'price', 'year'].includes(options.focus) ? options.focus : null;
+      build(current, only);
+      container.classList.toggle('filter-sheet--single', Boolean(only));
       container.hidden = false;
-
-      // 누른 칩의 항목으로 내려가 있게 한다. 창 안의 목록만 움직인다.
-      // scrollIntoView는 지도 화면 전체까지 밀어 올리므로 쓰지 않는다
-      const focus = options.focus && container.querySelector(`.filter-sheet__section[data-filter="${options.focus}"]`);
-      const body = container.querySelector('.filter-sheet__body');
-      if (focus && body) body.scrollTop = focus.offsetTop - body.offsetTop;
 
       if (onKey) document.removeEventListener('keydown', onKey);
       onKey = (event) => { if (event.key === 'Escape') api.close(); };

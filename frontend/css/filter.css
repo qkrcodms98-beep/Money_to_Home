@@ -115,6 +115,24 @@
   padding-top: 2px;
 }
 
+/* 칩 하나만 연 창. 제목이 그 항목의 이름이라 항목 안의 이름은 숨긴다 (면적의 ㎡/평 버튼은 남긴다) */
+.filter-sheet--single .filter-sheet__label {
+  display: none;
+}
+
+.filter-sheet--single .filter-sheet__label-row {
+  justify-content: flex-end;
+}
+
+/* 평균가와 준공 연도는 이름 줄에 다른 것이 없어 줄째 숨긴다 */
+.filter-sheet--single .filter-sheet__section:not([data-filter='area']) .filter-sheet__label-row {
+  display: none;
+}
+
+.filter-sheet--single .filter-sheet__section:not([data-filter='area']) {
+  padding-top: 8px;
+}
+
 .filter-sheet__label-row {
   display: flex;
   align-items: center;
