@@ -23,6 +23,8 @@ backend/services/calc.py에 함수를 만들 때마다 여기에 테스트를 �
     def test_accumulated_saving():
         assert calc.accumulated_saving(1_000_000, 5) == 60_000_000
 """
+import pytest
+
 from backend.services import calc
 
 # 문서의 예시 상품 (db/seed_loan_products.sql의 1번, 2번과 같은 값)
@@ -210,3 +212,87 @@ def test_returns_int():
         calc.required_monthly_saving(450_000_000, 315_000_000, 50_000_000, 5),
     ]
     assert all(type(value) is int for value in values)
+
+
+# ---------------------------------------------------------------------------
+# 계산 검증 표 (남은 작업 계획 B-7). 실제 DB의 아파트 8곳을 손으로 계산하고 화면(A-07)의 값과 맞춰 봤다.
+#
+# 평균가는 2026-10-14에 A-05로 받은 값이고, 상품은 DB에 넣은 실제 두 상품이다.
+# 손 계산은 calc.py를 부르지 않고 요구사항 명세서 부록 C의 식을 따로 써서 했다.
+# 같은 날 A-07(POST /api/apartments/{id}/scenario)의 응답과 8건 모두 일치했다.
+# 여기서는 calc의 함수를 A-07과 같은 순서로 불러 그 손 계산 값이 나오는지 고정해 둔다.
+#
+#   대출금액 = min(한도, 평균가 × 0.7) 버림
+#   월 상환액 = 대출금액 × m × (1+m)^N ÷ ((1+m)^N − 1), m = 연 금리 ÷ 12, N = 상환 연수 × 12, 반올림
+#   부족자금 = 평균가 − 자기자금 − 대출금액
+#   필요 월 저축액 = (평균가 − 대출금액 − 보유자산) ÷ (12 × 목표 연수) 올림. 부족할 때만
+#   허용 상승률 = (목표 가능 가격 ÷ 평균가)^(1 ÷ 목표 연수) − 1, 소수 첫째 자리 버림
+# ---------------------------------------------------------------------------
+
+# db/seed_loan_products.sql의 실제 상품 (기준일 2026-10-01, 2026-09-17)
+PRODUCT_HF = {"max_limit": 360_000_000, "ltv_ratio": 0.7, "annual_rate_pct": 5.2, "max_house_price": 600_000_000}
+PRODUCT_KAKAO = {"max_limit": 1_000_000_000, "ltv_ratio": 0.7, "annual_rate_pct": 5.42, "max_house_price": None}
+
+# (사례, 평균가, 보유자산, 월 저축, 목표 연수, 상품, 상환 연수,
+#  기대값: 대출금액, 월 상환액, 구분, 부족자금, 필요 월 저축액, 허용 상승률)
+VERIFY_CASES = [
+    # A 동구 두산위브2차 59㎡. 333,861,111 × 0.7 = 233,702,777.7 → 233,702,777
+    #   333,861,111 − 110,000,000 − 233,702,777 = −9,841,666 (여유)
+    #   목표 가능 가격 110,000,000 ÷ 0.3 = 366,666,666 → (366,666,666 ÷ 333,861,111)^(1/5) − 1 = 1.89% → 1.8
+    ("A 기간 내 가능", 333_861_111, 50_000_000, 1_000_000, 5, PRODUCT_HF, 30,
+     233_702_777, 1_283_287, calc.WITHIN, -9_841_666, None, 1.8),
+    # B 동구 두산위브2차 84㎡. 433,300,000 × 0.7 = 303,310,000
+    #   433,300,000 − 110,000,000 − 303,310,000 = 19,990,000 (부족)
+    #   (433,300,000 − 303,310,000 − 50,000,000) ÷ 60 = 1,333,166.7 → 1,333,167
+    ("B 자금 부족", 433_300_000, 50_000_000, 1_000_000, 5, PRODUCT_HF, 30,
+     303_310_000, 1_665_508, calc.LACK, 19_990_000, 1_333_167, None),
+    # C 동구 라인1차 84㎡. 165,666,667 × 0.7 = 115,966,666.9 → 115,966,666
+    #   지금 50,000,000 + 115,966,666 = 165,966,666 ≥ 165,666,667 → 지금 가능
+    #   (366,666,666 ÷ 165,666,667)^(1/5) − 1 = 17.23% → 17.2
+    ("C 지금 가능", 165_666_667, 50_000_000, 1_000_000, 5, PRODUCT_HF, 30,
+     115_966_666, 636_786, calc.NOW, -60_299_999, None, 17.2),
+    # D 동구 무등산아이파크 84㎡. 606,009,756 × 0.7 = 424,206,829 > 한도 → 360,000,000
+    #   평균가가 상품의 대상 주택 가격 상한 6억을 넘는다 (계산에서는 빼지 않는다)
+    #   (606,009,756 − 360,000,000 − 50,000,000) ÷ 60 = 3,266,829.3 → 3,266,830
+    ("D 한도·상한 초과", 606_009_756, 50_000_000, 1_000_000, 5, PRODUCT_HF, 30,
+     360_000_000, 1_976_799, calc.LACK, 136_009_756, 3_266_830, None),
+    # E 동구 해광파크 108㎡, 대출 없이 3년. 자기자금 50,000,000 + 1,500,000 × 36 = 104,000,000
+    #   118,000,000 − 104,000,000 = 14,000,000 (부족). (118,000,000 − 50,000,000) ÷ 36 = 1,888,888.9 → 1,888,889
+    ("E 대출 없이 3년", 118_000_000, 50_000_000, 1_500_000, 3, None, None,
+     0, None, calc.LACK, 14_000_000, 1_888_889, None),
+    # F 동구 라인1차 133㎡, 목표 기간 "지금", 카카오 40년. 235,000,000 × 0.7 = 164,500,000
+    #   80,000,000 + 164,500,000 = 244,500,000 ≥ 235,000,000 → 지금 가능. "지금"이라 필요 월 저축액·허용 상승률 없음
+    ("F 지금, 카카오 40년", 235_000_000, 80_000_000, 2_000_000, 0, PRODUCT_KAKAO, 40,
+     164_500_000, 839_506, calc.NOW, -9_500_000, None, None),
+    # G 동구 두산위브2차 59㎡, 보유자산 0원, 월 저축 0원, 10년, 카카오 15년
+    #   333,861,111 − 0 − 233,702,777 = 100,158,334. 100,158,334 ÷ 120 = 834,652.8 → 834,653
+    #   목표 가능 가격 0원 → 허용 상승률 없음
+    ("G 보유 0원, 저축 0원", 333_861_111, 0, 0, 10, PRODUCT_KAKAO, 15,
+     233_702_777, 1_899_640, calc.LACK, 100_158_334, 834_653, None),
+    # H 동구 라인1차 84㎡, 보유자산 0원, 월 250만 원, 10년, 대출 없이. 자기자금 300,000,000
+    #   (300,000,000 ÷ 165,666,667)^(1/10) − 1 = 6.11% → 6.1
+    ("H 보유 0원, 대출 없이 10년", 165_666_667, 0, 2_500_000, 10, None, None,
+     0, None, calc.WITHIN, -134_333_333, None, 6.1),
+]
+
+
+@pytest.mark.parametrize(
+    "label, price, assets, saving, years, product, repay, loan_exp, pay_exp, cat_exp, short_exp, need_exp, growth_exp",
+    VERIFY_CASES,
+    ids=[case[0] for case in VERIFY_CASES],
+)
+def test_verify_table(label, price, assets, saving, years, product, repay,
+                      loan_exp, pay_exp, cat_exp, short_exp, need_exp, growth_exp):
+    """services/scenario.py와 같은 순서로 calc를 불러 손 계산 값과 맞춘다."""
+    own = calc.own_funds(assets, calc.accumulated_saving(saving, years))
+    loan = calc.loan_amount(price, product)
+    short = calc.shortage(price, own, loan)
+
+    assert loan == loan_exp
+    if product is not None:
+        assert calc.monthly_payment(loan, product["annual_rate_pct"], repay) == pay_exp
+    assert calc.category(assets, own, loan, price, years) == cat_exp
+    assert short == short_exp
+    need = calc.required_monthly_saving(price, loan, assets, years) if short > 0 else None
+    assert need == need_exp
+    assert calc.allowed_growth_rate(calc.target_price(own, product), price, years) == growth_exp
