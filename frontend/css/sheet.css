@@ -327,6 +327,14 @@
   padding: 4px 0;
   overflow-x: auto;
   scrollbar-width: none;
+  /* 오른쪽 끝을 흐리게 해 면적이 더 있다는 것을 보인다. 끝까지 밀면 아래 빈자리(::after)가 흐린 곳에 와서 마지막 면적이 다 보인다 */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.apt__area-list::after {
+  content: '';
+  flex: 0 0 22px;
 }
 
 .apt__area-list::-webkit-scrollbar {
