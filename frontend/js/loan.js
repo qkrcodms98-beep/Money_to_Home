@@ -304,7 +304,7 @@
     errorBar.hidden = true;
     render();
     try {
-      await api.put('/api/profile/loan', values);
+      await account.save('/api/profile/loan', values); // 로그인했을 때만 저장한다 (account.js, 팀장)
     } catch (error) {
       busy = false;
       // 재무정보가 서버에 없을 때처럼 서버가 이유를 알려 주면 그 문장을, 아니면 저장 실패 문장을 보여 준다.
@@ -314,7 +314,8 @@
       return;
     }
     store.set('input', values);
-    location.href = 'plan.html';
+    // 입력 요약의 "수정"으로 왔으면 이 화면만 고치고 요약으로 돌아간다 (팀장)
+    location.href = store.get('place').return_to === 'summary' ? 'summary.html' : 'plan.html';
   }
 
   form.addEventListener('submit', (event) => {

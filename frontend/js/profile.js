@@ -175,7 +175,7 @@
     submit.disabled = true;
     saveError.hidden = true;
     try {
-      await api.put('/api/profile/finance', { ...values, restart });
+      await account.save('/api/profile/finance', { ...values, restart }); // 로그인했을 때만 저장한다 (account.js)
     } catch (error) {
       if (error.status === 422 && error.field) {
         // 서버가 값을 거부했다. 서버의 문장을 그 입력란 아래에 그대로 보여 준다 (P-02 ⑬).
@@ -188,7 +188,8 @@
     }
     store.set('input', values);
     store.set('place', { profile_step: 'confirm', restart: false });
-    location.href = 'loan.html';
+    // 입력 요약의 "수정"으로 왔으면 이 화면만 고치고 요약으로 돌아간다
+    location.href = store.get('place').return_to === 'summary' ? 'summary.html' : 'loan.html';
   }
 
   // ── 움직임 ───────────────────────────────────────────

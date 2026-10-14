@@ -53,7 +53,8 @@ def products(db):
 
 
 @pytest.fixture
-def client(db):
+def anon_client(db):
+    """로그인하지 않은 브라우저"""
     def use_test_db():
         try:
             yield db
@@ -65,3 +66,12 @@ def client(db):
     app.dependency_overrides[get_db] = use_test_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(anon_client):
+    """테스트 사용자(번호 1)로 로그인한 브라우저. 재무정보 API(A-08 ~ A-11)는 로그인해야 쓴다."""
+    from backend.services import auth
+
+    anon_client.cookies.set(auth.COOKIE_NAME, auth.make_token(1))
+    return anon_client

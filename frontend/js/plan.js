@@ -182,7 +182,7 @@
     errorBar.hidden = true;
     render();
     try {
-      await api.put('/api/profile/plan', values);
+      await account.save('/api/profile/plan', values); // 로그인했을 때만 저장한다 (account.js)
     } catch (error) {
       busy = false;
       if (error.status === 422 && error.field === 'monthly_saving') {
@@ -196,7 +196,7 @@
       return;
     }
     store.set('input', values);
-    location.href = 'map.html';
+    location.href = 'summary.html'; // 입력 요약(P-04 ⑤)을 한 번 보고 지도로 간다
   }
 
   // ── 움직임 ───────────────────────────────────────────

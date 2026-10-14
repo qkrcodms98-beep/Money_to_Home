@@ -11,6 +11,12 @@ MSG_PW = "비밀번호는 8자 이상이며 영문과 숫자를 포함해야 합
 
 
 # ---------------- A-14 아이디 확인 ----------------
+
+@pytest.fixture
+def client(anon_client):
+    """이 파일의 테스트는 로그인하지 않은 브라우저에서 시작한다 (가입과 로그인을 직접 한다)."""
+    return anon_client
+
 def test_check_available(client):
     res = client.post("/api/auth/login-id/check", json={"login_id": "home2026"})
     assert res.status_code == 200
@@ -174,9 +180,12 @@ def test_other_requests_also_keep_login(client, monkeypatch):
 
 
 # ---------------- 재무정보는 로그인한 회원의 것만 ----------------
-def test_profile_belongs_to_login_user(client, db):
-    # 로그인하지 않으면 테스트 사용자(번호 1)의 값이다 (화면이 바뀔 때까지의 동작)
-    client.put("/api/profile/finance", json=FINANCE)
+def test_profile_needs_login(client, db):
+    # 로그인하지 않은 사용자의 값은 브라우저에만 둔다. 재무정보 API는 401이다 (FR-PROFILE-04)
+    assert client.put("/api/profile/finance", json=FINANCE).status_code == 401
+    assert client.get("/api/profile").status_code == 401
+    assert client.put("/api/profile/plan", json={"monthly_saving": 1_000_000, "target_years": 5}).status_code == 401
+    assert db.query(models.Profile).count() == 0
 
     client.post("/api/auth/signup", json=SIGNUP)
     assert client.get("/api/profile").json()["profile"] is None  # 새 회원은 저장한 값이 없다
@@ -184,8 +193,8 @@ def test_profile_belongs_to_login_user(client, db):
     assert client.get("/api/profile").json()["profile"]["age"] == 40
 
     client.post("/api/auth/logout")
-    assert client.get("/api/profile").json()["profile"]["age"] == 29  # 테스트 사용자의 값은 그대로다
-    assert db.query(models.Profile).count() == 2
+    assert client.get("/api/profile").status_code == 401
+    assert db.query(models.Profile).count() == 1
 
 
 def test_two_users_do_not_see_each_other(client):

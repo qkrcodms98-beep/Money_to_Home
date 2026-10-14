@@ -6,20 +6,29 @@
   <title>머니 to 홈</title>
   <!-- 모든 화면이 common.css를 먼저, 화면의 CSS를 그 뒤에 불러 쓴다. -->
   <link rel="stylesheet" href="css/common.css?v=20261014-1">
-  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/index.css?v=20261014-1">
 </head>
 <body>
-  <!-- P-01 ① 시작 화면 (로그인하지 않음). Figma "확정 목업 v3"의 P-01 ①. 모바일에는 헤더가 없다. -->
+  <!-- P-01 시작 화면. Figma "확정 목업 v3"의 P-01 ① ~ ⑤. 모바일에는 헤더가 없다.
+       처음에는 ① 기본(로그인하지 않음)으로 그려 두고, 로그인 상태를 물어본 뒤 js/index.js가 ② ~ ⑤로 바꾼다. -->
   <div class="top-space"></div>
 
   <div class="start-layout">
     <main class="page start">
-      <img class="start__logo" src="img/logo.svg" alt="">
+      <!-- ⑤ 로그인 시간이 끝남. 로고 자리에 둔다 -->
+      <p class="notice start__expired" id="start-expired" hidden>30분 동안 사용하지 않아 로그아웃되었습니다. 입력하던 값은 이 기기에 남아 있습니다.</p>
+      <img class="start__logo" id="start-logo" src="img/logo.svg" alt="">
 
-      <h1 class="title title--display">내 자산과 저축, 대출로<br>목표할 수 있는 집을<br>지도에서 찾아보세요</h1>
-      <p class="subtitle">광주 5개 구 아파트의 최근 1년 실거래가로 계산합니다.</p>
+      <h1 class="title title--display" id="start-title">내 자산과 저축, 대출로<br>목표할 수 있는 집을<br>지도에서 찾아보세요</h1>
+      <p class="subtitle" id="start-subtitle">광주 5개 구 아파트의 최근 1년 실거래가로 계산합니다.</p>
 
-      <ol class="steps">
+      <!-- ② 저장한 정보. 값은 A-08로 받아 index.js가 채운다 -->
+      <dl class="saved-box" id="start-saved" hidden></dl>
+
+      <!-- ④ 저장한 정보를 불러오지 못함 -->
+      <p class="notice notice--error start__error" id="start-error" role="alert" hidden>인터넷 연결을 확인하고 다시 시도해 주세요.</p>
+
+      <ol class="steps" id="start-steps">
         <li class="steps__item">
           <span class="steps__number">1</span>
           <span class="steps__text">
@@ -43,7 +52,7 @@
         </li>
       </ol>
 
-      <p class="notice">
+      <p class="notice" id="start-notice">
         집값을 예측하지 않습니다. 대출 금액은 추정치이며 실제 한도는 금융기관 심사로 결정됩니다.
         지도의 아파트는 매물이 아니라 실거래 기록입니다.
       </p>
@@ -51,6 +60,15 @@
 
     <div class="bottom-action">
       <a class="button button--primary" id="start-button" href="profile.html">로그인 없이 시작하기</a>
+      <button type="button" class="button button--primary" id="start-retry" hidden>다시 시도</button>
+      <button type="button" class="link-button start__restart" id="start-restart" hidden>처음부터 다시 입력</button>
+      <!-- ① 로그인하지 않았을 때만 -->
+      <p class="start__auth" id="start-auth">
+        <a class="link-button" href="login.html">로그인</a>
+        <span class="start__divider" aria-hidden="true"></span>
+        <a class="link-button" href="signup.html">회원가입</a>
+      </p>
+      <p class="start__hint" id="start-hint">로그인하면 입력한 정보를 저장해 다음에 이어서 볼 수 있습니다.</p>
     </div>
   </div>
 
@@ -60,6 +78,7 @@
   <script src="js/format.js?v=20261013-1"></script>
   <script src="js/guard.js"></script>
   <script src="js/layout.js"></script>
-  <script src="js/index.js"></script>
+  <script src="js/account.js?v=20261014-1"></script>
+  <script src="js/index.js?v=20261014-1"></script>
 </body>
 </html>
