@@ -21,6 +21,8 @@
   --text-sheet-arrow: 22px; /* ‹ › */
   --text-sheet-close: 18px; /* ✕ */
   --line-height-sheet-value: 32px; /* 평균가와 여유자금의 줄 높이 */
+  --text-sheet-tag: 11px; /* "위치 없음" 표시. common.css에 11px 이름이 없다 */
+  --radius-sheet-tag: 4px; /* "위치 없음" 표시의 모서리 */
   --sheet-duration: 0.6s; /* 창이 올라오고 내려가는 시간. sheet.js도 이 값을 읽는다 */
   --sheet-ease-up: cubic-bezier(0.22, 1, 0.36, 1); /* 빠르게 올라와 천천히 멈춘다 */
   --sheet-ease-down: cubic-bezier(0.55, 0, 0.75, 0.3); /* 천천히 출발해 빠르게 내려간다 */
@@ -243,6 +245,19 @@
   font-weight: var(--font-bold);
   line-height: var(--line-height);
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 좌표가 없는 아파트의 "위치 없음" (P-06 ⑱, 목업 4009:602). 회색 바탕의 작은 글자 */
+.apt__tag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--radius-sheet-tag);
+  background: var(--color-bg-sub);
+  color: var(--color-text-sub);
+  font-size: var(--text-sheet-tag);
+  font-weight: var(--font-medium);
+  line-height: 16px;
   white-space: nowrap;
 }
 
@@ -524,6 +539,17 @@
   color: var(--color-text);
   font-weight: var(--font-bold);
   text-align: right;
+}
+
+/* 좌표가 없는 아파트의 안내 (P-06 ⑱, 목업 4009:604). 아파트 정보 탭 맨 위의 점선 상자 */
+.apt-info__notice {
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-card);
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: var(--line-height);
 }
 
 /* 불러오지 못함. 지도의 불러오지 못함(P-05 ⑰)과 같은 모양 */

@@ -36,6 +36,13 @@
 //   sheet.close()                   닫는다 (뒤로 가기와 같다)
 //   sheet.onChange(() => {})        상태가 바뀔 때마다 부른다. sheet.phase, stage, mode, moving을 읽는다
 //   sheet.targetHeight()            지금 단계의 창이 다 움직인 뒤의 높이(px)
+//
+// 예외 화면. 언제 띄울지는 아는 쪽(map-view.js)이 정해서 부른다. 이 파일은 보여 주기만 한다.
+//   sheet.showEmpty()                         결과 없음 (P-05 ⑨). 목록을 30%로 연다.
+//                                             빈 화면의 문장과 버튼은 list.js(김목산)가 이미 그려 둔 것을 쓴다
+//   sheet.showLoadError({ message, onRetry }) 아파트를 불러오지 못함. 목록 자리에 오류와 '다시 시도'를 그리고 30%로 연다.
+//                                             그리기는 list.js의 listView.renderError를 부른다.
+//                                             message를 빼면 list.js의 문장 "아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
 
 const SHEET_NEXT_STAGE = { 30: '80', 80: 'full', full: '30' };
 const SHEET_HISTORY_KEY = 'sheet'; // history.state에 남기는 표시. 창이 열려 있다는 뜻이다
@@ -175,6 +182,25 @@ const sheet = {
 
   onChange(listener) {
     sheet.listeners.push(listener);
+  },
+
+  // ───────── 예외 화면 ─────────
+
+  // 결과 없음 (P-05 ⑨). 목록 30%. 목록은 받은 응답(0곳)으로 list.js가 이미 그려 두었다.
+  showEmpty() {
+    sheet.show('30', 'list');
+  },
+
+  // 아파트를 불러오지 못함. 목록 자리에 오류 문장과 '다시 시도'를 그리고 목록 30%로 연다.
+  // list.js를 불러오지 않았으면 아무것도 하지 않는다.
+  showLoadError({ message, onRetry } = {}) {
+    if (typeof listView === 'undefined' || typeof listView.renderError !== 'function') return;
+    listView.renderError(document.getElementById('apt-list'), {
+      message, // undefined면 list.js의 문장
+      onRetry,
+      onClose: () => sheet.close(),
+    });
+    sheet.show('30', 'list');
   },
 
   apply() {
