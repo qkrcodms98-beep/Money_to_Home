@@ -17,6 +17,7 @@ import hmac
 import logging
 import secrets
 import time
+from datetime import datetime
 
 import bcrypt
 from sqlalchemy import select
@@ -25,7 +26,7 @@ from sqlalchemy.orm import Session
 
 from backend.config import settings
 from backend.errors import ApiError
-from backend.models import User
+from backend.models import Profile, SavedResult, User
 
 logger = logging.getLogger("money_to_home")
 
@@ -35,6 +36,8 @@ SESSION_SECONDS = 30 * 60  # 마지막 요청 뒤 30분 (FR-USER-08)
 MSG_ID_TAKEN = "이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요."  # P-08 ③
 MSG_LOGIN_FAILED = "아이디 또는 비밀번호가 맞지 않습니다."  # P-07 ②. 어느 쪽이 틀렸는지 구분하지 않는다 (FR-USER-07)
 MSG_LOGIN_REQUIRED = "로그인이 필요합니다."
+MSG_CURRENT_WRONG = "지금 비밀번호가 맞지 않습니다."  # 와이어프레임 C4 (P-10)
+MSG_PASSWORD_WRONG = "비밀번호가 맞지 않습니다."  # 탈퇴할 때. C4의 문장에서 "지금"만 뺐다
 
 # 서명 키. .env에 없으면 서버를 켤 때마다 새로 만든다 (서버를 다시 켜면 모두 로그아웃된다).
 _secret = settings.session_secret_key.encode("utf-8")
@@ -121,10 +124,15 @@ def check_available(db: Session, login_id: str) -> None:
         raise ApiError(409, MSG_ID_TAKEN, "login_id")
 
 
-def signup(db: Session, login_id: str, password: str) -> User:
-    """회원을 만든다. 아이디 확인을 통과한 뒤 그사이에 다른 사람이 가입했으면 409"""
+def signup(db: Session, login_id: str, password: str, agreed: bool | None = None) -> User:
+    """회원을 만든다. 아이디 확인을 통과한 뒤 그사이에 다른 사람이 가입했으면 409.
+
+    가입 동의(agreed)가 true면 동의한 시각을 남긴다 (FR-USER-05).
+    """
     check_available(db, login_id)
     user = User(login_id=login_id, password_hash=hash_password(password))
+    if agreed:
+        user.terms_agreed_at = datetime.now()
     db.add(user)
     try:
         db.flush()
@@ -141,3 +149,28 @@ def login(db: Session, login_id: str, password: str) -> User:
     if user is None or not matched:
         raise ApiError(401, MSG_LOGIN_FAILED)
     return user
+
+
+def change_password(db: Session, user_id: int, current: str, new: str) -> None:
+    """A-19 비밀번호 변경 (FR-USER-13). 지금 비밀번호가 틀리면 422 (그 입력란에 알린다)"""
+    user = db.get(User, user_id)
+    if user is None:
+        raise ApiError(401, MSG_LOGIN_REQUIRED)
+    if not verify_password(current, user.password_hash):
+        raise ApiError(422, MSG_CURRENT_WRONG, "current_password")
+    user.password_hash = hash_password(new)
+
+
+def withdraw(db: Session, user_id: int, password: str) -> None:
+    """A-20 회원 탈퇴 (FR-USER-11, 12). 재무정보와 저장한 결과를 함께 지운다. 비밀번호가 틀리면 422
+
+    DB의 외래 키도 함께 지우게(ON DELETE CASCADE) 되어 있지만, 여기서도 직접 지워 어느 DB에서든 같게 한다.
+    """
+    user = db.get(User, user_id)
+    if user is None:
+        raise ApiError(401, MSG_LOGIN_REQUIRED)
+    if not verify_password(password, user.password_hash):
+        raise ApiError(422, MSG_PASSWORD_WRONG, "password")
+    db.query(SavedResult).filter(SavedResult.user_id == user_id).delete()
+    db.query(Profile).filter(Profile.user_id == user_id).delete()
+    db.delete(user)
