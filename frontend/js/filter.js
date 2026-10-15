@@ -464,7 +464,7 @@ const filterSheet = (() => {
         const pyeong = areaUnit === 'pyeong';
         return span((v) => (pyeong ? toPyeong(v) : v), pyeong ? '평' : '㎡');
       }
-      if (key === 'price') return span((v) => format.won(v).replace(/ 원$/, ''), ' 원'); // "가격 1억~3억 원"
+      if (key === 'price') return span((v) => format.won(v).replace(/ ?원$/, ''), ' 원'); // "가격 1억~3억 원"
       return span((v) => v, '');
     },
   };
