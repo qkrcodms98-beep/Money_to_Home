@@ -61,7 +61,8 @@ const saved = {
   async toLogin() {
     await account.me();
     if (store.get('place').expired === true) return;
-    location.href = 'login.html';
+    // 로그인한 뒤 보던 이 화면(목록 또는 ?id=번호)으로 돌아오게 넘긴다 (auth.js의 next)
+    location.href = `login.html?next=${encodeURIComponent(location.pathname.slice(1) + location.search)}`;
   },
 
   // ───────── 목록 (C1) ─────────

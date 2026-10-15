@@ -6,7 +6,7 @@
   <title>머니 to 홈</title>
   <!-- 모든 화면이 common.css를 먼저, 화면의 CSS를 그 뒤에 불러 쓴다. -->
   <link rel="stylesheet" href="css/common.css?v=20261014-1">
-  <link rel="stylesheet" href="css/index.css?v=20261014-1">
+  <link rel="stylesheet" href="css/index.css?v=20261015-1">
 </head>
 <body>
   <!-- P-01 시작 화면. Figma "확정 목업 v3"의 P-01 ① ~ ⑤. 모바일에는 헤더가 없다.
@@ -61,7 +61,12 @@
     <div class="bottom-action">
       <a class="button button--primary" id="start-button" href="profile.html">로그인 없이 시작하기</a>
       <button type="button" class="button button--primary" id="start-retry" hidden>다시 시도</button>
-      <button type="button" class="link-button start__restart" id="start-restart" hidden>처음부터 다시 입력</button>
+      <!-- ② 저장한 정보 있음: "처음부터 다시 입력 | 수정하기". ④ 불러오지 못함: "새로 입력하기" 하나 -->
+      <div class="start__links">
+        <button type="button" class="link-button start__restart" id="start-restart" hidden>처음부터 다시 입력</button>
+        <span class="start__divider" id="start-edit-divider" aria-hidden="true" hidden></span>
+        <button type="button" class="link-button start__restart" id="start-edit" hidden>수정하기</button>
+      </div>
       <!-- ① 로그인하지 않았을 때만 -->
       <p class="start__auth" id="start-auth">
         <a class="link-button" href="login.html">로그인</a>
@@ -79,6 +84,6 @@
   <script src="js/guard.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/account.js?v=20261014-1"></script>
-  <script src="js/index.js?v=20261014-1"></script>
+  <script src="js/index.js?v=20261015-1"></script>
 </body>
 </html>
