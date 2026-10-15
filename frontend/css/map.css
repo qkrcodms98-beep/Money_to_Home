@@ -16,6 +16,13 @@
   --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.22); /* 말풍선 B */
   --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라 */
 
+  /* 광주 5개 구 경계 (P-05 ⑪, FR-MAP-28). js/boundary.js가 읽어 카카오맵의 선과 면에 쓴다. 굵기와 불투명도는 boundary.js에 있다.
+     경계는 지도를 이해시키는 보조 선이라 말풍선보다 눈에 띄지 않게 회색으로 두고, 고른 지역만 동 표시와 같은 연보라로 칠한다. */
+  --boundary-gu: var(--color-text-sub); /* 구 경계 */
+  --boundary-dong: var(--color-line-strong); /* 행정동 경계. 연한 회색, 가까이 볼 때만 */
+  --boundary-picked: var(--color-dong); /* 고른 구·동의 선과 반투명 칠 */
+  --boundary-mask: var(--color-dim); /* 경계 밖을 덮는 반투명 면 */
+
   /* 말풍선의 꼬리 끝(아파트의 자리)이 말풍선 왼쪽 위에서 떨어진 거리.
      꼬리(15 × 10)는 왼쪽에서 1px, 위에서 47px에 있고 끝은 그 가운데 아래다. */
   --marker-tip-x: 8.5px;
@@ -268,6 +275,33 @@
   border-style: dashed;
   background: color-mix(in srgb, var(--color-dong) 28%, transparent);
   color: var(--color-dong);
+}
+
+/* 고른 동의 아파트 수 (P-05 ⑪). 지금은 쓰지 않는다. 다시 쓰려고 남겨 둔다 (map-view.js의 renderFocusLabel). 동 경계의 위쪽 가운데에 붙는 연보라 알약. 동 표시와 같은 색이다.
+   누를 수 없다. 밑의 지도를 끌 수 있게 마우스를 받지 않는다. */
+.dong-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-dong);
+  color: var(--color-on-primary);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dong-label__name {
+  font-size: var(--text-help);
+  font-weight: var(--font-bold);
+  line-height: 20px;
+}
+
+.dong-label__count {
+  font-size: var(--text-badge);
+  font-weight: var(--font-medium);
+  line-height: 18px;
 }
 
 /* 이 말풍선 뒤에 겹쳐 가려진 아파트의 수. "+3". 말풍선의 오른쪽 위에 붙는다. */
@@ -794,4 +828,12 @@
   height: 2px;
   border-radius: 1px;
   background: var(--color-on-primary);
+}
+
+/* 광주 5개 구 경계 (js/boundary.js). 카카오맵은 선과 면을 지도 위의 SVG 한 장에 그린다.
+   경계 밖 덮개가 아주 넓어서 그 SVG가 지도 전체를 덮는다. 경계는 누를 것이 없으므로 누르기와 끌기가 지도로 가게 한다.
+   (말풍선 안의 SVG(.marker__shape)는 버튼의 일부라 그대로 둔다) */
+#kakao-map svg:not(.marker__shape),
+#kakao-map svg:not(.marker__shape) * {
+  pointer-events: none !important;
 }

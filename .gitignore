@@ -14,3 +14,6 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+
+# 자료 원본. 크고 다시 받을 수 있어 저장소에 넣지 않는다 (data/build_boundaries.py의 브이월드 법정동 SHP 등)
+data/raw/
