@@ -7,9 +7,16 @@
 // 80% 이상에는 탭(아파트 정보, 시나리오)이 보인다.
 //   아파트 정보 (P-06 ⑦): 아파트 한 곳 API(A-06, GET /api/apartments/{id})로 채운다.
 //     창이 80% 이상이고 아파트 정보 탭이 보일 때 처음 한 번 부른다. 받은 것은 아파트마다 기억해 두고 다시 부르지 않는다.
-//     1차의 여섯 줄: 지번 주소, 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래.
-//     세대수와 가격 범위는 2차, 로드뷰 자리는 3차라 아직 그리지 않는다 (와이어프레임 P-06 ⑦).
-//     값을 모르는 줄(도로명 주소, 준공 연도가 비어 있음)은 그리지 않는다.
+//     여덟 줄: 지번 주소, 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래, 세대수, 가격 범위.
+//     순서는 목업 A9(4010:1111), C6(4022:1188)을 따른다. 1차 여섯 줄 뒤에 2차 두 줄을 붙인다.
+//     세대수는 "1,234세대 (2026년 8월 기준)", 가격 범위는 "2억 7,000만 ~ 3억 3,000만 원" (FR-APT-15, 16).
+//     값을 모르는 줄(도로명 주소, 준공 연도, 세대수가 비어 있음)은 그리지 않는다.
+//   로드뷰 (3차, FR-MAP-09, 10, T-MAP-11. 목업 C6 4022:1205, C6b 4022:1356):
+//     아파트 정보 탭을 전체로 올렸을 때만, 창 맨 위(손잡이 위)에 둔다. 그때 처음 불러온다.
+//     창 폭 전체를 채우고 가로:세로는 황금비 1.618 : 1이다 (시안 ②, sheet.css).
+//     그 아파트 둘레 100m 안의 가장 가까운 로드뷰를 카카오맵으로 찾는다 (서버 API 없음. API 명세서 3.5).
+//     로드뷰가 없거나, 좌표가 없거나, 카카오맵을 쓸 수 없으면 같은 자리에 기본 이미지(집 그림과 문장)를 둔다.
+//     자리(#apt-roadview)는 이 파일이 만들어 창(#sheet)의 손잡이 앞에 넣는다.
 //   좌표가 없는 아파트 (P-06 ⑱, 목업 4009:492): 이름과 배지 옆에 "위치 없음"을 붙이고,
 //     아파트 정보 탭의 맨 위에 점선 안내를 둔다. 목록에서 열었을 때만 생긴다 (지도에는 표시가 없다).
 //   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
@@ -35,6 +42,10 @@ const APT_INFO_FAIL = '아파트를 불러오지 못했습니다. 잠시 후 다
 // 좌표가 없는 아파트 (와이어프레임 P-06 ⑱의 문장 그대로)
 const APT_NO_COORD = '위치 없음';
 const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 표시하지 못했습니다. 지도는 그대로 두었습니다.';
+// 로드뷰 (목업 C6, C6b)
+const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 가장 가까운 로드뷰를 쓴다
+const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
+const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
 
 const aptHasCoord = (apartment) =>
   apartment.latitude !== null && apartment.latitude !== undefined &&
@@ -49,6 +60,8 @@ const aptPanel = {
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
   loading: new Set(), // 받는 중인 아파트 번호
   failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
+  roadview: null, // 카카오 로드뷰 (처음 보일 때 한 번 만든다)
+  roadviewFor: null, // 로드뷰 자리에 마지막으로 그린 아파트 번호
 
   init(handlers) {
     aptPanel.handlers = handlers;
@@ -71,11 +84,15 @@ const aptPanel = {
       tab.addEventListener('click', () => {
         aptPanel.selectTab(tab.id);
         aptPanel.renderInfo();
+        aptPanel.renderRoadview();
       });
     });
 
-    // 창이 80% 이상으로 커지면 아파트 정보 탭이 보인다. 그때 처음 부른다.
-    sheet.onChange(() => aptPanel.renderInfo());
+    // 창이 80% 이상으로 커지면 아파트 정보 탭이 보인다. 그때 처음 부른다. 전체가 되면 로드뷰를 부른다.
+    sheet.onChange(() => {
+      aptPanel.renderInfo();
+      aptPanel.renderRoadview();
+    });
   },
 
   unit: () => (store.get('map').area_unit === 'pyeong' ? 'pyeong' : 'm2'),
@@ -181,6 +198,7 @@ const aptPanel = {
 
     aptPanel.renderInfo();
     aptPanel.renderScenario();
+    aptPanel.renderRoadview();
   },
 
   // ───────── 좌표가 없는 아파트 (P-06 ⑱) ─────────
@@ -205,6 +223,90 @@ const aptPanel = {
     box.className = 'apt-info__notice';
     box.textContent = APT_NO_COORD_NOTICE;
     return box;
+  },
+
+  // ───────── 로드뷰 (3차, 목업 C6, C6b) ─────────
+
+  // 로드뷰 자리가 보이는가. 전체 단계이고, 아파트 창이고, 아파트 정보 탭이 골라져 있을 때 (C6)
+  roadviewVisible() {
+    return (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment' &&
+      sheet.stage === 'full' &&
+      document.getElementById('apt-tab-info').getAttribute('aria-selected') === 'true';
+  },
+
+  // 로드뷰 자리. 처음 쓸 때 한 번 만들어 창의 손잡이 앞(창 맨 위)에 넣는다.
+  //   .apt-roadview__view   카카오 로드뷰가 그려지는 곳
+  //   .apt-roadview__empty  기본 이미지 (집 그림과 문장)
+  roadviewBox() {
+    let box = document.getElementById('apt-roadview');
+    if (box) return box;
+    box = document.createElement('div');
+    box.id = 'apt-roadview';
+    box.className = 'apt-roadview';
+    box.hidden = true;
+    const view = document.createElement('div');
+    view.className = 'apt-roadview__view';
+    view.hidden = true;
+    const empty = document.createElement('div');
+    empty.className = 'apt-roadview__empty';
+    empty.hidden = true;
+    const icon = document.createElement('img');
+    icon.className = 'apt-roadview__icon';
+    icon.src = APT_HOUSE_ICON;
+    icon.alt = '';
+    const text = document.createElement('p');
+    text.className = 'apt-roadview__text';
+    text.textContent = APT_NO_ROADVIEW;
+    empty.append(icon, text);
+    box.append(view, empty);
+    const handle = document.getElementById('sheet-handle');
+    handle.parentElement.insertBefore(box, handle);
+    return box;
+  },
+
+  // 'view' 로드뷰, 'empty' 기본 이미지, null 아무것도 (찾는 중)
+  roadviewShow(which) {
+    const box = aptPanel.roadviewBox();
+    box.querySelector('.apt-roadview__view').hidden = which !== 'view';
+    box.querySelector('.apt-roadview__empty').hidden = which !== 'empty';
+  },
+
+  // 보일 때만 그린다. 같은 아파트면 다시 찾지 않는다 (창이 움직임을 마치면 크기만 맞춘다).
+  renderRoadview() {
+    const { apartment } = aptPanel;
+    const box = aptPanel.roadviewBox();
+    const visible = Boolean(apartment) && aptPanel.roadviewVisible();
+    box.hidden = !visible;
+    if (!visible) return;
+    if (aptPanel.roadviewFor === apartment.id) {
+      if (aptPanel.roadview && !sheet.moving) aptPanel.roadview.relayout();
+      return;
+    }
+    aptPanel.roadviewFor = apartment.id;
+    const kakaoReady = typeof kakao !== 'undefined' && kakao.maps && typeof kakao.maps.RoadviewClient === 'function';
+    if (!aptHasCoord(apartment) || !kakaoReady) {
+      aptPanel.roadviewShow('empty');
+      return;
+    }
+    aptPanel.roadviewShow(null);
+    const id = apartment.id;
+    const position = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
+    try {
+      new kakao.maps.RoadviewClient().getNearestPanoId(position, APT_ROADVIEW_RADIUS, (panoId) => {
+        if (aptPanel.roadviewFor !== id) return; // 찾는 사이에 다른 아파트로 넘겼다
+        if (panoId === null || panoId === undefined) {
+          aptPanel.roadviewShow('empty');
+          return;
+        }
+        aptPanel.roadviewShow('view');
+        const view = aptPanel.roadviewBox().querySelector('.apt-roadview__view');
+        if (!aptPanel.roadview) aptPanel.roadview = new kakao.maps.Roadview(view);
+        aptPanel.roadview.setPanoId(panoId, position);
+        aptPanel.roadview.relayout();
+      });
+    } catch (error) {
+      aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
+    }
   },
 
   // ───────── 아파트 정보 탭 (P-06 ⑦, A-06) ─────────
@@ -250,7 +352,8 @@ const aptPanel = {
     aptPanel.renderInfo();
   },
 
-  // 정보 여섯 줄 (1차). 면적과 평균가와 거래 건수는 지금 고른 면적의 것이다.
+  // 정보 여덟 줄. 면적, 평균가, 가격 범위, 거래 건수는 지금 고른 면적의 것이다.
+  // 세대수를 모르는 아파트는 세대수 줄을 그리지 않는다 (FR-APT-15).
   infoRows(detail) {
     const picked = aptPanel.apartment.areas[aptPanel.areaIndex];
     const area = detail.areas.find((item) => item.area_band === picked.area_band) || picked;
@@ -261,6 +364,8 @@ const aptPanel = {
       ['면적', format.area(area.supply_area, area.exclusive_area, aptPanel.unit())],
       ['실거래 평균가', format.won(area.avg_price)],
       ['최근 1년 거래', `${format.comma(area.trade_count)}건`],
+      ['세대수', aptPanel.householdsText(detail)],
+      ['가격 범위', aptPanel.priceRangeText(area)],
     ];
     const list = document.createElement('dl');
     list.className = 'apt-info';
@@ -277,6 +382,21 @@ const aptPanel = {
       list.append(row);
     });
     return list;
+  },
+
+  // 세대수 "1,234세대 (2026년 8월 기준)". 세대수를 모르면 null (줄을 그리지 않는다). 기준일을 모르면 괄호를 뺀다
+  householdsText(detail) {
+    if (detail.households === null || detail.households === undefined) return null;
+    const count = `${format.comma(detail.households)}세대`;
+    if (!detail.households_base_date) return count;
+    const [year, month] = detail.households_base_date.split('-');
+    return `${count} (${year}년 ${Number(month)}월 기준)`;
+  },
+
+  // 가격 범위 "2억 7,000만 ~ 3억 3,000만 원" (목업 2038:566). 앞 금액의 "원"은 뺀다
+  priceRangeText(area) {
+    if (area.min_price === null || area.min_price === undefined || area.max_price === null || area.max_price === undefined) return null;
+    return `${format.won(area.min_price).replace(/ 원$/, '')} ~ ${format.won(area.max_price)}`;
   },
 
   infoFail(id) {
