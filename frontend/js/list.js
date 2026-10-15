@@ -17,6 +17,10 @@
 //     onChangeFilters: () => { ... },                // 결과 없음의 '조건 바꾸기' (조건 창을 연다). 없으면 버튼이 없다
 //   });
 //
+//   // 불러오는 중 (P-05 ⑯, FR-COMMON-10). 회색 자리표시 카드 3장. where가 있으면 머리에 지역 이름, onClose가 있으면 닫기
+//   listView.renderLoading(el, { where: { gu: '서구', dong: '치평동' }, onClose: () => { ... } });
+//   // 결과가 오면 render나 renderError로 바꿔 그리면 된다
+//
 //   // 불러오지 못했을 때. message가 없으면 "아파트를 불러오지 못했습니다…", onRetry가 있으면 '다시 시도', onClose가 있으면 닫기
 //   listView.renderError(el, { message, onRetry: () => { ... }, onClose: () => { ... } });
 //
@@ -52,6 +56,7 @@ const LIST_TEXT = {
   changeFilters: '조건 바꾸기',
   loadFail: '아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', // 지도 화면과 같은 문장 (와이어프레임 P-04 ⑩)
   retry: '다시 시도',
+  loading: '아파트를 불러오는 중', // 와이어프레임 P-05 ⑯의 알림과 같은 말
   noCoord: '위치 없음',
   overCap: '상한 초과',
 };
@@ -277,6 +282,7 @@ const listView = {
       store.set('map', { sort: next });
       listView.load(container, where, handlers).catch(() => {}); // 실패하면 load가 오류 문구를 그린다
     };
+    listView.renderLoading(container, { where, onClose: handlers.onClose });
     try {
       const result = await api.post('/api/apartments/search', { conditions: guard.conditions(), where, sort });
       listView.render(container, result, { ...handlers, where, sort, onSort });
@@ -290,6 +296,38 @@ const listView = {
       });
       throw error;
     }
+  },
+
+  // 불러오는 중. 머리(지역 이름, 닫기)와 회색 자리표시 카드 3장 (P-05 ⑯, FR-COMMON-10).
+  // 받는 동안 빈 화면이나 앞의 목록이 보이지 않게 한다. 화면 읽기 프로그램에는 '불러오는 중'으로 알린다
+  renderLoading(container, { where, onClose } = {}) {
+    const root = listEl('section', 'list list--loading');
+    root.setAttribute('aria-busy', 'true');
+    const head = listEl('header', 'list__head');
+    const place = [where && where.gu, where && where.dong].filter(Boolean).join(' ');
+    const title = listEl('h2', 'list__title');
+    if (place) title.append(listEl('span', 'list__place', place));
+    title.append(listEl('span', 'list__skeleton list__skeleton--count'));
+    head.append(title);
+    if (onClose) head.append(listCloseButton(onClose));
+    root.append(head);
+    const status = listEl('p', 'list__loading-text', LIST_TEXT.loading);
+    status.setAttribute('role', 'status');
+    root.append(status);
+
+    const group = listEl('div', 'list__group');
+    group.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 3; i += 1) {
+      const card = listEl('div', 'list-card list-card--skeleton');
+      const body = listEl('div', 'list-card__skeleton-body');
+      const headLine = listEl('div', 'list-card__head');
+      headLine.append(listEl('span', 'list__skeleton list__skeleton--name'), listEl('span', 'list__skeleton list__skeleton--badge'));
+      body.append(headLine, listEl('span', 'list__skeleton list__skeleton--meta'), listEl('span', 'list__skeleton list__skeleton--money'));
+      card.append(body);
+      group.append(card);
+    }
+    root.append(group);
+    container.replaceChildren(root);
   },
 
   // 불러오지 못함. 빨간 테두리 상자에 문장과 '다시 시도' (P-05 ⑰, 아파트 정보 탭과 같은 모양)

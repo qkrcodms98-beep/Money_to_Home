@@ -379,6 +379,80 @@
   padding: 14px 16px;
 }
 
+/* ───────── 불러오는 중 (P-05 ⑯). 회색 자리표시 카드 3장. 왼쪽에서 오른쪽으로 옅은 빛이 지나간다 ───────── */
+.list__skeleton {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-badge);
+  background: linear-gradient(90deg, var(--color-bg-sub) 25%, var(--color-line) 50%, var(--color-bg-sub) 75%);
+  background-size: 200% 100%;
+  animation: list-skeleton 1.2s ease-in-out infinite;
+}
+
+.list__skeleton--count {
+  display: inline-block;
+  width: 44px;
+  height: 18px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.list__skeleton--name {
+  width: 55%;
+  height: 18px;
+}
+
+.list__skeleton--badge {
+  width: 64px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+}
+
+.list__skeleton--meta {
+  width: 70%;
+  margin-top: 10px;
+}
+
+.list__skeleton--money {
+  width: 50%;
+  margin-top: 10px;
+}
+
+.list-card--skeleton {
+  border-color: var(--color-line);
+}
+
+.list-card__skeleton-body {
+  flex: 1;
+  padding: 16px;
+}
+
+/* 화면에는 안 보이고 화면 읽기 프로그램만 읽는다 */
+.list__loading-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes list-skeleton {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list__skeleton {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .list-card__track {
     transition: none;
