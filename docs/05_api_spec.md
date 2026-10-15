@@ -663,8 +663,8 @@
 
 | 번호 | API | 요청 | 응답 | 근거 |
 | --- | --- | --- | --- | --- |
-| A-19 | `PUT /api/auth/password` | 지금 비밀번호, 새 비밀번호 | 204. 지금 비밀번호가 틀리면 422 | FR-USER-13 |
-| A-20 | `DELETE /api/auth/me` | 비밀번호 (와이어프레임 C5의 제안) | 204. 재무정보와 저장한 결과가 함께 지워지고 로그아웃된다. | FR-USER-11, 12 |
+| A-19 | `PUT /api/auth/password` | `{ current_password, new_password, new_password_confirm }`. 새 비밀번호 규칙은 가입과 같다 | 204. 지금 비밀번호가 틀리면 422 "지금 비밀번호가 맞지 않습니다." (field `current_password`). 로그인 상태는 그대로 | FR-USER-13 |
+| A-20 | `DELETE /api/auth/me` | `{ password }` (와이어프레임 C5) | 204. 재무정보와 저장한 결과가 함께 지워지고 로그아웃된다. 비밀번호가 틀리면 422 "비밀번호가 맞지 않습니다." (field `password`) | FR-USER-11, 12 |
 | A-21 | `POST /api/saved-results` | `conditions`, 아파트 번호, 면적대 | 201과 저장한 결과 | FR-RESULT-07 |
 | A-22 | `GET /api/saved-results` | | 내가 저장한 결과의 목록. 최근 것부터 | FR-RESULT-08, FR-USER-15 |
 | A-23 | `GET /api/saved-results/{id}` | | 저장한 결과 하나. 남의 것이면 404 | FR-RESULT-08, FR-USER-15 |
