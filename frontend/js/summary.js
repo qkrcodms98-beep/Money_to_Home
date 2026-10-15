@@ -20,7 +20,14 @@
 
   // 시작 화면의 "수정하기"로 왔으면 제목만 바꾼다. 기능은 같다 (2026-10-15 회의).
   // 고치러 다녀와도(return_to) 유지하고, 지도로 넘어가면 지운다
-  if (store.get('place').summary_edit) $('summary-title').textContent = '수정할 정보가 있으신가요?';
+  // 진행 바와 "3/4 저축 계획"은 숨기고, ‹ 는 시작 화면(이어서 하기 / 처음부터 다시 입력 / 수정하기)으로 보낸다
+  if (store.get('place').summary_edit) {
+    $('summary-title').textContent = '수정할 정보가 있으신가요?';
+    document.querySelectorAll('.progress__bars, .progress__label').forEach((part) => { part.hidden = true; });
+    const back = document.querySelector('.progress__back');
+    back.href = 'index.html';
+    back.setAttribute('aria-label', '시작 화면으로');
+  }
   $('summary-map').addEventListener('click', () => store.set('place', { summary_edit: false }));
   const yearsText = (years) => (years === 0 ? '지금' : `${years}년`);
 
