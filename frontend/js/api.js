@@ -3,6 +3,7 @@
 //   const data = await api.get('/api/loan-products');
 //   const data = await api.post('/api/calc/loan', { ... });
 //   const data = await api.put('/api/profile/finance', { ... });
+//   await api.delete('/api/auth/me', { password });   본문이 필요 없으면 api.delete(path)
 //
 // 오류가 나면 ApiError를 던진다. error.detail은 사용자에게 보여 줄 문장이고,
 // error.field는 문제가 된 입력란의 이름이다 (없을 수 있다).
@@ -54,5 +55,5 @@ const api = {
   get: (path) => request('GET', path),
   post: (path, body) => request('POST', path, body),
   put: (path, body) => request('PUT', path, body),
-  delete: (path) => request('DELETE', path),
+  delete: (path, body) => request('DELETE', path, body), // 본문은 있을 때만 보낸다 (A-20 탈퇴의 비밀번호)
 };
