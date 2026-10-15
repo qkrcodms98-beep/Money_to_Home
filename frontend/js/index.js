@@ -2,14 +2,16 @@
 //
 // 로그인 상태에 따라 다섯 가지 중 하나를 보여 준다 (와이어프레임 P-01 ① ~ ⑤).
 //   ① 로그인하지 않음            "로그인 없이 시작하기", "로그인 | 회원가입"
-//   ② 로그인, 저장한 정보 있음    저장한 값 일곱 줄, "이어서 하기", "처음부터 다시 입력"
+//   ② 로그인, 저장한 정보 있음    저장한 값 일곱 줄, "이어서 하기", "처음부터 다시 입력 | 수정하기"
 //   ③ 로그인, 저장한 정보 없음    "○○님, 반갑습니다", "시작하기"
 //   ④ 저장한 정보를 불러오지 못함  "다시 시도", "새로 입력하기"
 //   ⑤ 로그인 시간이 끝남         ①과 같고 로고 자리에 안내. account.js가 표시를 남기고 이 화면으로 보낸다
 //
 // "로그인 없이 시작하기"와 "시작하기"는 이 탭에서 입력하던 값이 있으면 보던 자리로 보낸다 (FR-PROFILE-11).
 //   값이 없으면 재무정보, 재무정보만 있으면 대출상품, 대출 선택까지 있으면 저축 계획, 다 있으면 지도.
-// "이어서 하기"는 저장한 값을 이 탭에 채우고 재무정보의 확인 화면(P-02 ⑦)으로 간다.
+// "이어서 하기"는 저장한 값을 이 탭에 채우고 바로 지도로 간다 (덜 채운 단계가 있으면 그 단계로).
+// "수정하기"는 저장한 값을 채우고 입력 요약(summary.html)으로 간다. 제목이 "수정할 정보가 있으신가요?"로 바뀐다.
+// (2026-10-15 회의에서 정함. 예전에는 이어서 하기가 재무정보의 확인 화면으로 갔다)
 // 값은 탭을 닫으면 사라진다. 서버에서 온 글자는 textContent로 넣는다.
 
 (() => {
@@ -18,7 +20,7 @@
 
   // 화면의 부품을 보이고 숨긴다. names에 있는 것만 보인다.
   const PARTS = ['start-logo', 'start-saved', 'start-error', 'start-steps', 'start-notice', 'start-button',
-    'start-retry', 'start-restart', 'start-auth', 'start-hint'];
+    'start-retry', 'start-restart', 'start-edit-divider', 'start-edit', 'start-auth', 'start-hint'];
   function showOnly(names) {
     PARTS.forEach((id) => { $(id).hidden = !names.includes(id); });
   }
@@ -77,7 +79,7 @@
   function restart() {
     store.clear('input');
     store.clear('map');
-    store.set('place', { restart: true, profile_step: null });
+    store.set('place', { restart: true, profile_step: null, summary_edit: false });
     location.href = 'profile.html';
   }
 
@@ -93,15 +95,26 @@
 
   // ② 저장한 정보 있음
   function showSaved(loginId, profile) {
-    showOnly(['start-saved', 'start-button', 'start-restart']);
+    showOnly(['start-saved', 'start-button', 'start-restart', 'start-edit-divider', 'start-edit']);
     $('start-expired').hidden = true;
     setTitle([`${loginId}님,`, '저장한 정보가 있습니다']);
     $('start-subtitle').textContent = '이어서 하면 저장한 값이 채워진 상태로 시작합니다.';
     savedRows(profile);
     startButton.textContent = '이어서 하기';
-    startButton.href = 'profile.html';
-    startButton.onclick = () => fillInput(profile);
+    // 이어서 하기: 값을 채운 뒤 갈 곳을 다시 정한다. 다 있으면 지도, 덜 채운 단계가 있으면 그 단계
+    startButton.href = 'map.html';
+    startButton.onclick = () => {
+      fillInput(profile);
+      store.set('place', { summary_edit: false });
+      startButton.href = guard.resumePage();
+    };
     $('start-restart').textContent = '처음부터 다시 입력';
+    // 수정하기: 값을 채우고 입력 요약에서 고칠 것만 고친다
+    $('start-edit').onclick = () => {
+      fillInput(profile);
+      store.set('place', { summary_edit: true });
+      location.href = 'summary.html';
+    };
   }
 
   // ③ 저장한 정보 없음

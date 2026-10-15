@@ -17,6 +17,11 @@
   });
   const input = store.get('input');
   const $ = (id) => document.getElementById(id);
+
+  // 시작 화면의 "수정하기"로 왔으면 제목만 바꾼다. 기능은 같다 (2026-10-15 회의).
+  // 고치러 다녀와도(return_to) 유지하고, 지도로 넘어가면 지운다
+  if (store.get('place').summary_edit) $('summary-title').textContent = '수정할 정보가 있으신가요?';
+  $('summary-map').addEventListener('click', () => store.set('place', { summary_edit: false }));
   const yearsText = (years) => (years === 0 ? '지금' : `${years}년`);
 
   function fill(id, rows) {

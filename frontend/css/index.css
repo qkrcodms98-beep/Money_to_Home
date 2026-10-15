@@ -115,11 +115,16 @@
   margin-top: 28px;
 }
 
-/* 아래 고정 영역의 글자 버튼들 */
-.start__restart {
+/* 아래 고정 영역의 글자 버튼들. "처음부터 다시 입력 | 수정하기"는 한 줄에 가운데로 */
+.start__links {
   display: flex;
-  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin-top: 8px;
+}
+
+.start__restart {
   text-decoration: underline;
 }
 
