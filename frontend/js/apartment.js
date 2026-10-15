@@ -17,6 +17,12 @@
 //     그 아파트 둘레 100m 안의 가장 가까운 로드뷰를 카카오맵으로 찾는다 (서버 API 없음. API 명세서 3.5).
 //     로드뷰가 없거나, 좌표가 없거나, 카카오맵을 쓸 수 없으면 같은 자리에 기본 이미지(집 그림과 문장)를 둔다.
 //     자리(#apt-roadview)는 이 파일이 만들어 창(#sheet)의 손잡이 앞에 넣는다.
+//   비슷한 아파트 (3차, FR-APT-17, T-APT-11. 목업 C6 4022:1301): 정보 줄 아래에 김목산의 similar.js가 그린다.
+//     이 파일은 자리(#apt-similar)를 만들고 similarView.load를 부르기만 한다. 아파트·면적·조건이 그대로면 다시 부르지 않는다.
+//     similar.js가 있으면 정보 줄 위에 "기본 정보" 제목을 붙인다 (C6. 묶음이 둘이 되므로).
+//     카드를 누르면 그 아파트로 넘어간다. 지금 지도에 있는 아파트면 ‹ ›와 같이 넘기고,
+//     없으면(다른 동 등) map-view.js가 넘겨준 handlers.onPickSimilar를 부른다 (없으면 아무것도 하지 않는다).
+//     similar.js를 불러오지 않았으면 아무것도 하지 않는다.
 //   좌표가 없는 아파트 (P-06 ⑱, 목업 4009:492): 이름과 배지 옆에 "위치 없음"을 붙이고,
 //     아파트 정보 탭의 맨 위에 점선 안내를 둔다. 목록에서 열었을 때만 생긴다 (지도에는 표시가 없다).
 //   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
@@ -46,6 +52,15 @@ const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 
 const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 가장 가까운 로드뷰를 쓴다
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
 const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
+const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아파트가 아래에 붙을 때만 둔다
+
+// "기본 정보" 제목 (목업 C6)
+const aptInfoTitle = () => {
+  const title = document.createElement('h3');
+  title.className = 'apt-info__title';
+  title.textContent = APT_INFO_TITLE;
+  return title;
+};
 
 const aptHasCoord = (apartment) =>
   apartment.latitude !== null && apartment.latitude !== undefined &&
@@ -62,6 +77,7 @@ const aptPanel = {
   failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
   roadview: null, // 카카오 로드뷰 (처음 보일 때 한 번 만든다)
   roadviewFor: null, // 로드뷰 자리에 마지막으로 그린 아파트 번호
+  similarKey: null, // 비슷한 아파트를 마지막으로 부른 것 (아파트 번호, 면적대, 조건)
 
   init(handlers) {
     aptPanel.handlers = handlers;
@@ -309,6 +325,50 @@ const aptPanel = {
     }
   },
 
+  // ───────── 비슷한 아파트 (3차, 목업 C6, 김목산의 similar.js) ─────────
+
+  similarReady: () => typeof similarView !== 'undefined' && typeof similarView.load === 'function',
+
+  // 자리. similar.js가 없으면 null (자리를 만들지 않는다)
+  similarBox() {
+    if (!aptPanel.similarReady()) return null;
+    let box = document.getElementById('apt-similar');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'apt-similar';
+    }
+    return box;
+  },
+
+  // 아파트 정보 탭이 보일 때 부른다. 아파트, 면적, 조건이 지난번과 같으면 다시 부르지 않는다
+  renderSimilar() {
+    const { apartment } = aptPanel;
+    const box = aptPanel.similarBox();
+    if (!box || !apartment || !aptPanel.infoVisible()) return;
+    const area = apartment.areas[aptPanel.areaIndex];
+    const key = JSON.stringify([apartment.id, area.area_band, guard.conditions()]);
+    if (key === aptPanel.similarKey) return;
+    aptPanel.similarKey = key;
+    similarView.load(box, { apartmentId: apartment.id, areaBand: area.area_band }, { onPick: aptPanel.pickSimilar });
+  },
+
+  // 비슷한 아파트의 카드를 누름. apartment는 A-24 응답의 아파트, areaBand는 카드에 보이던 면적대
+  //   지금 지도에 있는 아파트면 ‹ ›와 같이 그 아파트로 넘긴다 (그 면적을 고르고, 아파트 정보 탭 맨 위로)
+  //   없으면(다른 동이거나 조건 밖) map-view.js의 onPickSimilar에 맡긴다
+  pickSimilar(apartment, areaBand) {
+    const { handlers } = aptPanel;
+    const order = handlers.order ? handlers.order(aptPanel.apartment) : [];
+    const known = order.find((item) => item.id === apartment.id);
+    if (known) {
+      const areaIndex = Math.max(known.areas.findIndex((area) => area.area_band === areaBand), 0);
+      aptPanel.show(known, areaIndex, { listPlace: aptPanel.listPlace });
+      handlers.onMove(known);
+      document.querySelector('.apt__panels').scrollTop = 0;
+      return;
+    }
+    if (typeof handlers.onPickSimilar === 'function') handlers.onPickSimilar(apartment, areaBand);
+  },
+
   // ───────── 아파트 정보 탭 (P-06 ⑦, A-06) ─────────
 
   // 아파트 정보 탭이 지금 보이는가. 80% 이상이고, 아파트 창이고, 그 탭이 골라져 있을 때
@@ -324,10 +384,16 @@ const aptPanel = {
     if (!apartment || !aptPanel.infoVisible()) return;
     const panel = document.getElementById('apartment-info');
     const notice = aptPanel.noCoordNotice(); // 좌표가 없으면 맨 위에 (받는 중에도 보인다)
-    const show = (content) => panel.replaceChildren(...[notice, content].filter(Boolean));
+    const similar = aptPanel.similarBox(); // 비슷한 아파트 자리. 같은 요소를 다시 붙이므로 그려 둔 카드가 남는다
+    // rows: 정보 줄을 그릴 때만 "기본 정보" 제목을 붙인다 (비슷한 아파트가 있을 때만)
+    const show = (content, rows = false) => {
+      const title = rows && similar ? aptInfoTitle() : null;
+      panel.replaceChildren(...[notice, title, content, similar].filter(Boolean));
+      aptPanel.renderSimilar();
+    };
     const detail = aptPanel.details.get(apartment.id);
     if (detail) {
-      show(aptPanel.infoRows(detail));
+      show(aptPanel.infoRows(detail), true);
       return;
     }
     if (aptPanel.failed.has(apartment.id)) {

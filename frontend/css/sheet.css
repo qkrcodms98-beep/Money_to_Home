@@ -596,6 +596,14 @@
   padding: 8px var(--page-padding) 24px;
 }
 
+/* "기본 정보" 제목 (목업 C6 4022:1279). 비슷한 아파트(similar.css의 .similar__title)와 같은 글자 */
+.apt-info__title {
+  margin: 8px 0 0;
+  font-size: var(--text-body);
+  font-weight: var(--font-bold);
+  line-height: var(--line-height);
+}
+
 /* 아파트 정보 탭 (P-06 ⑦, 목업 2038:538). 이름은 왼쪽 회색, 값은 오른쪽 굵게. 줄마다 아래 선 */
 .apt-info {
   margin: 0;

@@ -76,6 +76,8 @@ const sheet = {
   phase: 'closed', // 'closed' | 'opening' | 'open' | 'closing'
   moving: false, // 올라오거나 높이가 바뀌는 중인가 (끄는 중에도 true)
   dragging: false, // 손잡이나 머리를 끄는 중인가
+  backPending: false, // close()가 기록을 되돌렸고 그 popstate를 기다리는 중
+  reopened: false, // 기다리는 사이에 show()로 다시 열었다
   dragFrom: null, // 끌기를 시작한 단계 (단계를 바꾸던 중에 잡았으면 null)
   suppressClick: false, // 끌기를 막 끝냈다. 손을 뗄 때 생기는 누르기를 버린다
   mapStage: null, // 지도가 지금 맞춰져 있는 단계. null이면 지도가 화면을 다 쓴다
@@ -88,7 +90,17 @@ const sheet = {
     });
 
     // 브라우저의 뒤로 가기. 창을 열 때 남긴 기록에서 빠져나오면 창을 닫는다.
+    // 닫기(close)가 기록을 되돌린 뒤 그 알림이 오기 전에 다시 열었으면(show) 닫지 않고 기록만 다시 남긴다.
+    // 지역을 바꾸며 창을 닫고 곧바로 다른 아파트를 여는 경우다 (이름 검색, 비슷한 아파트).
     window.addEventListener('popstate', () => {
+      if (sheet.backPending) {
+        sheet.backPending = false;
+        if (sheet.reopened) {
+          sheet.reopened = false;
+          if (sheet.isShown() && !sheet.isOwnHistory()) history.pushState({ [SHEET_HISTORY_KEY]: true }, '');
+          return;
+        }
+      }
       if (sheet.isShown() && !sheet.isOwnHistory()) sheet.hide();
     });
 
@@ -127,7 +139,8 @@ const sheet = {
   // 닫혀 있으면(내려가는 중도) 아래에서 올라오게 연다. 열려 있으면 단계와 내용을 바꾼다.
   // 기록은 열 때 하나만 남긴다. 그래서 몇 번을 바꿔도 뒤로 가기 한 번이면 창이 닫힌다.
   show(stage, mode) {
-    if (!sheet.isOwnHistory()) history.pushState({ [SHEET_HISTORY_KEY]: true }, '');
+    if (sheet.backPending) sheet.reopened = true; // 닫기가 아직 끝나지 않았다. popstate에서 닫지 않는다
+    else if (!sheet.isOwnHistory()) history.pushState({ [SHEET_HISTORY_KEY]: true }, '');
     if (sheet.isShown()) {
       sheet.mode = mode;
       if (sheet.stage === stage) sheet.apply();
@@ -168,8 +181,11 @@ const sheet = {
   // 닫기 버튼. 열 때 남긴 기록을 되돌려(뒤로 가기) 닫는다. 기록이 어긋나 있으면 바로 닫는다.
   close() {
     if (!sheet.isShown()) return;
-    if (sheet.isOwnHistory()) history.back(); // popstate에서 hide()가 불린다
-    else sheet.hide();
+    if (sheet.isOwnHistory()) {
+      sheet.backPending = true;
+      sheet.reopened = false;
+      history.back(); // popstate에서 hide()가 불린다
+    } else sheet.hide();
   },
 
   // 아래로 내려가게 닫는다. 지도는 먼저 화면을 다 쓰게 되돌린다. 다 내려가면 숨기고 비운다.

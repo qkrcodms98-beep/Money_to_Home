@@ -1219,6 +1219,7 @@ function bindEvents() {
     order: sheetOrder,
     basis: basisText,
     onMove: moveToApartment,
+    onPickSimilar: onSearchPick, // 비슷한 아파트의 카드 (similar.js). 지도에 없는 아파트면 그 구·동으로 옮겨 연다
     onBackToList: backToList,
     onClose: () => sheet.close(),
     onUnitChange: () => {
