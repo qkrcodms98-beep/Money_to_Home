@@ -12,6 +12,10 @@ const format = {
     const rest = man % 10000;
     const sign = amount < 0 && man > 0 ? '-' : '';
 
+    // 만 원이 안 되는 금액은 원 단위 그대로. 0은 "0원" (2026-10-15에 정함, 전에는 "0만 원")
+    const won = Math.round(Math.abs(amount));
+    if (man === 0) return `${amount < 0 && won > 0 ? '-' : ''}${won.toLocaleString('ko-KR')}원`;
+
     let text;
     if (eok > 0 && rest > 0) text = `${eok.toLocaleString('ko-KR')}억 ${rest.toLocaleString('ko-KR')}만 원`;
     else if (eok > 0) text = `${eok.toLocaleString('ko-KR')}억 원`;
