@@ -37,3 +37,59 @@
   color: var(--color-error-text);
   font-weight: var(--font-medium);
 }
+
+/* 탈퇴 확인 모달 (2026-10-15 팀장과 정함). 목업에 없어 화면의 빨간 상자와 버튼 모양을 따랐다 */
+.account-confirm {
+  width: calc(100% - 2 * var(--page-padding));
+  max-width: 340px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.account-confirm::backdrop {
+  background: var(--color-dim);
+  opacity: 0.4;
+}
+
+.account-confirm__box {
+  padding: 24px 20px 20px;
+}
+
+.account-confirm__title {
+  margin: 0;
+  font-size: var(--text-item);
+  font-weight: var(--font-bold);
+}
+
+.account-confirm__text {
+  margin: 8px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-body);
+  line-height: var(--line-height);
+  word-break: keep-all;
+}
+
+.account-confirm__buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.account-confirm__cancel,
+.account-confirm__ok {
+  flex: 1;
+}
+
+/* 지우는 버튼이라 빨강 */
+.account-confirm__ok {
+  background: var(--color-error);
+  color: var(--color-on-primary);
+}
+
+.account-confirm .button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

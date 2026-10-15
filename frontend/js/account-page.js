@@ -154,10 +154,32 @@ function initWithdraw(loginId) {
     }
   });
 
-  form.addEventListener('submit', async (event) => {
+  // 확인 모달 (2026-10-15 팀장과 정함). 화면의 '탈퇴하기'는 모달만 열고, 모달의 '탈퇴하기'가 서버에 보낸다.
+  // 취소, Esc, 모달 바깥을 누르면 닫히고 아무 일도 없다. 열리면 '취소'에 먼저 초점을 둔다 (Enter로 실수해도 탈퇴되지 않게)
+  const confirmBox = document.getElementById('withdraw-confirm');
+  const confirmOk = document.getElementById('withdraw-confirm-ok');
+  const closeConfirm = () => {
+    if (confirmBox.open) confirmBox.close();
+  };
+  document.getElementById('withdraw-confirm-cancel').addEventListener('click', closeConfirm);
+  confirmBox.addEventListener('click', (event) => {
+    if (event.target === confirmBox) closeConfirm(); // 상자 밖(어두운 바탕)을 누름
+  });
+  confirmBox.addEventListener('close', () => {
+    if (!sending) input.focus();
+  });
+
+  form.addEventListener('submit', (event) => {
     event.preventDefault();
     if (submit.disabled) return;
+    confirmBox.showModal();
+    document.getElementById('withdraw-confirm-cancel').focus();
+  });
+
+  confirmOk.addEventListener('click', async () => {
+    if (sending) return;
     sending = true;
+    confirmOk.disabled = true;
     update();
     try {
       await api.delete('/api/auth/me', ACCOUNT_BODY.withdraw(input.value));
@@ -167,6 +189,9 @@ function initWithdraw(loginId) {
       location.href = 'index.html'; // 탈퇴하면 시작 화면으로 간다 (C5)
       return;
     } catch (error) {
+      sending = false;
+      confirmOk.disabled = false;
+      closeConfirm();
       if (error.status === 401 && error.field !== 'password') {
         accountGoLogin();
         return;
