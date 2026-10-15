@@ -205,3 +205,109 @@ def test_two_users_do_not_see_each_other(client):
     other = {"login_id": "other2026", "password": "other1234", "password_confirm": "other1234"}
     client.post("/api/auth/signup", json=other)
     assert client.get("/api/profile").json()["profile"] is None
+
+
+# ---------------- A-19 비밀번호 변경 (3차) ----------------
+NEW_PW = {"current_password": "money2home", "new_password": "newpass2026", "new_password_confirm": "newpass2026"}
+
+
+def test_change_password(client):
+    client.post("/api/auth/signup", json=SIGNUP)
+    res = client.put("/api/auth/password", json=NEW_PW)
+    assert res.status_code == 204
+    assert client.get("/api/auth/me").status_code == 200  # 바꾼 뒤에도 로그인 상태다
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/login", json={"login_id": "home2026", "password": "money2home"}).status_code == 401
+    assert client.post("/api/auth/login", json={"login_id": "home2026", "password": "newpass2026"}).status_code == 200
+
+
+def test_change_password_wrong_current(client):
+    client.post("/api/auth/signup", json=SIGNUP)
+    res = client.put("/api/auth/password", json={**NEW_PW, "current_password": "wrong1234"})
+    assert res.status_code == 422
+    assert res.json() == {"detail": "지금 비밀번호가 맞지 않습니다.", "field": "current_password"}
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/login", json={"login_id": "home2026", "password": "money2home"}).status_code == 200
+
+
+@pytest.mark.parametrize("body, field, detail", [
+    ({**NEW_PW, "new_password": "short1", "new_password_confirm": "short1"}, "new_password", MSG_PW),
+    ({**NEW_PW, "new_password": "abcdefgh", "new_password_confirm": "abcdefgh"}, "new_password", MSG_PW),
+    ({**NEW_PW, "new_password_confirm": "newpass2027"}, "new_password_confirm", "비밀번호가 서로 다릅니다."),
+    ({"current_password": "money2home", "new_password": "newpass2026"}, "new_password_confirm", "필요한 값이 빠졌습니다."),
+])
+def test_change_password_rules(client, body, field, detail):
+    client.post("/api/auth/signup", json=SIGNUP)
+    res = client.put("/api/auth/password", json=body)
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}
+
+
+def test_change_password_needs_login(client):
+    assert client.put("/api/auth/password", json=NEW_PW).status_code == 401
+
+
+def test_password_stored_as_new_hash(client, db):
+    client.post("/api/auth/signup", json=SIGNUP)
+    before = db.query(models.User).filter_by(login_id="home2026").one().password_hash
+    client.put("/api/auth/password", json=NEW_PW)
+    db.expire_all()
+    after = db.query(models.User).filter_by(login_id="home2026").one().password_hash
+    assert after != before and after.startswith("$2") and "newpass2026" not in after
+
+
+# ---------------- A-20 회원 탈퇴 (3차) ----------------
+def test_withdraw_deletes_everything(client, db, products):
+    client.post("/api/auth/signup", json=SIGNUP)
+    client.put("/api/profile/finance", json=FINANCE)
+    user_id = db.query(models.User).filter_by(login_id="home2026").one().id
+    db.add(models.SavedResult(
+        user_id=user_id, apartment_name="가아파트", gu="서구", dong="치평동", area_band=84, exclusive_area="84.9", avg_price=1,
+        current_assets=0, monthly_saving=0, target_years=0, loan_choice="none", accumulated_saving=0, shortage=1, category="lack",
+    ))
+    db.commit()
+
+    res = client.request("DELETE", "/api/auth/me", json={"password": "money2home"})
+    assert res.status_code == 204
+    db.expire_all()
+    assert db.query(models.User).filter_by(login_id="home2026").count() == 0
+    assert db.query(models.Profile).filter_by(user_id=user_id).count() == 0
+    assert db.query(models.SavedResult).filter_by(user_id=user_id).count() == 0
+    assert client.get("/api/auth/me").status_code == 401  # 로그아웃된다
+    assert client.post("/api/auth/login", json={"login_id": "home2026", "password": "money2home"}).status_code == 401
+    # 같은 아이디로 다시 가입할 수 있다
+    assert client.post("/api/auth/login-id/check", json={"login_id": "home2026"}).status_code == 200
+
+
+def test_withdraw_keeps_other_users(client, db):
+    other = {"login_id": "other2026", "password": "other1234", "password_confirm": "other1234"}
+    client.post("/api/auth/signup", json=other)
+    client.put("/api/profile/finance", json=FINANCE)
+    client.post("/api/auth/logout")
+    client.post("/api/auth/signup", json=SIGNUP)
+    client.request("DELETE", "/api/auth/me", json={"password": "money2home"})
+    db.expire_all()
+    assert db.query(models.User).filter_by(login_id="other2026").count() == 1
+    assert db.query(models.Profile).count() == 1
+
+
+def test_withdraw_wrong_password(client, db):
+    client.post("/api/auth/signup", json=SIGNUP)
+    res = client.request("DELETE", "/api/auth/me", json={"password": "wrong1234"})
+    assert res.status_code == 422
+    assert res.json() == {"detail": "비밀번호가 맞지 않습니다.", "field": "password"}
+    assert db.query(models.User).filter_by(login_id="home2026").count() == 1
+    assert client.get("/api/auth/me").status_code == 200
+
+
+def test_withdraw_needs_login(client):
+    assert client.request("DELETE", "/api/auth/me", json={"password": "money2home"}).status_code == 401
+
+
+# ---------------- 가입 동의 (3차, FR-USER-05) ----------------
+@pytest.mark.parametrize("agreed, stored", [(True, True), (False, False), (None, False)])
+def test_signup_agreed_time(client, db, agreed, stored):
+    body = {**SIGNUP} if agreed is None else {**SIGNUP, "agreed": agreed}
+    client.post("/api/auth/signup", json=body)
+    user = db.query(models.User).filter_by(login_id="home2026").one()
+    assert (user.terms_agreed_at is not None) == stored
