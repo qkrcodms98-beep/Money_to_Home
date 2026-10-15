@@ -1301,6 +1301,14 @@ function loadByBounds() {
 async function loadData() {
   const where = currentWhere();
   const mine = ++mapState.loadSeq;
+  // 구·동을 새로 받을 때는 목록 자리에 불러오는 중 화면을 먼저 그린다 (김목산의 listView.renderLoading).
+  // 지도를 끌어 영역으로 다시 받을 때는 그리지 않는다. 끌 때마다 목록이 깜빡이지 않게
+  if (!mapState.byBounds || !mapState.data) {
+    listView.renderLoading(document.getElementById('apt-list'), {
+      where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region,
+      onClose: () => sheet.close(),
+    });
+  }
   try {
     const data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where, sort: currentSort() }));
     if (mine !== mapState.loadSeq) return; // 그사이 다시 받기 시작했다. 늦게 온 이 응답은 버린다
