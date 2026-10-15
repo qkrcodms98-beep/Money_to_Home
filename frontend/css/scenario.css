@@ -12,9 +12,8 @@
   transition: opacity 0.2s;
 }
 
-/* 다시 계산하는 동안 앞의 결과를 흐리게 남긴다 (A2) */
-.scenario__result--busy,
-.scenario__rows--busy {
+/* 다시 계산하는 동안 앞의 결과 상자를 흐리게 남긴다 (A2). 값 줄은 흐리게 하지 않는다 (목업 A2) */
+.scenario__result--busy {
   opacity: 0.4;
 }
 
@@ -61,10 +60,6 @@
 }
 
 /* ───────── 값 줄 ───────── */
-.scenario__rows {
-  transition: opacity 0.2s;
-}
-
 /* 허용 상승률 줄 아래의 설명 한 줄 */
 .scenario__growth-help {
   flex-basis: 100%;
@@ -210,15 +205,60 @@
   height: 48px;
 }
 
-/* ───────── 받는 중, 받지 못함 ───────── */
-.scenario__state {
+/* ───────── 받는 중 (회색 자리 표시), 받지 못함 ─────────
+   모양은 대출상품 화면의 자리 표시(P-03 ⑦, loan.css의 .loan-skeleton)와 같은 회색 바탕이다.
+   결과 상자와 값 줄의 자리를 실제와 같게 잡아, 결과가 와도 화면이 덜 움직이게 한다. */
+.scenario__skeleton {
+  padding-bottom: 8px;
+}
+
+.scenario__result--skeleton {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 160px;
-  color: var(--color-text-sub);
-  font-size: var(--text-body);
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scenario__bone {
+  display: block;
+  border-radius: var(--radius-badge);
+  background: var(--color-bg-sub);
+}
+
+/* 결과 상자 안: 첫 줄, 큰 금액, 식 */
+.scenario__bone--lead {
+  width: 55%;
+  height: 16px;
+}
+
+.scenario__bone--gap {
+  width: 75%;
+  height: 32px;
+}
+
+.scenario__bone--formula {
+  width: 90%;
+  height: 14px;
+}
+
+/* 값 줄: 왼쪽 이름, 오른쪽 값. 줄의 높이는 실제 줄(.apt-info__row)과 같다 */
+.scenario__bone--label {
+  width: 96px;
+  height: 22px;
+}
+
+.scenario__bone--value {
+  width: 72px;
+  height: 22px;
+}
+
+/* 화면에는 보이지 않고 읽어 주는 프로그램만 읽는 글 ("계산하는 중") */
+.scenario__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .scenario__fail {

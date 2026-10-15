@@ -7,14 +7,14 @@
   <link rel="stylesheet" href="css/common.css">
   <!-- 값 줄(.apt-info)은 아파트 창과 같은 모양이라 sheet.css를 함께 쓴다 -->
   <link rel="stylesheet" href="css/sheet.css">
-  <link rel="stylesheet" href="css/scenario.css">
-  <link rel="stylesheet" href="css/saved.css">
+  <link rel="stylesheet" href="css/scenario.css?v=20261015-1">
+  <link rel="stylesheet" href="css/saved.css?v=20261015-1">
   <link rel="stylesheet" href="css/glossary.css">
 </head>
 <body>
   <!-- P-09 저장한 결과 (3차). 담당: 박채은. 와이어프레임 C1(목록), C3(열어 보기).
        saved.html은 목록, saved.html?id=번호는 하나 열어 보기다. js/saved.js가 그린다.
-       로그인해야 볼 수 있다. 로그인하지 않았으면 로그인 화면으로 보낸다. -->
+       로그인해야 볼 수 있다. 로그인하지 않았으면 로그인 화면으로, 30분이 지나 풀렸으면 시작 화면으로 보낸다. -->
   <div class="top-space"></div>
 
   <nav class="saved__nav">
@@ -29,9 +29,11 @@
   <script src="js/format.js?v=20261013-1"></script>
   <script src="js/guard.js"></script>
   <script src="js/layout.js"></script>
+  <!-- 로그인이 30분이 지나 풀렸는지 알아보는 데 쓴다 (P-01 ⑤) -->
+  <script src="js/account.js?v=20261014-1"></script>
   <!-- 결과 상자와 값 줄은 시나리오 탭과 같은 함수로 그린다 -->
   <script src="js/glossary.js"></script>
-  <script src="js/scenario.js"></script>
-  <script src="js/saved.js"></script>
+  <script src="js/scenario.js?v=20261015-1"></script>
+  <script src="js/saved.js?v=20261015-1"></script>
 </body>
 </html>

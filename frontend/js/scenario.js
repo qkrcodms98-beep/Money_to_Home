@@ -17,7 +17,8 @@
 //          대출 없이 계산이면 대출 세 줄 대신 "대출 / 대출 없이 계산" 한 줄 (FR-RESULT-05)
 //   목표 기간이 "지금"이면 필요 월 저축액과 허용 상승률 대신 회색 안내 (A1)
 //   평균가가 상품의 대상 주택 가격 상한을 넘으면 안내 (FR-LOAN-14, P-06 ⑲의 문장)
-//   조건 바꿔 보기: 월 저축액, 목표 기간, "다시 계산" (A2 ~ A4)
+//   처음 받는 동안: 결과 상자와 값 줄 자리에 회색 자리 표시(스켈레톤) (FR-COMMON-10)
+//   조건 바꿔 보기: 월 저축액, 목표 기간, "다시 계산" (A2 ~ A4). 다시 계산하는 동안 결과 상자만 흐리게 둔다
 //   결과 저장 (3차, C2): A-21. 저장하면 "저장됨 ✓", 아래 알림에 "저장한 결과 보기"
 //     로그인하지 않았으면(401) 저장할 값을 store의 place.pending_save에 남기고 로그인 화면으로 보낸다 (P-07 ③).
 //     로그인한 뒤 지도 화면으로 돌아오면 남긴 값을 저장하고 알린다 (resumePendingSave).
@@ -116,7 +117,7 @@ const scenarioView = {
     });
   },
 
-  // 처음 그릴 때와 "다시 시도". 받는 동안은 "계산하는 중"을 보여 준다.
+  // 처음 그릴 때와 "다시 시도". 받는 동안은 결과 자리에 회색 자리 표시(스켈레톤)를 둔다.
   async load() {
     const seq = ++scenarioView.seq;
     scenarioView.status = 'loading';
@@ -135,7 +136,7 @@ const scenarioView = {
     scenarioView.draw();
   },
 
-  // "다시 계산" (A2 ~ A4). 받는 동안은 앞의 결과를 흐리게 두고 버튼을 끈다.
+  // "다시 계산" (A2 ~ A4). 받는 동안은 앞의 결과 상자를 흐리게 두고 버튼을 끈다.
   // 실패하면 결과는 앞의 것 그대로, 입력한 값도 지우지 않고 아래에 알린다.
   async recalc() {
     const saving = scenarioView.draft.saving.trim();
@@ -182,7 +183,7 @@ const scenarioView = {
     if (!root) return;
 
     if (status === 'loading') {
-      root.replaceChildren(scenarioView.loadingBox());
+      root.replaceChildren(scenarioView.skeleton());
       return;
     }
     if (status === 'failed') {
@@ -261,8 +262,8 @@ const scenarioView = {
     }
     lines.push(['목표 부동산 가격', scenarioView.money(result.price)]);
 
+    // 다시 계산하는 동안에도 값 줄은 흐리게 하지 않는다. 흐려지는 것은 결과 상자뿐이다 (A2, 목업 A2)
     const list = scenarioView.make('dl', 'apt-info scenario__rows');
-    if (scenarioView.status === 'recalc') list.classList.add('scenario__rows--busy');
     lines.forEach(([label, value]) => list.append(scenarioView.row(label, value, SCENARIO_TERMS[label])));
 
     // 허용 상승률 (C-12). 서버가 null을 주면(음수, "지금") 줄을 그리지 않는다 (P-06 ⑳, A1)
@@ -435,11 +436,35 @@ const scenarioView = {
     return box;
   },
 
-  // 처음 받는 중
-  loadingBox() {
-    const box = scenarioView.make('div', 'scenario__state');
+  // 처음 받는 중 (FR-COMMON-10). 결과 상자와 값 줄이 올 자리에 회색 자리 표시를 둔다.
+  // 모양은 대출상품 화면의 자리 표시(P-03 ⑦)처럼 회색 바탕이고, 자리는 실제 결과와 같게 잡아 받은 뒤에 화면이 덜 움직이게 한다.
+  // 저장한 결과의 열어 보기(saved.js)도 이 함수를 쓴다. text는 읽어 주는 프로그램에 들려줄 말이다.
+  skeleton(text = SCENARIO_TEXT.loading) {
+    const box = scenarioView.make('div', 'scenario__skeleton');
     box.setAttribute('role', 'status');
-    box.append(scenarioView.make('span', 'scenario__spinner'), scenarioView.make('span', '', SCENARIO_TEXT.loading));
+    box.append(scenarioView.make('span', 'scenario__sr-only', text));
+
+    const bar = (className) => {
+      const node = scenarioView.make('span', `scenario__bone ${className}`);
+      node.setAttribute('aria-hidden', 'true');
+      return node;
+    };
+
+    // 결과 상자 자리: 첫 줄, 큰 금액, 식
+    const result = scenarioView.make('div', 'scenario__result scenario__result--skeleton');
+    result.setAttribute('aria-hidden', 'true');
+    result.append(bar('scenario__bone--lead'), bar('scenario__bone--gap'), bar('scenario__bone--formula'));
+
+    // 값 줄 자리: 대출이 있을 때의 아홉 줄
+    const rows = scenarioView.make('div', 'scenario__skeleton-rows');
+    rows.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 9; i += 1) {
+      const row = scenarioView.make('div', 'apt-info__row');
+      row.append(bar('scenario__bone--label'), bar('scenario__bone--value'));
+      rows.append(row);
+    }
+
+    box.append(result, rows);
     return box;
   },
 
