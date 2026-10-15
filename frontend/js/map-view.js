@@ -5,6 +5,7 @@
 //   - 아파트 찾기(A-05) 응답의 아파트를 말풍선으로 지도에 올린다 (카카오맵 CustomOverlay).
 //     말풍선의 꼬리 끝이 아파트의 자리다. 좌표가 없는 아파트는 지도에 그리지 않는다 (FR-MAP-07, 목록에만 나온다).
 //   - 현재 위치 버튼, 확대·축소 버튼, 축척을 지도에 붙인다 (FR-MAP-24, 25, 26).
+//   - 광주 5개 구 경계와 경계 밖 덮개, 고른 지역의 강조는 js/boundary.js가 그린다 (FR-MAP-28). 여기서는 붙이고 고른 지역만 알린다.
 //
 // 자료
 //   - 아파트는 A-05(POST /api/apartments/search)에서, 구와 동의 목록과 위치는 A-02(GET /api/regions)에서 받는다.
@@ -37,13 +38,25 @@ const SDK_TIMEOUT_MS = 10000;
 // 처음 위치와 확대 수준은 명세서에 "정할 것"으로 남아 있다 (요구사항 8.3). 실제 지도를 보며 정한 뒤 고친다.
 const DEFAULT_CENTER = { latitude: 35.1600, longitude: 126.8514 };
 const DEFAULT_LEVEL = 4; // 카카오맵의 확대 수준. 숫자가 작을수록 가깝다.
-const DONG_LEVEL = 5; // 동 하나를 볼 때
-const GU_LEVEL = 7; // 구 전체를 볼 때
-// 이 수준부터(더 넓게 보면) 아파트 말풍선 대신 동마다 표시 하나를 그린다 (P-05 ③, FR-MAP-20).
-// 와이어프레임에 "미정"으로 남아 있던 값이다. 동 하나(5)는 말풍선, 구 전체(7)는 동 표시가 되게 6으로 정했다.
-const DONG_MARKER_LEVEL = 6;
-// 이 수준부터(더 넓게 보면) 동 표시가 서로 겹쳐서, 구마다 표시 하나로 묶는다 (P-05 ⑪, FR-MAP-31).
-const GU_MARKER_LEVEL = 8;
+// 확대 수준의 단계 (2026-10-15 팀장 직무대행 결정. 지도·부동산 앱에서 흔히 쓰는 틀에 맞췄다. 그 전은 동 6, 구 8)
+//   1 ~ 4  단지   아파트 말풍선
+//   5 ~ 6  동     동마다 표시 하나 (P-05 ③, FR-MAP-20)
+//   7 ~ 9  구·시  구마다 표시 하나 (P-05 ⑪, FR-MAP-31). 9는 광주 5개 구가 한 화면에 들어오는 정도
+const DONG_MARKER_LEVEL = 5; // 이 수준부터(더 넓게 보면) 말풍선 대신 동 표시
+const GU_MARKER_LEVEL = 7; // 이 수준부터(더 넓게 보면) 동 표시 대신 구 표시
+const DONG_LEVEL = 4; // 경계 자료가 없을 때 동 하나를 볼 수준 (말풍선)
+const GU_LEVEL = 7; // 경계 자료가 없을 때 구 하나를 볼 수준 (구 표시)
+// 구·동을 고르면 그 지역에 맞춰 지도를 옮긴다 (경계 자료, js/boundary.js)
+//   동을 고름, 동 표시를 누름 : 그 동 전체가 들어오는 수준(3 ~ 6). 5 ~ 6이어도 그 동의 말풍선을 다 그린다 (동을 고른 사람은 그 동의 매물을 보려는 것이다)
+//                            동을 고른 동안은 그 동의 아파트만 보인다. 그 동 안에서 확대하거나 끌어도 이웃 동의 말풍선은 나오지 않는다
+//   구를 고름              : 그 구에서 아파트가 있는 동들의 범위가 들어오는 수준(7 ~ 8). 구 표시, 고른 구 강조
+//                            구 경계 전체가 아니라 사람이 사는 곳이다. 광산구·북구는 논밭과 산이 넓어 구 전체에 맞추면 단지가 한쪽에 작게 몰린다
+//   구 표시를 누름          : 같은 범위를 동 표시로 본다(5 ~ 6). 넓게에서 좁게 내려가며 보는 흐름
+//   손으로 확대·축소해 고른 단계를 벗어나거나 고른 동 밖으로 끌면 이 예외는 풀리고 위 단계를 따른다 (mapState.focus, focusHolds)
+const FIT_MIN_LEVEL = 3; // 아주 작은 동도 이보다 가까이 가지 않는다 (주변이 보이게)
+const FIT_LEVELS = { dong: [FIT_MIN_LEVEL, 6], gu: [GU_MARKER_LEVEL, 8], drill: [DONG_MARKER_LEVEL, 6] };
+const DONG_FIT_MAX_LEVEL = FIT_LEVELS.dong[1]; // 고른 동은 여기까지 고른 상태가 이어지고 말풍선이다
+const FIT_PAD = 16; // 지역 경계와 화면 가장자리 사이의 여백 (px)
 const ALL_GU_NAME = '광주 5개 구 전체'; // 구 표시를 볼 때 지역 버튼의 글자
 // 가까이 볼 때 말풍선끼리 이만큼(넓이의 비율) 넘게 겹치면 하나로 묶는다.
 const OVERLAP_RATIO = 0.35;
@@ -105,6 +118,8 @@ const mapState = {
   tappedAt: 0, // 지도 위 표시를 마지막으로 누른 때 (ms)
   loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
+  focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
+  focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
 };
 
 // ───────── 카카오맵 불러오기 ─────────
@@ -157,10 +172,7 @@ function createMap(center) {
   });
   // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
   kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
-  // 지도를 누르면 지도 위의 창을 닫는다. 말풍선을 누른 직후의 click은 말풍선의 것이라 넘긴다 (onTap)
-  kakao.maps.event.addListener(map, 'click', () => {
-    if (Date.now() - mapState.tappedAt > TAP_GUARD_MS) closeOverlays();
-  });
+  kakao.maps.event.addListener(map, 'click', onMapClick);
   kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
   kakao.maps.event.addListener(map, 'idle', () => {
     renderScale();
@@ -169,7 +181,14 @@ function createMap(center) {
     if (mapState.mode === 'apartment' && mapState.level !== map.getLevel()) renderMarkers();
   });
   hideKakaoScale();
+  // 경계 (js/boundary.js). 행정동 선은 동 표시가 나오기 전(말풍선 수준)에서만 그린다
+  mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL });
   return map;
+}
+
+// 지도를 누르면 지도 위의 창을 닫는다. 말풍선을 누른 직후의 click은 말풍선의 것이라 넘긴다 (onTap)
+function onMapClick() {
+  if (Date.now() - mapState.tappedAt > TAP_GUARD_MS) closeOverlays();
 }
 
 // 카카오맵이 왼쪽 아래에 그리는 축척(막대와 "100m")을 숨긴다. 축척은 목업의 것(.map-scale)을 쓴다.
@@ -230,6 +249,7 @@ async function moveToMyLocation({ quiet = false } = {}) {
   const { status, position } = await askPosition();
   if (status === 'ok') {
     showMyLocation(position);
+    mapState.focus = null; // 고른 구·동을 떠나 내 주변을 본다
     // 천천히 옮겨 가지 않고 화면이 바뀌듯 한 번에 그 자리로 간다. 아파트가 보이는 수준까지 가까이
     mapState.map.setCenter(toLatLng(position));
     mapState.map.setLevel(MY_LOCATION_LEVEL);
@@ -320,8 +340,13 @@ function basisText() {
 // 지역 버튼의 글자. "서구 치평동", 구 전체면 "서구 전체"
 function renderRegionName() {
   const { gu, dong } = mapState.region;
-  const name = mapState.mode === 'gu' ? ALL_GU_NAME : dong ? `${gu} ${dong}` : `${gu} 전체`;
+  // 구 표시 수준이어도 구를 골라 그 구 전체에 맞춘 것이면 그 구를 그대로 보여 준다
+  const allGu = mapState.mode === 'gu' && !(mapState.focus && mapState.focus.gu === gu && !mapState.focus.dong);
+  const name = allGu ? ALL_GU_NAME : dong ? `${gu} ${dong}` : `${gu} 전체`;
   document.getElementById('region-name').textContent = name;
+  // 경계 강조는 구·동을 골라 그 지역에 맞춰 옮겼을 때만 (mapState.focus). 손으로 옮기며 볼 때는 경계 선만 보인다
+  const picked = mapState.focus && mapState.focus.gu === gu && (mapState.focus.dong || null) === (dong || null);
+  mapBoundary.select(!allGu && picked ? { gu, dong } : null);
 }
 
 // 말풍선 B의 모양. Figma 부품 "말풍선 (아파트 표시)" 모양=B 단색의 벡터 경로(2034:40)를 그대로 옮겼다.
@@ -440,6 +465,44 @@ function renderMarkers() {
   });
 }
 
+// ───────── 고른 동의 아파트 수 ─────────
+// 지금은 화면에 달지 않는다 (2026-10-15 결정). 나중에 다시 쓰려고 함수와 모양(map.css의 .dong-label)을 남겨 둔다.
+// 다시 쓸 때는 renderMarkers의 처음(`if (!map || !data) return;` 다음)에 renderFocusLabel()을 부른다.
+// 숫자(focus.counts)는 loadData가 지금도 담아 둔다.
+// 동을 골라 그 동에 맞춰 옮기면, 동 경계의 위쪽 가운데에 "치평동 / 9곳 가능 · 전체 12곳"을 단다 (말풍선을 가리지 않게).
+// 숫자는 그 동으로 받은 A-05의 counts다 (가능 = 지금 가능 + 기간 내 가능, 동 표시의 숫자와 같다. 전체는 자금 부족도 센다).
+// 고른 상태가 이어지는 동안(6 이하, 그 동 안) 달려 있고, 손으로 7 이상으로 넓히거나 다른 동으로 끌면 뗀다.
+// 말풍선보다 아래(zIndex 1)에 둔다.
+function renderFocusLabel() {
+  const { focus, map } = mapState;
+  // 숫자는 그 동으로 받은 때의 것(focus.counts)을 쓴다. 고른 동 안에서 더 확대해 영역으로 받아도 동의 숫자는 그대로다.
+  // 조건이나 거르기가 바뀌었는데 아직 그 동으로 다시 받지 않았으면 숫자가 맞지 않으므로 달지 않는다.
+  const show = focus && focus.kind === 'dong' && focus.counts && focus.countsKey === countsKey() &&
+    markerMode() === 'apartment';
+  const area = show ? mapBoundary.boundsOf(focus.gu, focus.dong) : null;
+  if (!area) {
+    if (mapState.focusLabel) mapState.focusLabel.setMap(null);
+    return;
+  }
+  const { now, within, total } = focus.counts;
+  const label = document.createElement('div');
+  label.className = 'dong-label';
+  label.setAttribute('role', 'status');
+  const name = document.createElement('span');
+  name.className = 'dong-label__name';
+  name.textContent = focus.dong;
+  const count = document.createElement('span');
+  count.className = 'dong-label__count';
+  count.textContent = `${format.comma(now + within)}곳 가능 · 전체 ${format.comma(total)}곳`;
+  label.append(name, count);
+  if (!mapState.focusLabel) {
+    mapState.focusLabel = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1, zIndex: 1, clickable: false });
+  }
+  mapState.focusLabel.setContent(label);
+  mapState.focusLabel.setPosition(new kakao.maps.LatLng(area.north, (area.west + area.east) / 2));
+  mapState.focusLabel.setMap(map);
+}
+
 // ───────── 가까이 볼 때: 겹치는 말풍선 묶기 ─────────
 // 말풍선끼리 많이 겹치면 맨 앞의 하나만 그리고 "+3"처럼 가려진 수를 적는다.
 //   - 앞에 오는 순서는 서버가 준 순서다 (지금 가능 → 기간 내 가능 → 자금 부족). 고른 아파트는 늘 앞에 온다.
@@ -521,8 +584,56 @@ function openGroup(group) {
 // 숫자는 그 동에서 목표할 수 있는 아파트 수(지금 가능 + 기간 내 가능)다. 0곳이면 점선 테두리로 그린다.
 
 // 확대 수준에 따라 그릴 표시. 가까이 보면 말풍선, 넓게 보면 동 표시, 더 넓게 보면 구 표시
+// 고른 지역의 예외가 이 확대 수준에서도 이어지는가
+//   동: 6 이하(말풍선)   구: 7 이상(구 표시)   구 표시 누름: 5 ~ 6(동 표시)
+function focusHolds(level) {
+  const { kind } = mapState.focus || {};
+  if (kind === 'dong') return level <= DONG_FIT_MAX_LEVEL;
+  if (kind === 'gu') return level >= GU_MARKER_LEVEL;
+  if (kind === 'drill') return level >= DONG_MARKER_LEVEL && level < GU_MARKER_LEVEL;
+  return false;
+}
+
+// 동을 골라 그 동만 보는 중인가 (확대 수준과 상관없이. 고른 상태는 focusHolds와 centerInFocus가 푼다)
+const focusDong = () => Boolean(mapState.focus && mapState.focus.kind === 'dong');
+
+// 고른 동의 아파트로 다시 받는다 (영역으로 받은 자료를 갖고 있을 때)
+function reloadFocusDong() {
+  const { focus } = mapState;
+  useRegion();
+  mapState.region = { gu: focus.gu, dong: focus.dong };
+  store.set('map', { ...mapState.region });
+  loadData();
+}
+
+// 지도 가운데가 고른 동의 경계 안인가. 경계를 모르면 안으로 본다
+function centerInFocus() {
+  const { focus, map } = mapState;
+  if (!focus || !focus.dong) return true;
+  const center = map.getCenter();
+  const inside = mapBoundary.contains(focus.gu, focus.dong, center.getLat(), center.getLng());
+  return inside !== false; // 경계를 모르면(null) 안으로 본다
+}
+
+// 고른 동의 예외(5 ~ 6에 그 동의 수만)가 풀렸을 때, 지도 가운데의 구 전체를 받아 동 표시로 그린다.
+// 말풍선이 사라지므로 열린 아파트 창은 닫는다 (onZoomChanged와 같다)
+function leaveToDongMarkers() {
+  if (sheet.mode === 'apartment') {
+    selectMarker(null);
+    sheet.close();
+  }
+  const near = nearestDong();
+  useRegion();
+  mapState.region = { gu: near ? near.gu : mapState.region.gu, dong: null };
+  store.set('map', { ...mapState.region });
+  loadData();
+}
+
 function markerMode() {
   const level = mapState.map ? mapState.map.getLevel() : DONG_LEVEL;
+  // 고른 동 전체에 맞춰 6까지 줄였으면 그 동의 말풍선을 그대로 보여 준다
+  const { focus } = mapState;
+  if (focus && focus.kind === 'dong' && level <= DONG_FIT_MAX_LEVEL) return 'apartment';
   if (level >= GU_MARKER_LEVEL) return 'gu';
   return level >= DONG_MARKER_LEVEL ? 'dong' : 'apartment';
 }
@@ -624,10 +735,13 @@ function nearestGu() {
 // 확대 수준이 바뀌어 그릴 표시(말풍선, 동, 구)가 달라질 때 다시 그린다.
 function onZoomChanged() {
   if (!mapState.data) return;
-  const next = markerMode();
-  const before = mapState.mode;
   // 손으로 확대·축소했는가. 코드가 한 것(지역 이동, 동 표시 누름, 묶음 풀기)은 스스로 자료를 받는다.
   const byHand = Date.now() >= mapState.quietUntil;
+  // 손으로 확대·축소해 고른 단계를 벗어나면 예외를 풀고 원래 규칙으로 그린다.
+  // 고른 단계 안에서 움직이면(동을 고른 뒤 더 확대 등) 그대로 둔다. 그래야 동을 고른 뒤 확대해도 동 표시로 바뀌지 않는다
+  if (byHand && mapState.focus && !focusHolds(mapState.map.getLevel())) mapState.focus = null;
+  const next = markerMode();
+  const before = mapState.mode;
   if (next === before) {
     // 말풍선을 보는 채로 확대·축소하면 보이는 영역이 달라진다
     if (next === 'apartment' && byHand) scheduleBoundsLoad();
@@ -647,8 +761,9 @@ function onZoomChanged() {
     sheet.close();
   }
 
-  // 구 표시를 보다가 가까이 가면, 지도 가운데에서 가장 가까운 구의 아파트를 받아 보여 준다.
-  if (before === 'gu') {
+  // 구 표시를 보다가 손으로 가까이 가면, 지도 가운데에서 가장 가까운 구의 아파트를 받아 보여 준다.
+  // 코드가 옮긴 것(구·동 선택, 구 표시 누름)은 고른 지역이 있으므로 바꾸지 않는다.
+  if (before === 'gu' && byHand) {
     const gu = nearestGu();
     if (gu !== mapState.region.gu || mapState.region.dong !== null) {
       mapState.byBounds = false;
@@ -1197,6 +1312,8 @@ const insideBounds = (area, apartment) =>
 
 // 받아 둔 자료가 지금의 입력, 조건, 정렬로 받은 것인지 견주는 글자
 const requestKey = () => JSON.stringify([guard.conditions(), currentFilters(), currentSort()]);
+// 고른 동의 숫자가 달라지는 것(조건과 거르기). 정렬은 숫자를 바꾸지 않는다
+const countsKey = () => JSON.stringify([guard.conditions(), currentFilters()]);
 
 // 목록에 그릴 자료. 영역으로 받았으면 보이는 영역 안의 아파트만 남기고 개수를 다시 센다. 순서는 서버가 준 그대로다.
 function visibleData() {
@@ -1263,7 +1380,7 @@ function preloadAround() {
 // 지도를 끌기 시작할 때: 미리 받아 둔 주변이 있으면 바로 그린다. 고른 아파트는 그대로 둔다.
 function adoptPreload() {
   const { preload } = mapState;
-  if (mapState.byBounds || !preload || markerMode() !== 'apartment' || preload.key !== requestKey()) return;
+  if (focusDong() || mapState.byBounds || !preload || markerMode() !== 'apartment' || preload.key !== requestKey()) return;
   const selected = mapState.selectedId;
   mapState.byBounds = true;
   mapState.data = preload.data;
@@ -1283,7 +1400,24 @@ function scheduleBoundsLoad(wait = BOUNDS_WAIT) {
 // 받아 둔 영역 안에 여유 있게 있으면 다시 받지 않고 목록만 보이는 곳에 맞춘다.
 function loadByBounds() {
   const view = mapBounds();
-  if (!mapState.map || markerMode() !== 'apartment' || !view) return;
+  if (!mapState.map || !view) return;
+  const { focus } = mapState;
+  if (focus && focus.kind === 'dong' && !centerInFocus()) {
+    // 고른 동 밖으로 끌었다. 고른 상태를 풀고 원래 규칙(5 ~ 6은 동 표시)으로 돌아간다
+    mapState.focus = null;
+    if (markerMode() !== 'apartment') {
+      leaveToDongMarkers();
+      return;
+    }
+  }
+  // 말풍선 수준이 아니면(동·구 표시, 고른 동의 수만) 영역으로 받지 않는다
+  if (markerMode() !== 'apartment') return;
+  // 동을 고른 동안은 그 동 안에서 끌고 확대해도 그 동의 아파트만 보여 준다 (2026-10-15 결정).
+  // 보이는 영역으로 받지 않는다. 받으면 이웃 동의 말풍선까지 나온다
+  if (focusDong()) {
+    if (mapState.byBounds) reloadFocusDong();
+    return;
+  }
   const near = nearestDong();
   if (near) {
     mapState.region = near;
@@ -1318,7 +1452,12 @@ async function loadData() {
     mapState.loadFailed = false;
     mapState.loadedBounds = where.bounds || null;
     mapState.preload = null;
-    if (!where.bounds) preloadAround();
+    const { focus } = mapState;
+    if (focus && focus.kind === 'dong' && where.dong === focus.dong && where.gu === focus.gu) {
+      focus.counts = data.counts; // 고른 동의 아파트 수 (renderFocusLabel)
+      focus.countsKey = countsKey();
+    }
+    if (!where.bounds && !focusDong()) preloadAround(); // 고른 동은 이웃을 미리 받지 않는다
   } catch (error) {
     if (mine !== mapState.loadSeq) return;
     // 서버가 값을 거부했으면(422) 그 문장을, 아니면 불러오지 못했다는 문장을 보여 준다.
@@ -1343,13 +1482,87 @@ async function loadData() {
   syncApartmentSheet();
 }
 
-// 지도를 그 지역으로 옮긴다. 좌표가 없는 지역이면 옮기지 않는다.
+// ───────── 고른 지역 전체를 한 화면에 (2026-10-15) ─────────
+
+// 지도 위에 떠 있는 것(검색 줄, 조건 칩)에 가리지 않는 지도의 영역 { top, right, bottom, left } (px, #kakao-map 기준)
+function viewPadding() {
+  const box = document.getElementById('kakao-map').getBoundingClientRect();
+  const chips = document.querySelector('.chip-row');
+  const top = chips ? Math.max(0, chips.getBoundingClientRect().bottom - box.top) : 0;
+  return { top: top + FIT_PAD, right: FIT_PAD, bottom: FIT_PAD, left: FIT_PAD };
+}
+
+// 그 지역 전체가 들어오는 확대 수준과, 경계의 가운데 { center, level, focus }. 경계 자료가 없으면 null.
+//   focus: 지역의 가운데가 와야 할 화면의 점 (가려진 위쪽을 뺀 영역의 가운데)
+//   maxLevel: 이보다 넓게 보지 않는다
+// 맞출 범위 { south, west, north, east }. 동은 그 동의 경계, 구는 그 구에서 아파트가 있는 동들의 경계를 합친 범위
+// (구·동 목록 A-02에 나오는 동만 아파트가 있다). 경계 자료가 없으면 null
+function regionArea({ gu, dong }) {
+  if (dong) return mapBoundary.boundsOf(gu, dong);
+  const region = mapState.regions.find((item) => item.gu === gu);
+  const boxes = (region ? region.dongs : []).map((item) => mapBoundary.boundsOf(gu, item.dong)).filter(Boolean);
+  if (boxes.length === 0) return mapBoundary.boundsOf(gu, null); // 법정동이 아직 안 왔으면 구 경계 전체
+  return {
+    south: Math.min(...boxes.map((b) => b.south)),
+    west: Math.min(...boxes.map((b) => b.west)),
+    north: Math.max(...boxes.map((b) => b.north)),
+    east: Math.max(...boxes.map((b) => b.east)),
+  };
+}
+
+// 그 범위가 들어오는 확대 수준(levels 안에서)과 범위의 가운데 { center, level, focus }. 경계 자료가 없으면 null.
+//   focus: 범위의 가운데가 와야 할 화면의 점 (가려진 위쪽을 뺀 영역의 가운데)
+//   drill: 구 표시를 눌렀다 (구의 범위를 동 표시로 본다)
+function regionFit(region, drill = false) {
+  const area = regionArea(region);
+  const { map } = mapState;
+  if (!area || !map) return null;
+  const [minLevel, maxLevel] = region.dong ? FIT_LEVELS.dong : drill ? FIT_LEVELS.drill : FIT_LEVELS.gu;
+  const box = document.getElementById('kakao-map');
+  const pad = viewPadding();
+  const width = box.clientWidth - pad.left - pad.right;
+  const height = box.clientHeight - pad.top - pad.bottom;
+  if (width <= 0 || height <= 0) return null;
+  const projection = map.getProjection();
+  const sw = projection.containerPointFromCoords(new kakao.maps.LatLng(area.south, area.west));
+  const ne = projection.containerPointFromCoords(new kakao.maps.LatLng(area.north, area.east));
+  // 지금 수준에서의 범위 크기(px)가 쓸 수 있는 영역의 몇 배인가. 수준이 하나 올라가면 반으로 준다
+  const ratio = Math.max(Math.abs(ne.x - sw.x) / width, Math.abs(sw.y - ne.y) / height);
+  const needed = map.getLevel() + Math.ceil(Math.log2(Math.max(ratio, 1e-6)) - 1e-9);
+  const level = Math.min(Math.max(needed, minLevel, MIN_LEVEL), maxLevel, MAX_LEVEL);
+  const center = new kakao.maps.LatLng((area.south + area.north) / 2, (area.west + area.east) / 2);
+  return { center, level, focus: { x: pad.left + width / 2, y: pad.top + height / 2 } };
+}
+
+// 지금 수준에서, 지역의 가운데(center)가 화면의 focus 점에 오게 하려면 지도 가운데에 둘 좌표
+function centerFor(center, focus) {
+  const { map } = mapState;
+  const box = document.getElementById('kakao-map');
+  const point = map.getProjection().containerPointFromCoords(center);
+  return map.getProjection().coordsFromContainerPoint(
+    new kakao.maps.Point(point.x - focus.x + box.clientWidth / 2, point.y - focus.y + box.clientHeight / 2),
+  );
+}
+
+// 지도를 그 지역으로 옮긴다. 경계 자료가 있으면 그 지역 전체가 들어오게, 없으면 아파트 좌표의 평균으로 (예전과 같다).
 function panToRegion() {
-  const center = regionCenter(mapState.region);
-  if (!mapState.map || !center) return;
+  const { map } = mapState;
+  if (!map) return;
+  const fit = regionFit(mapState.region);
   quietZoom(500);
-  mapState.map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
-  mapState.map.setCenter(toLatLng(center));
+  if (fit) {
+    mapState.focus = { ...mapState.region, kind: mapState.region.dong ? 'dong' : 'gu' };
+    map.setCenter(fit.center); // 가운데를 먼저 옮긴 뒤 확대 수준을 바꾼다 (바뀌는 동안에도 그 지역을 보고 있게)
+    map.setLevel(fit.level);
+    map.setCenter(centerFor(fit.center, fit.focus));
+    return;
+  }
+  // 경계로 맞추지 못했으면 동의 예외는 풀고 원래 규칙으로. 구는 구 표시 수준(7)이라 고른 구로 둔다 (지역 버튼 "북구 전체")
+  mapState.focus = mapState.region.dong ? null : { ...mapState.region, kind: 'gu' };
+  const center = regionCenter(mapState.region);
+  if (!center) return;
+  map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
+  map.setCenter(toLatLng(center));
 }
 
 // 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
@@ -1376,37 +1589,57 @@ function closeOverlays() {
 // 동이면 말풍선이 보이는 수준(5), 구면 동 표시가 보이는 수준(7)까지 간다.
 // 확대가 끝나면 zoom_changed가 표시를 바꿔 그린다. 아파트는 확대하는 동안 받아 둔다.
 async function zoomToRegion({ gu, dong }) {
-  const center = regionCenter({ gu, dong });
+  const drill = !dong; // 구 표시를 눌렀다
+  const fit = regionFit({ gu, dong }, drill);
+  const center = fit ? null : regionCenter({ gu, dong });
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!center || still) {
-    await moveToRegion({ gu, dong }); // 자리를 모르거나 움직임을 줄이도록 설정했으면 바로 옮긴다
+  if ((!fit && !center) || still || (fit && fit.level >= mapState.map.getLevel())) {
+    // 자리를 모르거나, 움직임을 줄이도록 설정했거나, 더 넓게 봐야 하면(확대가 아님) 바로 옮긴다
+    if (fit && drill) {
+      // 구 표시를 눌렀을 때는 동 표시(5 ~ 6)로 본다. moveToRegion은 구 표시(7 ~ 8)로 맞추므로 여기서 맞춘다
+      useRegion();
+      mapState.region = { gu, dong };
+      store.set('map', { gu, dong });
+      renderRegionName();
+      quietZoom(500);
+      mapState.focus = { gu, dong, kind: 'drill' };
+      mapState.map.setCenter(fit.center);
+      mapState.map.setLevel(fit.level);
+      mapState.map.setCenter(centerFor(fit.center, fit.focus));
+      await loadData();
+      return;
+    }
+    await moveToRegion({ gu, dong });
     return;
   }
   useRegion();
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
+  mapState.focus = fit ? { gu, dong, kind: dong ? 'dong' : 'drill' } : null;
   quietZoom(ZOOM_MS + 400);
   const { map } = mapState;
-  const target = toLatLng(center);
-  const level = dong ? DONG_LEVEL : GU_LEVEL;
+  const target = fit ? fit.center : toLatLng(center);
+  // 경계가 없을 때: 동 표시를 누르면 말풍선(4), 구 표시를 누르면 동 표시(6)로 내려가 본다
+  const level = fit ? fit.level : dong ? DONG_LEVEL : GU_MARKER_LEVEL - 1;
+  const box = document.getElementById('kakao-map');
+  // 지역이 와야 할 화면의 점. 경계로 맞출 때는 가려진 위쪽을 뺀 영역의 가운데, 아니면 화면 가운데
+  const middle = fit ? fit.focus : { x: box.clientWidth / 2, y: box.clientHeight / 2 };
   const scale = 2 ** (map.getLevel() - level); // 확대되는 배율. 수준이 하나 내려가면 두 배다
   if (scale <= 1) {
-    map.panTo(target); // 이미 가까이 보고 있으면 옮기기만 한다
+    map.panTo(fit ? centerFor(target, middle) : target); // 이미 그 수준이면 옮기기만 한다
   } else {
     // 카카오맵은 "한 점을 붙잡고 확대"만 할 수 있다. 그래서 붙잡을 점을 계산한다.
     // 화면의 점 a를 붙잡고 scale배 확대하면, 화면의 점 p는 a + scale × (p − a)로 간다.
-    // 그 지역(p)이 화면 가운데(c)로 가려면 a = (scale × p − c) ÷ (scale − 1)을 붙잡으면 된다.
+    // 그 지역(p)이 화면의 점 c로 가려면 a = (scale × p − c) ÷ (scale − 1)을 붙잡으면 된다.
     const projection = map.getProjection();
     const point = projection.containerPointFromCoords(target);
-    const box = document.getElementById('kakao-map');
-    const middle = { x: box.clientWidth / 2, y: box.clientHeight / 2 };
     const anchor = projection.coordsFromContainerPoint(
       new kakao.maps.Point((scale * point.x - middle.x) / (scale - 1), (scale * point.y - middle.y) / (scale - 1)),
     );
     map.setLevel(level, { anchor, animate: { duration: ZOOM_MS } });
     // 계산의 반올림으로 조금 어긋난 것을 끝난 뒤에 맞춘다.
     setTimeout(() => {
-      if (mapState.region.gu === gu && mapState.region.dong === dong) map.panTo(target);
+      if (mapState.region.gu === gu && mapState.region.dong === dong) map.panTo(fit ? centerFor(target, middle) : target);
     }, ZOOM_MS + 80);
   }
   await loadData();
@@ -1432,6 +1665,23 @@ async function startKakaoMap() {
   panToRegion();
   renderMarkers();
   renderScale();
+  refitWhenBdongArrives();
+}
+
+// 새로 고쳤을 때 보관된 동이 있으면, 법정동 경계는 뒤에서 오므로 처음에는 예전 방식(아파트 좌표, 4)으로 옮겨진다.
+// 법정동이 오면 그 동 전체에 다시 맞춘다. 그사이 사용자가 지도를 움직였거나 다른 지역을 골랐으면 그대로 둔다.
+function refitWhenBdongArrives() {
+  const { map, region } = mapState;
+  if (!map || !region.dong || mapState.focus) return;
+  const level = map.getLevel();
+  const center = map.getCenter();
+  mapBoundary.bdongReady().then((ok) => {
+    const now = map.getCenter();
+    const still = map.getLevel() === level && now.getLat() === center.getLat() && now.getLng() === center.getLng();
+    if (!ok || !still || mapState.focus || mapState.region.gu !== region.gu || mapState.region.dong !== region.dong) return;
+    panToRegion();
+    renderMarkers();
+  });
 }
 
 async function initMap() {

@@ -20,6 +20,27 @@ const AUTH_TEXT = {
   passwordSame: '비밀번호가 같습니다',
 };
 
+// 로그인한 뒤 돌아갈 화면. login.html?next=saved.html 처럼 부른 화면이 주소로 넘긴다.
+// 우리 화면 이름(영문·숫자·-, .html, 뒤에 ?값)만 받는다. 바깥 주소(https://…, //…)는 버린다 (다른 사이트로 보내지 않게).
+// 로그인·가입 화면 자신도 받지 않는다. 회원가입으로 넘어갔다 와도 이어지게 두 화면의 링크에 붙여 둔다.
+const AUTH_NEXT_PATTERN = /^[a-z0-9-]+\.html(\?[^#]*)?$/i;
+
+function nextPage() {
+  const next = new URLSearchParams(location.search).get('next');
+  if (!next || !AUTH_NEXT_PATTERN.test(next)) return null;
+  if (/^(login|signup)\.html/i.test(next)) return null;
+  return next;
+}
+
+// 로그인·가입 화면 사이의 링크에 next를 이어 붙인다
+function keepNext(selector) {
+  const next = nextPage();
+  if (!next) return;
+  document.querySelectorAll(selector).forEach((link) => {
+    link.href = `${link.getAttribute('href')}?next=${encodeURIComponent(next)}`;
+  });
+}
+
 // 아이디 기억하기 쿠키. 아이디만 둔다. 끄고 로그인하면 지운다
 const REMEMBER_COOKIE = 'mth_remember_id';
 const REMEMBER_DAYS = 30;
@@ -150,8 +171,9 @@ function initLogin() {
       // 로그인에 성공했을 때만 기억한다. 꺼져 있으면 전에 기억한 아이디도 지운다
       if (remember.checked) rememberedId.set(idInput.value);
       else rememberedId.clear();
-      // 저장하려다 왔으면 지도로(저장은 scenario.js가 이어서 한다), 아니면 시작 화면의 로그인 상태로 (P-01 ②, ③)
-      location.href = pendingSave ? 'map.html' : 'index.html';
+      // 저장하려다 왔으면 지도로(저장은 scenario.js가 이어서 한다). 돌아갈 화면(next)이 있으면 그 화면으로.
+      // 둘 다 아니면 시작 화면의 로그인 상태로 (P-01 ②, ③)
+      location.href = pendingSave ? 'map.html' : (nextPage() || 'index.html');
       return;
     } catch (error) {
       // 넣은 값은 지우지 않는다. 어느 쪽이 틀렸는지 구분하지 않는다 (P-07 ②)
@@ -348,7 +370,7 @@ function initSignup() {
     document.querySelector('.auth-nav').hidden = true;
     document.getElementById('signup-done-text').textContent =
       `${loginId}님, 이제 입력한 정보를 저장해 다음에 이어서 볼 수 있습니다.`;
-    document.getElementById('signup-start').href = store.get('place').pending_save ? 'map.html' : guard.resumePage();
+    document.getElementById('signup-start').href = store.get('place').pending_save ? 'map.html' : (nextPage() || guard.resumePage());
     document.getElementById('signup-done').hidden = false;
     document.getElementById('signup-start').focus();
   }
@@ -359,5 +381,6 @@ function initSignup() {
 }
 
 bindBack();
+keepNext('a[href="signup.html"], a[href="login.html"]');
 if (document.body.dataset.page === 'login') initLogin();
 if (document.body.dataset.page === 'signup') initSignup();
