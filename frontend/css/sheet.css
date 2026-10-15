@@ -42,10 +42,18 @@
   border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
   background: var(--color-bg);
   box-shadow: var(--shadow-sheet);
-  /* 단계가 바뀔 때 높이가 0.6초 동안 바뀐다 (30% → 80% → 전체 → 30%) */
+  /* 단계가 바뀔 때 높이가 0.6초 동안 바뀐다 (30% → 80% → 전체 → 30%).
+     끌다가 떼면 손을 뗀 자리에서 출발한다. 30%보다 내려 끌었다가 떼면 위치(transform)도 돌아온다 */
   transition:
     height var(--sheet-duration) var(--sheet-ease-up),
+    transform var(--sheet-duration) var(--sheet-ease-up),
     border-radius var(--sheet-duration) var(--sheet-ease-up);
+}
+
+/* 끄는 중 (sheet.js가 붙였다 뗀다). 높이와 위치는 sheet.js가 손가락에 맞춰 바로 적는다 */
+.sheet--dragging {
+  transition: none;
+  user-select: none;
 }
 
 /* 80%: 지도 영역(.map-app에서 내 조건 줄을 뺀 높이)의 80%. 390 × 844에서 643, 지도가 161 남는다 (140 이상) */
@@ -78,9 +86,10 @@
   }
 }
 
+/* 아래로 길게 끌어 닫으면 손을 뗀 자리(--sheet-drag-y)에서 이어서 내려간다 */
 @keyframes sheet-down {
   from {
-    transform: translateY(0);
+    transform: translateY(var(--sheet-drag-y, 0px));
   }
   to {
     transform: translateY(100%);
@@ -99,7 +108,7 @@
   }
 }
 
-/* 손잡이. 1차에는 누르면 다음 단계로 바뀐다 (sheet.js).
+/* 손잡이. 누르면 다음 단계로 바뀌고, 위아래로 끌 수 있다 (sheet.js).
    보이는 막대는 40 × 5, 위에서 10px. 버튼은 막대 아래 머리까지의 빈자리(30%에서 33px)를 다 쓴다.
    누르는 영역이 44 이상이 되도록 위로 11px 넓힌다. */
 .sheet__handle {
@@ -112,7 +121,20 @@
   padding: 10px 0 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none; /* 끄는 동안 페이지가 당겨지거나 움직이지 않게 한다 (화면 설계서 7.6) */
+}
+
+/* 머리 부분도 위아래로 끈다 (화면 설계서 7.1). 아파트 창의 머리, 김목산의 list.js가 그리는 목록의 머리.
+   위아래 손동작은 sheet.js가 받고, 옆으로 미는 것(면적 줄의 스크롤)은 브라우저에 둔다 */
+.sheet .apt__head,
+.sheet .list__head {
+  touch-action: pan-x;
+}
+
+.sheet--dragging,
+.sheet--dragging .sheet__handle {
+  cursor: grabbing;
 }
 
 .sheet__handle::after {
@@ -132,6 +154,59 @@
   height: 5px;
   border-radius: 3px;
   background: var(--color-line-strong);
+}
+
+/* 로드뷰 (3차, 목업 C6 4022:1205, C6b 4022:1356). apartment.js가 손잡이 앞(창 맨 위)에 넣는다.
+   아파트 정보 탭을 전체로 올렸을 때만 보인다.
+   모양은 로드뷰 시안 ② "꽉 채우기"(Figma 4077:1252, 2026-10-15 세환이 정함): 여백 없이 창 폭 전체를 채운다.
+   가로:세로는 황금비 1.618 : 1 (390 폭에서 241). 손잡이와는 8 떨어진다 */
+.apt-roadview {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 1.618 / 1;
+  margin: 0 0 8px;
+  overflow: hidden;
+  background: var(--color-bg-sub);
+}
+
+.apt-roadview[hidden] {
+  display: none;
+}
+
+.apt-roadview__view {
+  position: absolute;
+  inset: 0;
+}
+
+/* 로드뷰가 없을 때의 기본 이미지: 가운데에 집 그림(44)과 문장, 사이 8 (C6b) */
+.apt-roadview__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 var(--page-padding);
+  color: var(--color-text-sub);
+  text-align: center;
+}
+
+.apt-roadview__view[hidden],
+.apt-roadview__empty[hidden] {
+  display: none;
+}
+
+.apt-roadview__icon {
+  width: 44px;
+  height: 44px;
+}
+
+.apt-roadview__text {
+  margin: 0;
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height);
 }
 
 /* 목록 자리 (김목산의 list.js가 그린다). 내용만 스크롤된다 */

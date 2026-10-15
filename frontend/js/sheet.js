@@ -9,9 +9,20 @@
 //   '80'   지도 영역의 80% (390 × 844에서 643). 목록 보기, 목록의 카드, 30%에서 손잡이
 //   'full' 내 조건 줄 바로 아래부터. 80%에서 손잡이
 //
-// 1차에는 손잡이를 누르면 다음 단계로 바뀐다. 30% → 80% → 전체 → 30% (전체에서 누르면 30%. 2026-10-13 세환이 정함).
-// 끌어서 키우고 줄이는 것은 2차다 (FR-MAP-17).
-// 닫기 버튼과 브라우저의 뒤로 가기로 닫는다. 뒤로 가기는 페이지를 떠나지 않고 창만 닫는다 (화면 설계서 7.1).
+// 손잡이를 누르면 다음 단계로 바뀐다. 30% → 80% → 전체 → 30% (전체에서 누르면 30%. 2026-10-13 세환이 정함).
+// 닫기 버튼, 아래로 길게 끌기, 브라우저의 뒤로 가기로 닫는다. 뒤로 가기는 페이지를 떠나지 않고 창만 닫는다 (화면 설계서 7.1).
+//
+// 끌기 (FR-MAP-17, T-MAP-17, 화면 설계서 7.1과 7.6)
+//   손잡이와 머리 부분(아파트 창의 머리, 목록의 머리)을 위아래로 끈다. 내용 영역은 스크롤만 된다.
+//   8px 넘게 움직여야 끌기다. 그보다 적으면 누르기라서 손잡이와 머리의 버튼이 그대로 눌린다.
+//   옆으로 더 많이 움직이면 끌기가 아니다 (좌우로 밀어 넘기기는 따로다. FR-MAP-18).
+//   끄는 동안 창의 높이가 손가락을 따라온다. 전체보다 높이 올라가지 않는다.
+//   30%보다 아래로 끌면 창이 그 높이 그대로 내려간다.
+//   손을 떼면
+//     30%보다 100px 넘게 내렸으면 닫는다 ("아래로 길게 끌어 닫는다")
+//     빠르게 튕겼으면(1초에 500px 이상) 튕긴 쪽의 다음 단계로 간다
+//     그 밖에는 가장 가까운 단계로 간다
+//   끄는 동안 지도는 건드리지 않는다. 다른 단계로 가면 손잡이를 누른 것과 같이 맞추고, 처음 단계로 돌아오면 지도는 그대로다.
 //
 // 움직임 (0.6초, sheet.css의 --sheet-duration)
 //   열 때는 아래에서 올라오고, 닫을 때는 아래로 내려간다.
@@ -25,6 +36,7 @@
 //   'opening'  올라오는 중
 //   'open'     열림 (단계가 바뀌는 중이면 moving이 true)
 //   'closing'  내려가는 중
+//   끄는 동안은 'open'이고 moving과 dragging이 true다.
 //
 // 여기서는 속성만 바꾼다. 모양은 sheet.css가 맡는다.
 //   .sheet[data-stage]        창의 높이와 창 안의 내용
@@ -36,6 +48,7 @@
 //   sheet.close()                   닫는다 (뒤로 가기와 같다)
 //   sheet.onChange(() => {})        상태가 바뀔 때마다 부른다. sheet.phase, stage, mode, moving을 읽는다
 //   sheet.targetHeight()            지금 단계의 창이 다 움직인 뒤의 높이(px)
+//   sheet.stageHeight('80')         그 단계의 창 높이(px)
 //
 // 예외 화면. 언제 띄울지는 아는 쪽(map-view.js)이 정해서 부른다. 이 파일은 보여 주기만 한다.
 //   sheet.showEmpty()                         결과 없음 (P-05 ⑨). 목록을 30%로 연다.
@@ -49,12 +62,22 @@ const SHEET_HISTORY_KEY = 'sheet'; // history.state에 남기는 표시. 창이 
 // 단계마다 지도가 쓰는 자리의 크기 순서. 클수록 지도가 넓다. 전체 단계에서는 지도를 줄이지 않는다 (창에 다 가려진다).
 const SHEET_MAP_ROOM = { 80: 1, 30: 2, full: 3 };
 const SHEET_RATIO_80 = 0.8; // sheet.css의 80% 높이와 같은 값
+const SHEET_STAGES = ['30', '80', 'full']; // 낮은 것부터
+// 끌기 (화면 설계서 7.1, 7.6). 손잡이와 머리 부분에서만 받는다. 목록의 머리는 김목산의 list.js가 그린다.
+const SHEET_DRAG_AREA = '.sheet__handle, .apt__head, .list__head';
+const SHEET_DRAG_START = 8; // 이만큼(px) 움직여야 끌기로 본다. 그보다 적으면 누르기다
+const SHEET_CLOSE_DISTANCE = 100; // 30%보다 이만큼(px) 넘게 내리고 떼면 닫는다
+const SHEET_FLICK_SPEED = 0.5; // 1ms에 이만큼(px), 곧 1초에 500px 넘게 움직이다 떼면 튕긴 것으로 본다
+const SHEET_FLICK_TIME = 100; // 손을 떼기 전 이 시간(ms) 동안의 움직임으로 빠르기를 잰다
 
 const sheet = {
   stage: null, // '30' | '80' | 'full' | null
   mode: null, // 'list' | 'apartment' | null
   phase: 'closed', // 'closed' | 'opening' | 'open' | 'closing'
-  moving: false, // 올라오거나 높이가 바뀌는 중인가
+  moving: false, // 올라오거나 높이가 바뀌는 중인가 (끄는 중에도 true)
+  dragging: false, // 손잡이나 머리를 끄는 중인가
+  dragFrom: null, // 끌기를 시작한 단계 (단계를 바꾸던 중에 잡았으면 null)
+  suppressClick: false, // 끌기를 막 끝냈다. 손을 뗄 때 생기는 누르기를 버린다
   mapStage: null, // 지도가 지금 맞춰져 있는 단계. null이면 지도가 화면을 다 쓴다
   timer: null,
   listeners: [],
@@ -71,6 +94,7 @@ const sheet = {
 
     // 창이 열린 채로 새로 고치면 기록에 표시가 남아 있다. 창은 닫힌 채로 시작하므로 표시를 지운다.
     if (sheet.isOwnHistory()) history.replaceState(null, '');
+    sheet.initDrag();
     sheet.apply();
   },
 
@@ -89,9 +113,14 @@ const sheet = {
 
   // 지금 단계의 창이 다 움직인 뒤의 높이(px). 움직이는 동안의 높이가 아니다.
   targetHeight() {
+    return sheet.stageHeight(sheet.stage);
+  },
+
+  // 그 단계의 창 높이(px). sheet.css의 높이와 같은 값이다.
+  stageHeight(stage) {
     const area = document.querySelector('.map-area').clientHeight;
-    if (sheet.stage === '30') return parseFloat(getComputedStyle(document.body).getPropertyValue('--sheet-height-30'));
-    if (sheet.stage === '80') return area * SHEET_RATIO_80;
+    if (stage === '30') return parseFloat(getComputedStyle(document.body).getPropertyValue('--sheet-height-30'));
+    if (stage === '80') return area * SHEET_RATIO_80;
     return area;
   },
 
@@ -105,6 +134,7 @@ const sheet = {
       else sheet.changeStage(stage);
       return;
     }
+    sheet.clearDrag(); // 끌어 닫던 창이 다 내려가기 전에 다시 연 경우
     sheet.stage = stage;
     sheet.mode = mode;
     sheet.phase = 'opening';
@@ -151,7 +181,155 @@ const sheet = {
       sheet.phase = 'closed';
       sheet.stage = null;
       sheet.mode = null;
+      sheet.clearDrag();
     });
+  },
+
+  // ───────── 끌기 (FR-MAP-17) ─────────
+
+  // 손잡이와 머리 부분의 누름, 움직임, 뗌을 받는다. 창 전체에서 받고 누른 곳을 본다
+  // (목록의 머리는 list.js가 다시 그릴 때마다 새로 생기기 때문이다).
+  initDrag() {
+    const box = document.getElementById('sheet');
+    let drag = null; // { id, x, y, startHeight, dragging, sideways, samples }
+
+    box.addEventListener('pointerdown', (event) => {
+      if (drag || sheet.phase !== 'open') return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (!event.target.closest(SHEET_DRAG_AREA)) return;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, startHeight: 0, dragging: false, sideways: false, samples: [] };
+    });
+
+    window.addEventListener('pointermove', (event) => {
+      if (!drag || event.pointerId !== drag.id || drag.sideways) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      if (!drag.dragging) {
+        if (Math.abs(dx) < SHEET_DRAG_START && Math.abs(dy) < SHEET_DRAG_START) return;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          drag.sideways = true; // 옆으로 민 것. 끌기도 누르기도 아니다
+          return;
+        }
+        drag.dragging = true;
+        drag.startHeight = box.getBoundingClientRect().height; // 움직이는 중이었으면 그때의 높이
+        box.setPointerCapture(event.pointerId); // 손가락이 창 밖으로 나가도 계속 받는다
+        sheet.startDrag();
+      }
+      event.preventDefault(); // 끄는 동안 글자가 골라지지 않게 한다
+      drag.samples.push({ y: event.clientY, t: event.timeStamp });
+      sheet.moveDrag(drag.startHeight - dy);
+    });
+
+    // 뗌. 누르기였으면 아무것도 하지 않는다 (버튼이 눌린다). 취소(pointercancel)는 빠르기 없이 뗀 것으로 본다.
+    const release = (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const done = drag;
+      drag = null;
+      if (!done.dragging && !done.sideways) return; // 누르기
+      sheet.suppressClick = true;
+      setTimeout(() => {
+        sheet.suppressClick = false;
+      }, 0);
+      if (!done.dragging) return; // 옆으로 민 것
+      done.samples.push({ y: event.clientY, t: event.timeStamp });
+      const speed = event.type === 'pointercancel' ? 0 : sheet.dragSpeed(done.samples);
+      sheet.endDrag(done.startHeight - (event.clientY - done.y), speed);
+    };
+    // 뗌은 페이지 전체(window)에서 받는다. 창 밖이나 화면 밖에서 떼면 창이 받지 못할 때가 있다.
+    window.addEventListener('pointerup', release, true);
+    window.addEventListener('pointercancel', release, true);
+
+    // 끌기를 끝내거나 옆으로 밀고 뗀 손이 무엇도 누르지 않게 한다.
+    // 창 밖에서 손을 떼면 누른 곳이 창 밖(내 조건 줄 등)이 되어 "바깥을 누르면 닫기"(map-view.js)가 창을 닫으므로,
+    // 창이 아니라 페이지 전체(window)에서 가장 먼저 받아 버린다.
+    window.addEventListener('click', (event) => {
+      if (!sheet.suppressClick) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  },
+
+  // 손을 떼기 전 SHEET_FLICK_TIME 동안의 빠르기(px/ms). 아래로 움직였으면 +, 위로면 -
+  dragSpeed(samples) {
+    const last = samples[samples.length - 1];
+    const recent = samples.filter((sample) => last.t - sample.t <= SHEET_FLICK_TIME);
+    const first = recent[0];
+    if (last.t - first.t <= 0) return 0;
+    return (last.y - first.y) / (last.t - first.t);
+  },
+
+  // 끌기를 시작한다. 단계를 바꾸던 중이면 멈춘다.
+  // 지도는 건드리지 않고 알리지도 않는다. 알리면 map-view.js가 고른 아파트를 가운데로 다시 옮겨서,
+  // 사용자가 옮겨 둔 지도가 끄는 순간 움직인다 (2026-10-14 확인).
+  startDrag() {
+    sheet.dragFrom = sheet.moving ? null : sheet.stage; // 단계를 바꾸던 중이었으면 null
+    clearTimeout(sheet.timer);
+    document.getElementById('sheet').classList.add('sheet--dragging');
+    sheet.dragging = true;
+    sheet.moving = true;
+  },
+
+  // 창의 높이를 손가락에 맞춘다. 전체보다 높이 가지 않는다.
+  // 30%보다 낮으면 높이는 30% 그대로 두고 창을 아래로 내린다 (안의 내용이 찌그러지지 않게).
+  moveDrag(height) {
+    const box = document.getElementById('sheet');
+    const low = sheet.stageHeight('30');
+    const h = Math.min(height, sheet.stageHeight('full'));
+    box.style.height = `${Math.max(h, low)}px`;
+    box.style.transform = h < low ? `translateY(${low - h}px)` : '';
+  },
+
+  // 손을 뗐다. 길게 내렸으면 닫고, 아니면 고른 단계로 0.6초 동안 간다 (지금 높이에서 출발한다).
+  endDrag(height, speed) {
+    const box = document.getElementById('sheet');
+    box.classList.remove('sheet--dragging');
+    sheet.dragging = false;
+    const down = sheet.stageHeight('30') - height; // 30%보다 내린 거리
+    if (down > SHEET_CLOSE_DISTANCE) {
+      // 내린 자리에서 이어서 내려가게 한다 (sheet.css의 sheet-down이 --sheet-drag-y에서 출발한다)
+      box.style.setProperty('--sheet-drag-y', `${down}px`);
+      sheet.stage = '30';
+      sheet.close();
+      return;
+    }
+    const stage = sheet.pickStage(height, speed);
+    box.style.height = '';
+    box.style.transform = '';
+    if (stage === sheet.dragFrom) {
+      // 처음 단계로 돌아간다. 높이만 0.6초 동안 돌아가고 지도는 그대로 둔다 (아무에게도 알리지 않는다)
+      sheet.moving = false;
+      return;
+    }
+    sheet.changeStage(stage); // 다른 단계로 간다. 손잡이를 누른 것과 같다 (지도도 그 단계에 맞춘다)
+  },
+
+  // 뗀 높이와 빠르기로 갈 단계를 고른다.
+  // 위로 튕겼으면 지금 높이보다 높은 첫 단계, 아래로 튕겼으면 낮은 첫 단계, 아니면 가장 가까운 단계
+  pickStage(height, speed) {
+    const heights = SHEET_STAGES.map((stage) => sheet.stageHeight(stage));
+    if (speed <= -SHEET_FLICK_SPEED) {
+      const index = heights.findIndex((h) => h > height + 1);
+      return SHEET_STAGES[index === -1 ? SHEET_STAGES.length - 1 : index];
+    }
+    if (speed >= SHEET_FLICK_SPEED) {
+      const lower = heights.filter((h) => h < height - 1).length;
+      return SHEET_STAGES[Math.max(lower - 1, 0)];
+    }
+    let best = 0;
+    heights.forEach((h, index) => {
+      if (Math.abs(h - height) < Math.abs(heights[best] - height)) best = index;
+    });
+    return SHEET_STAGES[best];
+  },
+
+  // 끌며 붙인 높이와 위치를 지운다 (sheet.css의 단계 높이로 돌아간다)
+  clearDrag() {
+    const box = document.getElementById('sheet');
+    box.classList.remove('sheet--dragging');
+    box.style.height = '';
+    box.style.transform = '';
+    box.style.removeProperty('--sheet-drag-y');
+    sheet.dragging = false;
   },
 
   // 움직임을 시작하고(className이 있으면 그 움직임을 붙인다), 끝나면 done을 부른 뒤 다시 그린다.
