@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="css/common.css?v=20261014-1">
   <!-- ?v= 는 버전 표시다. 이 화면이 부르는 CSS나 JS를 고치면 그 파일의 숫자를 올린다. 브라우저가 예전 파일을 캐시에서 꺼내 쓰지 않게 한다. -->
   <link rel="stylesheet" href="css/list.css?v=20261014-3">
-  <link rel="stylesheet" href="css/map.css?v=20261014-2">
+  <link rel="stylesheet" href="css/map.css?v=20261014-3">
   <link rel="stylesheet" href="css/sheet.css?v=20261014-7">
   <link rel="stylesheet" href="css/scenario.css?v=20261014-1">
   <link rel="stylesheet" href="css/search.css?v=20261014-1">
-  <link rel="stylesheet" href="css/filter.css?v=20261014-1">
+  <link rel="stylesheet" href="css/filter.css?v=20261014-2">
   <link rel="stylesheet" href="css/region.css?v=20261013-2">
 </head>
 <body class="map-body">
@@ -67,15 +67,12 @@
     <!-- 이름 검색 결과 (P-05 ⑭, ⑮). 검색창에 글자를 적으면 김목산의 js/search.js가 이 안에 그린다. -->
     <div id="search-results" hidden></div>
 
-    <!-- 조건 칩 줄: 면적, 가격, 준공 연도 (2차), 자금 부족 표시 스위치 -->
+    <!-- 조건 칩 줄: '조건' 버튼 하나와 넣은 조건만 칩으로 (면적, 가격, 준공 연도, 자금 부족 표시).
+         '조건'을 누르면 김목산의 js/filter.js가 세 항목과 자금 부족 스위치가 든 창을 연다 (2026-10-14 팀에서 정함).
+         넣은 조건 칩은 map-view.js의 renderChips()가 #filter-tags 안에 그린다. 글자를 누르면 창, ✕를 누르면 그 조건만 푼다 -->
     <div class="chip-row">
-      <button type="button" class="filter-chip" data-filter="area">면적 ▾</button>
-      <button type="button" class="filter-chip" data-filter="price">가격 ▾</button>
-      <button type="button" class="filter-chip" data-filter="year">준공 연도 ▾</button>
-      <button type="button" class="filter-chip filter-chip--switch" id="lack-switch" role="switch" aria-checked="false">
-        자금 부족
-        <span class="switch" aria-hidden="true"><span class="switch__knob"></span></span>
-      </button>
+      <button type="button" class="filter-chip" id="filter-open" aria-haspopup="dialog">조건 ▾</button>
+      <div class="chip-row__tags" id="filter-tags"></div>
     </div>
 
     <!-- 조건 칩 아래 검은 알림. 잠시 뒤 사라진다 (와이어프레임 P-05 ㉑, ⑪) -->
@@ -222,12 +219,12 @@
   <script src="js/layout.js"></script>
   <script src="js/account.js?v=20261014-1"></script>
   <script src="js/region.js?v=20261013-3"></script>
-  <script src="js/filter.js?v=20261014-1"></script>
+  <script src="js/filter.js?v=20261014-2"></script>
   <script src="js/search.js?v=20261014-1"></script>
   <script src="js/list.js?v=20261014-3"></script>
   <script src="js/sheet.js?v=20261013-3"></script>
   <script src="js/scenario.js?v=20261014-1"></script>
   <script src="js/apartment.js?v=20261014-1"></script>
-  <script src="js/map-view.js?v=20261014-14"></script>
+  <script src="js/map-view.js?v=20261014-15"></script>
 </body>
 </html>

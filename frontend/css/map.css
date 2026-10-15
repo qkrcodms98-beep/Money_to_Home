@@ -444,9 +444,33 @@
 .chip-row {
   position: absolute;
   top: 49px;
-  left: 12px;
+  right: 0;
+  left: 0;
   display: flex;
   gap: 6px;
+  padding: 0 12px 8px; /* 아래 8px은 칩 그림자가 잘리지 않게 */
+  overflow-x: auto; /* 넣은 조건이 많으면 옆으로 민다 */
+  scrollbar-width: none;
+  pointer-events: none; /* 칩 사이 빈 곳은 지도를 누른 것으로 */
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-row > *,
+.chip-row__tags {
+  flex: none;
+  pointer-events: auto;
+}
+
+.chip-row__tags {
+  display: flex;
+  gap: 6px;
+}
+
+.chip-row__tags:empty {
+  display: none;
 }
 
 .filter-chip {
@@ -475,37 +499,29 @@
   color: var(--color-now-text);
 }
 
-.filter-chip--switch {
-  padding-right: 6px;
+/* 넣은 조건 칩. 글자(누르면 조건 창)와 ✕(누르면 그 조건만 풂) 두 버튼 */
+.filter-tag {
+  gap: 0;
+  padding: 0;
 }
 
-/* 스위치 22 × 13. 임시 모양이다. Figma의 "스위치 켬"(2037:77)을 내보내면 맞춰 본다. */
-.switch {
-  position: relative;
-  width: 22px;
-  height: 13px;
-  border-radius: var(--radius-pill);
-  background: var(--color-line-strong);
-  transition: background 0.15s ease;
+.filter-tag__text,
+.filter-tag__remove {
+  height: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
-.switch__knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--color-bg);
-  transition: transform 0.15s ease;
+.filter-tag__text {
+  padding: 0 4px 0 13px;
 }
 
-.filter-chip--switch[aria-checked="true"] .switch {
-  background: var(--color-primary);
-}
-
-.filter-chip--switch[aria-checked="true"] .switch__knob {
-  transform: translateX(9px);
+.filter-tag__remove {
+  padding: 0 11px 0 4px;
+  font-size: var(--text-badge);
 }
 
 /* ───────── 오른쪽 아래 버튼 ───────── */

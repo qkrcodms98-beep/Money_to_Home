@@ -720,29 +720,73 @@ function renderList() {
 // ───────── 조건 창 (P-05 ②) ─────────
 // 창은 김목산의 filter.js가 그린다. 여기서는 열고, 고른 조건을 보관하고, 그 조건으로 다시 받는다.
 
-// 칩의 글자. 조건이 있으면 "면적 59~84㎡ ▾"처럼 적고 파랗게 한다. 없으면 "면적 ▾"
-const CHIP_NAMES = { area: '면적', price: '가격', year: '준공 연도' };
+// 칩 줄. '조건 ▾' 버튼 하나와, 넣은 조건만 "면적 59~84㎡ ✕"처럼 칩으로 (2026-10-14 팀에서 정함).
+// 칩의 글자를 누르면 그 항목으로 내려간 조건 창이 열리고, ✕를 누르면 그 조건만 푼다.
+const FILTER_KEYS = { area: ['area_min', 'area_max'], price: ['price_min', 'price_max'], year: ['built_year_min', 'built_year_max'] };
+const LACK_TAG = '자금 부족 표시';
+
 function renderChips() {
   const filters = currentFilters();
   const unit = store.get('map').area_unit || 'm2';
-  document.querySelectorAll('.filter-chip[data-filter]').forEach((chip) => {
-    const key = chip.dataset.filter;
+  const showLack = store.get('map').show_lack === true;
+  const tags = [];
+  Object.keys(FILTER_KEYS).forEach((key) => {
     const label = filters ? filterSheet.label(filters, key, unit) : null;
-    chip.textContent = `${label || CHIP_NAMES[key]} ▾`;
-    chip.classList.toggle('filter-chip--on', Boolean(label));
+    if (label) tags.push(filterTag(label, () => openFilters(key), () => removeFilter(key)));
   });
+  if (showLack) tags.push(filterTag(LACK_TAG, () => openFilters('lack'), () => applyFilters(currentFilters(), { showLack: false })));
+  document.getElementById('filter-tags').replaceChildren(...tags);
+  document.getElementById('filter-open').classList.toggle('filter-chip--on', tags.length > 0);
 }
 
-// 조건 창을 연다. focus는 누른 칩('area', 'price', 'year'). 지역 선택 창이 열려 있으면 닫는다.
+// 넣은 조건 칩 하나. 글자 버튼과 ✕ 버튼
+function filterTag(text, onOpen, onRemove) {
+  const tag = document.createElement('span');
+  tag.className = 'filter-chip filter-chip--on filter-tag';
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'filter-tag__text';
+  open.textContent = text;
+  open.addEventListener('click', onOpen);
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'filter-tag__remove';
+  remove.textContent = '✕';
+  remove.setAttribute('aria-label', `${text} 조건 풀기`);
+  remove.addEventListener('click', onRemove);
+  tag.append(open, remove);
+  return tag;
+}
+
+// 한 항목의 조건만 푼다
+function removeFilter(key) {
+  const next = { ...(currentFilters() || {}) };
+  FILTER_KEYS[key].forEach((name) => { next[name] = null; });
+  applyFilters(next);
+}
+
+// 조건 창을 연다. focus는 그 항목으로 내려가 열릴 칩('area', 'price', 'year', 'lack'). 지역 선택 창이 열려 있으면 닫는다.
 function openFilters(focus) {
   regionPicker.close();
-  filterSheet.open(document.getElementById('filter-sheet'), currentFilters(), applyFilters, focus ? { focus } : {});
+  const options = { showLack: store.get('map').show_lack === true };
+  if (focus) options.focus = focus;
+  filterSheet.open(document.getElementById('filter-sheet'), currentFilters(), applyFilters, options);
 }
 
-// 조건을 적용한다 (null이면 초기화). 새로 고쳐도 남도록 store에 둔다. 아파트와 동·구의 수를 다시 받는다.
-function applyFilters(filters) {
+// 조건을 적용한다 (null이면 초기화). 새로 고쳐도 남도록 store에 둔다.
+// 면적·가격·준공 연도가 바뀌었으면 아파트와 동·구의 수를 다시 받는다.
+// extra.showLack이 있으면 자금 부족 표시도 바꾼다. 서버에 보내는 조건이 아니라 다시 받지 않고 다시 그리기만 한다.
+function applyFilters(filters, extra = {}) {
+  const before = JSON.stringify(currentFilters());
   store.set('map', { filters: filters && !filterSheet.isEmpty(filters) ? filters : null });
+  if (typeof extra.showLack === 'boolean' && extra.showLack !== (store.get('map').show_lack === true)) {
+    store.set('map', { show_lack: extra.showLack });
+    renderLackSwitch();
+    renderMarkers(); // 보이는 아파트가 달라져 겹침도 달라진다
+    aptPanel.render(); // ‹ › 로 넘길 아파트가 바뀐다
+  }
   renderChips();
+  if (JSON.stringify(currentFilters()) === before) return;
   resetSummary();
   loadData();
 }
@@ -950,8 +994,8 @@ function renderUnitButton() {
 
 function renderLackSwitch() {
   const show = store.get('map').show_lack === true; // 처음에는 꺼 둔다 (2026-10-13에 정함). 켜야 자금이 부족한 아파트가 보인다
-  document.getElementById('lack-switch').setAttribute('aria-checked', String(show));
   document.getElementById('map').classList.toggle('map--hide-lack', !show);
+  renderChips(); // 켜져 있으면 "자금 부족 표시 ✕" 칩이 뜬다. 켜고 끄는 곳은 조건 창이다
 }
 
 function renderLegend() {
@@ -962,14 +1006,6 @@ function renderLegend() {
 
 // ───────── 동작 ─────────
 function bindEvents() {
-  // 자금 부족 표시 끄고 켜기
-  document.getElementById('lack-switch').addEventListener('click', () => {
-    store.set('map', { show_lack: store.get('map').show_lack !== true });
-    renderLackSwitch();
-    renderMarkers(); // 보이는 아파트가 달라져 겹침도 달라진다
-    aptPanel.render(); // ‹ › 로 넘길 아파트가 바뀐다
-  });
-
   // ㎡/평 전환 (2차). 표시, 목록, 아파트 창에 함께 적용된다.
   document.getElementById('unit-button').addEventListener('click', () => {
     const next = store.get('map').area_unit === 'pyeong' ? 'm2' : 'pyeong';
@@ -1036,12 +1072,10 @@ function bindEvents() {
     }
   });
 
-  // 조건 칩 → 조건 창 (P-05 ②). 누른 칩의 항목으로 내려가 열린다. 열려 있으면 닫는다.
-  document.querySelectorAll('.filter-chip[data-filter]').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      if (filterSheet.isOpen()) filterSheet.close();
-      else openFilters(chip.dataset.filter);
-    });
+  // '조건 ▾' → 조건 창 (P-05 ②). 열려 있으면 닫는다. 넣은 조건 칩의 동작은 renderChips()에 있다
+  document.getElementById('filter-open').addEventListener('click', () => {
+    if (filterSheet.isOpen()) filterSheet.close();
+    else openFilters();
   });
 
   // 아파트 이름 검색 (P-05 ⑭). 결과는 js/search.js가 #search-results에 그린다.
