@@ -529,3 +529,90 @@ def test_invalid_bounds(client, chipyeong, where, field, detail):
     res = _search(client, where=where)
     assert res.status_code == 422
     assert res.json() == {"detail": detail, "field": field}
+
+
+# ------------------------------------------------------------------
+# A-24 비슷한 아파트 (3차)
+# ------------------------------------------------------------------
+@pytest.fixture
+def similar_set(db, products):
+    """고른 아파트는 21번 치평동 84㎡ 3억. 같은 동 4곳, 같은 구 다른 동 2곳, 다른 구 1곳, 평균가 없는 곳 1곳."""
+    north = _priced(28, "운암동", "북구아파트", [(84, 300_000_000)])
+    north.gu = "북구"
+    db.add_all([
+        _priced(21, "치평동", "고른아파트", [(59, 220_000_000), (84, 300_000_000)]),
+        _priced(22, "치평동", "가까운면적", [(84, 310_000_000), (114, 400_000_000)]),  # 차이 1,000만 (84㎡)
+        _priced(23, "치평동", "작은평형", [(59, 280_000_000)]),  # 차이 2,000만
+        _priced(24, "치평동", "같은가격", [(84, 300_000_000)]),  # 차이 0
+        _priced(25, "치평동", "비싼곳", [(114, 500_000_000)]),  # 차이 2억
+        _priced(26, "광천동", "옆동1", [(84, 301_000_000)]),  # 차이 100만
+        _priced(27, "쌍촌동", "옆동2", [(84, 299_000_000)]),  # 차이 100만
+        north,
+        models.Apartment(id=29, name="평균가없음", gu="서구", dong="치평동", jibun="29"),
+    ])
+    db.commit()
+
+
+def _similar(client, apartment_id=21, area_band=84, **body):
+    return client.post(f"/api/apartments/{apartment_id}/similar",
+                       json={"conditions": EXAMPLE, "area_band": area_band, **body})
+
+
+def test_similar_same_dong_first_then_closest_price(client, similar_set):
+    res = _similar(client).json()
+    assert res["base_price"] == 300_000_000
+    assert res["total"] == 6  # 고른 곳, 북구, 평균가 없는 곳은 빠진다
+    assert [a["id"] for a in res["apartments"]] == [24, 22, 23]
+    assert (res["offset"], res["next_offset"]) == (0, 3)
+
+
+def test_similar_refresh_goes_to_next_then_wraps(client, similar_set):
+    second = _similar(client, offset=3).json()
+    # 같은 동의 나머지(25) 다음에 같은 구의 다른 동. 차이가 같으면(100만) 번호 순
+    assert [a["id"] for a in second["apartments"]] == [25, 26, 27]
+    assert second["next_offset"] == 0  # 끝까지 봤으면 처음 세 곳으로
+    assert [a["id"] for a in _similar(client, offset=6).json()["apartments"]] == [24, 22, 23]
+
+
+def test_similar_uses_closest_area(client, similar_set):
+    near = _similar(client).json()["apartments"][1]
+    assert near["id"] == 22
+    assert [a["area_band"] for a in near["areas"]] == [84]  # 4억인 114㎡가 아니라 3억 1,000만인 84㎡
+    assert near["category"] == near["areas"][0]["category"]
+
+
+def test_similar_base_is_chosen_area(client, similar_set):
+    # 59㎡(2억 2,000만)를 고르면 같은 동에서 2억 8,000만(23)이 가장 가깝다
+    res = _similar(client, area_band=59).json()
+    assert res["base_price"] == 220_000_000
+    assert res["apartments"][0]["id"] == 23
+
+
+def test_similar_category_matches_search(client, similar_set):
+    item = _similar(client).json()["apartments"][0]
+    found = next(a for a in _search(client).json()["apartments"] if a["id"] == item["id"])
+    assert item["areas"][0] == found["areas"][0]
+
+
+@pytest.mark.parametrize("apartment_id, area_band", [(999, 84), (21, 114), (29, 84)])
+def test_similar_unknown_apartment_or_area(client, similar_set, apartment_id, area_band):
+    res = _similar(client, apartment_id, area_band)
+    assert res.status_code == 404
+    assert res.json()["detail"] == "아파트를 찾을 수 없습니다."
+
+
+@pytest.mark.parametrize("body, field, detail", [
+    ({"offset": -1}, "offset", "입력한 값을 다시 확인해 주세요."),
+    ({"offset": 1.5}, "offset", "소수는 입력할 수 없습니다. 만 원 단위의 정수로 입력해 주세요."),
+    ({"area_band": "84"}, "area_band", "숫자만 입력할 수 있습니다."),
+    ({"conditions": {**EXAMPLE, "loan_product_id": 999}}, "loan_product_id", "대출 상품과 상환 기간을 골라 주세요."),
+])
+def test_similar_invalid(client, similar_set, body, field, detail):
+    res = client.post("/api/apartments/21/similar", json={"conditions": EXAMPLE, "area_band": 84, **body})
+    assert res.status_code == 422
+    assert res.json() == {"detail": detail, "field": field}
+
+
+def test_similar_alone_in_gu(client, similar_set):
+    res = _similar(client, 28).json()  # 북구에는 이 아파트뿐이다
+    assert res == {"base_price": 300_000_000, "total": 0, "offset": 0, "next_offset": 0, "apartments": []}

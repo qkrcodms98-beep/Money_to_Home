@@ -4,6 +4,7 @@
 - A-05 POST /api/apartments/search : 아파트 찾기
 - A-12 POST /api/regions/summary   : 구별·동별 개수 (2차)
 - A-13 GET  /api/data-status       : 수집 기준일 (2차)
+- A-24 POST /api/apartments/{id}/similar : 비슷한 아파트 (3차)
 
 A-06 아파트 한 곳은 backend/routers/apartment_detail.py에 있다 (담당: 안세환).
 
@@ -14,7 +15,16 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.schemas.apartment import DataStatusOut, RegionsOut, SearchIn, SearchOut, SummaryIn, SummaryOut
+from backend.schemas.apartment import (
+    DataStatusOut,
+    RegionsOut,
+    SearchIn,
+    SearchOut,
+    SimilarIn,
+    SimilarOut,
+    SummaryIn,
+    SummaryOut,
+)
 from backend.services import apartment
 
 router = APIRouter(prefix="/api", tags=["아파트 탐색"])
@@ -42,3 +52,8 @@ def summarize_regions(body: SummaryIn, db: Session = Depends(get_db)):
 @router.get("/data-status", response_model=DataStatusOut)
 def get_data_status(db: Session = Depends(get_db)):
     return apartment.data_status(db)
+
+
+@router.post("/apartments/{apartment_id}/similar", response_model=SimilarOut)
+def similar_apartments(apartment_id: int, body: SimilarIn, db: Session = Depends(get_db)):
+    return apartment.similar(db, apartment_id, body.area_band, body.conditions, body.offset)

@@ -4,6 +4,7 @@
 - A-05 아파트 찾기: SearchIn, SearchOut
 - A-12 구별·동별 개수: SummaryIn, SummaryOut
 - A-13 수집 기준일: DataStatusOut
+- A-24 비슷한 아파트: SimilarIn, SimilarOut (3차)
 - Conditions는 API 명세서 2.2의 조건 묶음이다. A-07(시나리오) 등도 같은 모양으로 받는다.
 """
 from datetime import date
@@ -238,3 +239,31 @@ class DataStatusOut(BaseModel):
 
     trades_base_date: date | None  # 실거래를 받은 날
     households_base_date: date | None  # 세대수 자료의 기준 시점. 아직 없어 null
+
+
+# ------------------------------------------------------------------
+# A-24 비슷한 아파트 (3차)
+# ------------------------------------------------------------------
+class SimilarIn(BaseModel):
+    """A-24 요청"""
+
+    conditions: Conditions
+    area_band: StrictInt  # 고른 면적대. ㎡. 이 면적의 평균가가 기준 가격이다
+    offset: StrictInt = 0  # 몇 번째 후보부터 보여 줄지. 처음은 0, 새로고침은 앞 응답의 next_offset
+
+    @field_validator("offset")
+    @classmethod
+    def check_offset(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError(MSG_INVALID)
+        return value
+
+
+class SimilarOut(BaseModel):
+    """A-24 응답"""
+
+    base_price: int  # 기준 가격. 고른 아파트와 면적의 평균가. 원
+    total: int  # 후보의 수 (같은 구에서 고른 아파트를 뺀 곳)
+    offset: int  # 이번에 보여 주는 첫 후보의 순번. 보낸 offset이 total 이상이면 0으로 돌아간다
+    next_offset: int  # 새로고침에 보낼 값. 끝까지 봤으면 0 (처음 세 곳으로)
+    apartments: list[ApartmentItem]  # 최대 3곳. areas는 기준 가격에 가장 가까운 면적 하나
