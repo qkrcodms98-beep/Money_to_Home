@@ -116,6 +116,41 @@
   margin-top: 40px;
 }
 
+/* ───────── 받는 중 (회색 자리 표시) ─────────
+   막대(.scenario__bone)는 scenario.css의 것을 함께 쓴다. 여기서는 길이만 정한다. */
+.saved__card--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-color: var(--color-line);
+}
+
+.saved__bone--name {
+  width: 45%;
+  height: 22px;
+}
+
+.saved__bone--result {
+  width: 65%;
+  height: 20px;
+}
+
+.saved__bone--conditions {
+  width: 80%;
+  height: 16px;
+}
+
+.saved__bone--title {
+  width: 60%;
+  height: 30px;
+}
+
+.saved__bone--meta {
+  width: 70%;
+  height: 20px;
+  margin: 8px 0 16px;
+}
+
 .saved__fail {
   display: flex;
   flex-direction: column;
