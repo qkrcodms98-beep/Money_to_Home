@@ -1220,3 +1220,13 @@
 .map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar__link--edit {
   text-decoration: underline;
 }
+
+/* 로드뷰에 카카오가 얹는 조작 부품을 숨긴다 (2026-10-18). 사진만 보여 준다. 끌어서 둘러보기는 그대로 된다.
+     [id^="_box_util_"]  오른쪽의 확대 · 나침반 · 축소
+     [id^="_al_"]        가운데의 이동 화살표와 동 · 서 · 남 · 북 글자 (누르면 옆 지점으로 옮겨 가던 것)
+   카카오 저작권 표시(왼쪽 아래 "kakao, KnWorks")는 이용 약관상 가리지 않는다.
+   id 뒤의 숫자는 카카오가 그릴 때마다 붙이는 것이라 앞부분으로 찾는다 */
+.apt-roadview__view [id^="_box_util_"],
+.apt-roadview__view [id^="_al_"] {
+  display: none !important;
+}
