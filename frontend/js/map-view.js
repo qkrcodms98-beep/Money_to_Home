@@ -881,9 +881,10 @@ function removeFilter(key) {
 }
 
 // 조건 창을 연다. focus는 그 항목으로 내려가 열릴 칩('area', 'price', 'year', 'lack'). 지역 선택 창이 열려 있으면 닫는다.
+// 조건 창 맨 위에 지역(구·동)도 있다 (2026-10-18 새 스타일). 지역을 바꾸고 '적용'을 누르면 그 지역으로 옮긴다
 function openFilters(focus) {
   regionPicker.close();
-  const options = { showLack: store.get('map').show_lack === true };
+  const options = { showLack: store.get('map').show_lack === true, regions: mapState.regions, region: mapState.region };
   if (focus) options.focus = focus;
   filterSheet.open(document.getElementById('filter-sheet'), currentFilters(), applyFilters, options);
 }
@@ -901,6 +902,12 @@ function applyFilters(filters, extra = {}) {
     aptPanel.render(); // ‹ › 로 넘길 아파트가 바뀐다
   }
   renderChips();
+  if (extra.region) {
+    // 지역을 바꿨으면 옮기면서 새 조건으로 한 번만 받는다
+    if (JSON.stringify(currentFilters()) !== before) resetSummary();
+    moveToRegion(extra.region);
+    return;
+  }
   if (JSON.stringify(currentFilters()) === before) return;
   resetSummary();
   loadData();
@@ -1176,18 +1183,8 @@ function bindEvents() {
     if (!infoText.hidden && !infoText.contains(event.target)) setInfo(false);
   });
 
-  // 구·동 선택 (P-05 ⑬). 창은 js/region.js가 그린다.
-  document.getElementById('region-button').addEventListener('click', () => {
-    const sheet = document.getElementById('region-sheet');
-    if (regionPicker.isOpen()) {
-      regionPicker.close();
-    } else {
-      filterSheet.close(); // 두 창을 함께 띄우지 않는다
-      regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
-    }
-  });
-
-  // '조건 ▾' → 조건 창 (P-05 ②). 열려 있으면 닫는다. 넣은 조건 칩의 동작은 renderChips()에 있다
+  // 검색창 오른쪽의 조건 아이콘 → 조건 창 (P-05 ②). 구·동 선택(P-05 ⑬)도 이 창 맨 위에 있다 (2026-10-18 새 스타일).
+  // 열려 있으면 닫는다. 넣은 조건 칩의 동작은 renderChips()에 있다
   document.getElementById('filter-open').addEventListener('click', () => {
     if (filterSheet.isOpen()) filterSheet.close();
     else openFilters();
