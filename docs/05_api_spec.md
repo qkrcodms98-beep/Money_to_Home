@@ -668,7 +668,7 @@
 | A-21 | `POST /api/saved-results` | `conditions`, 아파트 번호, 면적대 | 201과 저장한 결과 | FR-RESULT-07 |
 | A-22 | `GET /api/saved-results` | | 내가 저장한 결과의 목록. 최근 것부터 | FR-RESULT-08, FR-USER-15 |
 | A-23 | `GET /api/saved-results/{id}` | | 저장한 결과 하나. 남의 것이면 404 | FR-RESULT-08, FR-USER-15 |
-| A-24 | `POST /api/apartments/{id}/similar` | `conditions`, `area_band`, `offset`(처음 0) | `base_price`, `total`, `offset`, `next_offset`, `apartments`(최대 6곳, A-05의 아파트 모양에 `areas`는 하나). 기준은 아래 | FR-APT-17 |
+| A-24 | `POST /api/apartments/{id}/similar` | `conditions`, `area_band`, `offset`(처음 0), `sort`(similar · area · newest, 없으면 similar) | `base_price`, `total`, `offset`, `next_offset`, `apartments`(최대 6곳, A-05의 아파트 모양에 `areas`는 하나). 기준은 아래 | FR-APT-17 |
 | A-25 | `GET /api/regions/{gu}/price-trend` | | 구의 집값 변동. 자료가 정해지지 않았다 (N-06, N-07). | FR-PLAN-06, 10 |
 
 - A-21은 화면이 계산 결과를 보내지 않는다. 조건과 아파트만 받고 **서버가 다시 계산해서 저장한다.** 화면에서 고친 숫자가 저장되는 일을 막는다 (NFR-13).
@@ -677,6 +677,7 @@
   - 기준 가격은 고른 아파트의 고른 면적의 평균가다. 없는 아파트나 면적이면 404 "아파트를 찾을 수 없습니다."
   - 후보는 같은 구에서 평균가가 있는 아파트다 (고른 아파트는 뺀다). 아파트마다 면적과 상관없이 평균가가 기준 가격에 가장 가까운 면적 하나로 견준다.
   - 순서는 같은 동이 먼저, 그다음 같은 구의 다른 동이다. 그 안에서 기준 가격과의 차이가 작은 순, 같으면 아파트 번호 순.
+  - 순서 `sort`: 모두 같은 동 먼저. similar는 기준 가격과의 차이 순, area는 고른 면적과 전용면적 차이 순(같으면 가격 차이), newest는 준공 연도가 최근인 순(모르면 뒤, 같으면 가격 차이). 다른 값이면 422.
   - 한 번에 여섯 곳 (2026-10-18, 예전에는 세 곳). 화면의 '다른 곳 보기'는 `next_offset`을 `offset`으로 보내 다음 여섯 곳을 받는다. 끝까지 보면 `next_offset`이 0이라 처음 여섯 곳으로 돌아간다. `offset`이 후보 수 이상이면 0부터 준다. 음수면 422.
   - 구분, 부족자금, 대출금액은 A-05와 같은 규칙으로 매긴다.
 

@@ -13,14 +13,19 @@
 //   similarView.clear(요소);   그린 것을 지운다 (다른 아파트로 옮겨 갈 때)
 //
 // A-24 POST /api/apartments/{id}/similar 를 부른다. 조건은 guard.conditions()가 만든다.
-// 순서는 서버가 정한다: 같은 동 먼저, 그다음 같은 구의 다른 동. 그 안에서 기준 가격에 가까운 순.
+// 순서는 서버가 정한다: 같은 동 먼저, 그다음 같은 구의 다른 동. 그 안에서 고른 정렬(가격 · 면적 · 준공 연도)이 비슷한 순.
 // '다른 곳 보기'를 누르면 다음 여섯 곳(next_offset)을 부르고, 끝까지 보면 처음 여섯 곳으로 돌아간다.
 // 후보가 한 번에 보이는 수 이하면 '다른 곳 보기'를 두지 않는다.
 // 서버에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
 
 const SIMILAR_TEXT = {
-  title: '내 조건과 비슷한 아파트',
-  help: '같은 동부터, 고른 면적의 평균가와 가까운 순입니다.',
+  title: '이 매물과 비슷한 아파트',
+  // 설명 줄. 정렬마다 다르다 (A-24의 sort)
+  help: {
+    similar: '같은 동부터 가장 비슷한 아파트순입니다.',
+    area: '같은 동부터 면적이 가장 비슷한 아파트순입니다.',
+    newest: '같은 동부터 새로 지은 아파트순입니다.',
+  },
   more: '다른 곳 보기',
   sortArea: '면적순',
   sortNewest: '신축순',
@@ -44,59 +49,41 @@ const similarView = (() => {
     return node;
   }
 
-  // 보이는 여섯 곳과 정렬 (2026-10-18).
-  //   기본(아무것도 누르지 않음): 구분순. 지금 가능 → 기간 내 가능 → 자금 부족. 같은 구분 안에서는 서버가 준 순서
-  //                              (같은 동 먼저, 기준 가격에 가까운 순). 목록 화면의 '구분순'과 같은 차례다
-  //   면적순: 전용면적이 넓은 순 (카드에 보이는 면적)
-  //   신축순: 준공 연도가 최근인 순. 준공 연도를 모르는 곳은 뒤로
-  //   누른 버튼을 다시 누르면 구분순으로 돌아간다. 다른 아파트로 옮겨 가도 고른 정렬은 남는다
-  const CATEGORY_ORDER = { now: 0, within: 1, lack: 2 };
-  const lists = new WeakMap(); // 요소 → { apartments, onPick }
-  const sorts = new WeakMap(); // 요소 → null | 'area' | 'newest'
+  // 정렬 (2026-10-18). 서버(A-24의 sort)가 후보 전체를 그 순서로 줄 세워 여섯 곳씩 준다.
+  // 그래서 '다른 곳 보기'(↻)를 누르면 같은 순서로 다음 여섯 곳이 이어 나온다. 모두 같은 동이 먼저다.
+  //   기본(아무것도 누르지 않음, similar): 이 아파트와 가격이 가장 비슷한 순
+  //   면적순(area): 이 아파트의 고른 면적과 전용면적이 가장 비슷한 순
+  //   신축순(newest): 준공 연도가 최근인 순 (모르는 곳은 뒤로)
+  //   누른 버튼을 다시 누르면 기본으로 돌아간다. 다른 아파트로 옮겨 가도 고른 정렬은 남는다
+  const sorts = new WeakMap(); // 요소 → 'similar' | 'area' | 'newest'
+  const current = new WeakMap(); // 요소 → { target, handlers } (정렬을 바꾸면 처음부터 다시 부른다)
+  const sortOf = (container) => sorts.get(container) || 'similar';
 
-  function sorted(apartments, sort) {
-    const rank = (a) => CATEGORY_ORDER[a.areas[0].category] ?? 3;
-    const byCategory = (a, b) => rank(a) - rank(b);
-    const list = apartments.map((apartment, index) => ({ apartment, index }));
-    const tie = (x, y) => x.index - y.index; // 같으면 서버 순서
-    if (sort === 'area') {
-      const area = (a) => Number(a.areas[0].exclusive_area) || 0;
-      list.sort((x, y) => area(y.apartment) - area(x.apartment) || tie(x, y));
-    } else if (sort === 'newest') {
-      const year = (a) => (a.built_year === null || a.built_year === undefined ? -Infinity : a.built_year);
-      list.sort((x, y) => year(y.apartment) - year(x.apartment) || tie(x, y));
-    } else {
-      list.sort((x, y) => byCategory(x.apartment, y.apartment) || tie(x, y));
-    }
-    return list.map((item) => item.apartment);
-  }
-
-  function paintList(container) {
-    const data = lists.get(container);
+  function paintList(container, apartments, onPick) {
     const body = container.querySelector('.similar__body');
-    if (!data || !body) return;
+    if (!body) return;
     const list = el('ul', 'similar__list');
     list.setAttribute('aria-label', SIMILAR_TEXT.title);
-    sorted(data.apartments, sorts.get(container) || null)
-      .forEach((apartment) => list.append(card(apartment, data.onPick)));
+    apartments.forEach((apartment) => list.append(card(apartment, onPick)));
     body.replaceChildren(list);
   }
 
-  // 거리순 | 신축순. '다른 곳 보기'(↻)는 load()가 이 뒤에 붙인다
+  // 면적순 | 신축순. '다른 곳 보기'(↻)는 load()가 이 뒤에 붙인다
   function sortButtons(container) {
     const box = el('div', 'similar__sort');
     box.setAttribute('role', 'group');
     box.setAttribute('aria-label', '정렬');
     const mark = () => box.querySelectorAll('.similar__sort-option')
-      .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === (sorts.get(container) || null))));
+      .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === sortOf(container))));
     [['area', SIMILAR_TEXT.sortArea], ['newest', SIMILAR_TEXT.sortNewest]].forEach(([value, text]) => {
       const button = el('button', 'similar__sort-option', text);
       button.type = 'button';
       button.dataset.sort = value;
       button.addEventListener('click', () => {
-        sorts.set(container, sorts.get(container) === value ? null : value);
+        sorts.set(container, sortOf(container) === value ? 'similar' : value);
         mark();
-        paintList(container);
+        const now = current.get(container);
+        if (now) load(container, now.target, now.handlers, 0); // 그 순서의 처음 여섯 곳
       });
       box.append(button);
     });
@@ -147,12 +134,14 @@ const similarView = (() => {
     container.classList.add('similar');
 
     // 머리는 처음 한 번만 그린다. 다시 부를 때는 '다른 곳 보기'만 잠깐 끈다
+    current.set(container, { target, handlers });
     let head = container.querySelector('.similar__head');
     if (!head) {
       head = el('div', 'similar__head');
       head.append(el('h3', 'similar__title', SIMILAR_TEXT.title), sortButtons(container));
-      container.replaceChildren(head, el('p', 'similar__help', SIMILAR_TEXT.help), el('div', 'similar__body'));
+      container.replaceChildren(head, el('p', 'similar__help'), el('div', 'similar__body'));
     }
+    container.querySelector('.similar__help').textContent = SIMILAR_TEXT.help[sortOf(container)];
     const more = head.querySelector('.similar__more');
     if (more) more.disabled = true;
     const body = container.querySelector('.similar__body');
@@ -162,6 +151,7 @@ const similarView = (() => {
       conditions: guard.conditions(),
       area_band: target.areaBand,
       offset,
+      sort: sortOf(container),
     }).then((result) => {
       if (seqs.get(container) !== mine) return;
       container.removeAttribute('aria-busy');
@@ -188,8 +178,7 @@ const similarView = (() => {
         body.replaceChildren(el('p', 'similar__empty', SIMILAR_TEXT.empty));
         return;
       }
-      lists.set(container, { apartments: result.apartments, onPick: handlers.onPick });
-      paintList(container);
+      paintList(container, result.apartments, handlers.onPick);
     }).catch(() => {
       if (seqs.get(container) !== mine) return;
       container.removeAttribute('aria-busy');
@@ -209,7 +198,7 @@ const similarView = (() => {
     load: (container, target, handlers) => load(container, target, handlers, 0),
     clear(container) {
       seqs.set(container, (seqs.get(container) || 0) + 1);
-      lists.delete(container);
+      current.delete(container);
       container.replaceChildren();
       container.removeAttribute('aria-busy');
     },

@@ -250,11 +250,19 @@ class SimilarIn(BaseModel):
     conditions: Conditions
     area_band: StrictInt  # 고른 면적대. ㎡. 이 면적의 평균가가 기준 가격이다
     offset: StrictInt = 0  # 몇 번째 후보부터 보여 줄지. 처음은 0, 새로고침은 앞 응답의 next_offset
+    sort: str = "similar"  # 순서. similar(가격이 비슷한 순), area(면적이 비슷한 순), newest(새로 지은 순). 모두 같은 동 먼저
 
     @field_validator("offset")
     @classmethod
     def check_offset(cls, value: int) -> int:
         if value < 0:
+            raise ValueError(MSG_INVALID)
+        return value
+
+    @field_validator("sort")
+    @classmethod
+    def check_sort(cls, value: str) -> str:
+        if value not in ("similar", "area", "newest"):
             raise ValueError(MSG_INVALID)
         return value
 

@@ -264,16 +264,19 @@ def regions_summary(db: Session, conditions, level: str, gu: str | None, filters
     return {"target_price": basis["target"], "level": level, "regions": result}
 
 
-def similar(db: Session, apartment_id: int, area_band: int, conditions, offset: int = 0) -> dict:
-    """A-24 비슷한 아파트 (FR-APT-17, 3차). 고른 아파트와 지역, 가격이 비슷한 아파트를 세 곳씩 보여 준다.
+def similar(db: Session, apartment_id: int, area_band: int, conditions, offset: int = 0, sort: str = "similar") -> dict:
+    """A-24 비슷한 아파트 (FR-APT-17, 3차). 고른 아파트와 지역, 가격(또는 면적, 준공 연도)이 비슷한 아파트를 여섯 곳씩 보여 준다.
 
     - 기준 가격: 고른 아파트의 고른 면적의 평균가. 없는 아파트나 그 면적의 평균가가 없으면 404.
     - 후보: 같은 구에서 평균가가 있는 아파트 (고른 아파트는 뺀다).
       아파트마다 면적과 상관없이 평균가가 기준 가격에 가장 가까운 면적 하나로 견준다.
       차이가 같으면 싼 면적, 그다음 면적대가 작은 것.
-    - 순서: 같은 동이 먼저, 그다음 같은 구의 다른 동. 그 안에서 기준 가격과의 차이가 작은 순, 같으면 아파트 번호 순.
-      가격이 가까우면 구분도 대개 같다 (구분은 면적의 평균가로 정해진다).
-    - offset부터 세 곳을 준다. next_offset은 다음 세 곳의 시작이고, 끝까지 봤으면 0이다 (처음 세 곳으로 돌아간다).
+    - 순서 (sort): 모두 같은 동이 먼저, 그다음 같은 구의 다른 동. 그 안에서
+        similar: 기준 가격과의 차이가 작은 순. 가격이 가까우면 구분도 대개 같다 (구분은 면적의 평균가로 정해진다)
+        area   : 고른 면적의 전용면적과 차이가 작은 순 (아파트마다 전용면적이 가장 가까운 면적 하나로 견준다), 같으면 가격 차이 순
+        newest : 준공 연도가 최근인 순 (모르면 뒤), 같으면 가격 차이 순
+      마지막은 아파트 번호 순. 새로고침(offset)은 같은 순서로 다음 곳들을 준다 (2026-10-18)
+    - offset부터 여섯 곳을 준다. next_offset은 다음 여섯 곳의 시작이고, 끝까지 봤으면 0이다 (처음으로 돌아간다).
       보낸 offset이 후보 수 이상이면 0부터 준다.
     - 구분, 부족자금, 대출금액은 A-05와 같은 함수(_item)로 매긴다.
     """
@@ -285,6 +288,7 @@ def similar(db: Session, apartment_id: int, area_band: int, conditions, offset: 
         raise ApiError(404, MSG_NO_APARTMENT)
     chosen = db.get(Apartment, apartment_id)
     base_price = base.avg_price
+    base_area = float(base.exclusive_area)
 
     query = (
         select(Apartment)
@@ -296,11 +300,21 @@ def similar(db: Session, apartment_id: int, area_band: int, conditions, offset: 
         item = _item(apt, None, basis)
         if item is None:
             continue
-        closest = min(item["areas"], key=lambda a: (abs(a["avg_price"] - base_price), a["avg_price"], a["area_band"]))
+        if sort == "area":
+            closest = min(item["areas"], key=lambda a: (abs(a["exclusive_area"] - base_area), abs(a["avg_price"] - base_price), a["area_band"]))
+        else:
+            closest = min(item["areas"], key=lambda a: (abs(a["avg_price"] - base_price), a["avg_price"], a["area_band"]))
         item["areas"] = [closest]
         item["category"] = closest["category"]
-        candidates.append((apt.dong != chosen.dong, abs(closest["avg_price"] - base_price), apt.id, item))
-    candidates.sort(key=lambda c: c[:3])
+        price_gap = abs(closest["avg_price"] - base_price)
+        if sort == "area":
+            order = (abs(closest["exclusive_area"] - base_area), price_gap)
+        elif sort == "newest":
+            order = (-(apt.built_year or 0) if apt.built_year else float("inf"), price_gap)
+        else:
+            order = (price_gap,)
+        candidates.append(((apt.dong != chosen.dong, *order, apt.id), item))
+    candidates.sort(key=lambda c: c[0])
 
     total = len(candidates)
     start = offset if offset < total else 0
@@ -310,7 +324,7 @@ def similar(db: Session, apartment_id: int, area_band: int, conditions, offset: 
         "total": total,
         "offset": start,
         "next_offset": end if end < total else 0,
-        "apartments": [c[3] for c in candidates[start:end]],
+        "apartments": [c[1] for c in candidates[start:end]],
     }
 
 

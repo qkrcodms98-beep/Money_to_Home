@@ -56,4 +56,4 @@ def get_data_status(db: Session = Depends(get_db)):
 
 @router.post("/apartments/{apartment_id}/similar", response_model=SimilarOut)
 def similar_apartments(apartment_id: int, body: SimilarIn, db: Session = Depends(get_db)):
-    return apartment.similar(db, apartment_id, body.area_band, body.conditions, body.offset)
+    return apartment.similar(db, apartment_id, body.area_band, body.conditions, body.offset, body.sort)
