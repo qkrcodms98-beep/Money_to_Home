@@ -728,6 +728,8 @@ const GU_MARKER_RADIUS = 35; // map.css의 .dong-marker--gu (70 × 70)
 const GU_MARKER_FAR_RADIUS = 28; // 가장 넓게 볼 때(GU_MARKER_FAR_LEVEL 이상)는 56 × 56 (new-style.css의 .map--far)
 const GU_MARKER_FAR_LEVEL = 9;
 const GU_MARKER_GAP = 16;
+// 구 표시 자리 보정 (가장 넓게 보는 수준의 화면 px, 오른쪽·아래가 +). 남구는 서구 경계선에 걸쳐 보여 오른쪽 아래로 (2026-10-18)
+const GU_MARKER_NUDGE = { 남구: { x: 8, y: 14 } }; // 오른쪽 8, 아래 14: 원 둘레 8곳 중 7곳이 남구 안, 동구와 76px
 
 // 구 표시의 자리는 한 번만 정하고(구 → LatLng) 구 표시 수준(7 ~ 9) 모두에서 그대로 쓴다 (2026-10-18).
 // 가장 넓게 보는 수준(9)에서 겹치지 않게 정하므로 더 가까이 보면(8, 7) 원 사이가 2배, 4배로 저절로 넓어진다.
@@ -816,6 +818,11 @@ function spreadGuPlaces(items) {
     }
     if (!moved) break;
   }
+  // 손으로 맞춘 보정 (가장 넓게 보는 수준의 화면 px). 계산한 자리가 경계선에 걸쳐 보이는 구만
+  points.forEach((pt) => {
+    const nudge = GU_MARKER_NUDGE[pt.gu];
+    if (nudge) { pt.x += nudge.x; pt.y += nudge.y; }
+  });
   return new Map(points.map((pt) => [pt.gu, projection.coordsFromContainerPoint(toScreen(pt.x, pt.y))]));
 }
 
