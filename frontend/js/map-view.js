@@ -182,7 +182,8 @@ function createMap(center) {
   });
   hideKakaoScale();
   // 경계 (js/boundary.js). 행정동 선은 동 표시가 나오기 전(말풍선 수준)에서만 그린다
-  mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL });
+  // 경계가 오면 구 표시를 경계 안으로 다시 벌린다 (먼저 그려졌으면 경계 확인 없이 벌려져 있다)
+  mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL }).then(() => respreadGuMarkers());
   return map;
 }
 
@@ -698,9 +699,11 @@ function renderAreaMarkers(level) {
   if (groups === null) loadSummary(level);
   if (!Array.isArray(groups)) return;
   const gu = level === 'gu';
-  mapState.markers = groups.filter(hasCoord).map((group) => {
+  const shown = groups.filter(hasCoord);
+  const places = gu ? spreadGuMarkers(shown) : null; // 구 표시는 서로 겹치지 않게 벌린다
+  mapState.markers = shown.map((group, i) => {
     const overlay = new kakao.maps.CustomOverlay({
-      position: toLatLng(group),
+      position: places ? places[i] : toLatLng(group),
       content: createAreaMarkerElement(
         group,
         gu ? group.gu : group.dong,
@@ -713,8 +716,88 @@ function renderAreaMarkers(level) {
       clickable: false, // 말풍선과 같다 (onTap)
     });
     overlay.setMap(mapState.map);
+    overlay.group = group;
     return overlay;
   });
+}
+
+// 구 표시를 서로 벌린다 (2026-10-18). 아파트 좌표 평균에 두면 서구·남구·동구처럼 가운데가 몰린 구는 넓게 볼 때 원이 겹친다.
+// 화면에서 원끼리 GU_MARKER_GAP만큼 떨어지게 조금씩 밀어내되, 원 둘레까지 그 구의 경계 안에 있는 자리로만 옮긴다
+// (다른 구를 침범하지 않게). 경계 자료가 아직 없으면 경계 확인 없이 벌린다. 돌려주는 것은 표시마다의 LatLng
+const GU_MARKER_RADIUS = 35; // map.css의 .dong-marker--gu (70 × 70)
+const GU_MARKER_FAR_RADIUS = 28; // 가장 넓게 볼 때(GU_MARKER_FAR_LEVEL 이상)는 56 × 56 (new-style.css의 .map--far)
+const GU_MARKER_FAR_LEVEL = 9;
+const GU_MARKER_GAP = 16;
+
+function spreadGuMarkers(groups) {
+  const { map } = mapState;
+  const projection = map.getProjection();
+  const far = map.getLevel() >= GU_MARKER_FAR_LEVEL;
+  document.getElementById('kakao-map').classList.toggle('map--far', far);
+  const radius = far ? GU_MARKER_FAR_RADIUS : GU_MARKER_RADIUS;
+  const points = groups.map((g) => {
+    const p = projection.containerPointFromCoords(toLatLng(g));
+    return { gu: g.gu, x: p.x, y: p.y };
+  });
+  // 원의 가운데와 둘레 여덟 점 가운데 그 구 안에 있는 점의 수 (0 ~ 9). 가운데가 밖이면 -1. 경계를 모르면 9
+  const inside = (gu, x, y) => {
+    const at = (dx, dy) => {
+      const c = projection.coordsFromContainerPoint(new kakao.maps.Point(x + dx, y + dy));
+      return mapBoundary.contains(gu, null, c.getLat(), c.getLng()) !== false;
+    };
+    if (!at(0, 0)) return -1;
+    let count = 1;
+    for (let k = 0; k < 8; k += 1) {
+      const a = (Math.PI / 4) * k;
+      if (at(Math.cos(a) * radius, Math.sin(a) * radius)) count += 1;
+    }
+    return count;
+  };
+  // 옮겨도 되는 자리: 가운데는 반드시 그 구 안. 둘레는 지금보다 더 밖으로 나가지 않거나, 거의(7점 이상) 안이면 된다.
+  // 가장 넓게 볼 때(9)는 구가 원보다 작아 둘레까지 다 넣을 수 없으므로 가운데만 지킨다
+  const fits = (pt, x, y) => {
+    const next = inside(pt.gu, x, y);
+    if (next < 0) return false;
+    return next >= Math.min(inside(pt.gu, pt.x, pt.y), 7);
+  };
+  const need = radius * 2 + GU_MARKER_GAP;
+  for (let round = 0; round < 80; round += 1) {
+    let moved = false;
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        const a = points[i];
+        const b = points[j];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist >= need) continue;
+        if (dist < 0.01) { dx = 1; dy = 0; dist = 1; }
+        const push = (need - dist) / 2 + 0.5;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        // 둘 다 반씩 밀고, 한쪽이 경계 밖으로 나가면 다른 쪽이 그만큼 더 간다
+        const tryMove = (pt, sx, sy) => {
+          if (!fits(pt, pt.x + sx, pt.y + sy)) return false;
+          pt.x += sx;
+          pt.y += sy;
+          return true;
+        };
+        const aOk = tryMove(a, -ux * push, -uy * push);
+        const bOk = tryMove(b, ux * (aOk ? push : push * 2), uy * (aOk ? push : push * 2));
+        if (!bOk && aOk) tryMove(a, -ux * push, -uy * push);
+        moved = moved || aOk || bOk;
+      }
+    }
+    if (!moved) break;
+  }
+  return points.map((pt) => projection.coordsFromContainerPoint(new kakao.maps.Point(pt.x, pt.y)));
+}
+
+// 구 표시를 보는 채로 확대·축소하면 화면 거리가 달라지므로 다시 벌린다
+function respreadGuMarkers() {
+  if (mapState.mode !== 'gu' || !mapState.markers.length || !mapState.markers[0].group) return;
+  const places = spreadGuMarkers(mapState.markers.map((overlay) => overlay.group));
+  mapState.markers.forEach((overlay, i) => overlay.setPosition(places[i]));
 }
 
 // ───────── 더 넓게 볼 때: 구 표시 (P-05 ⑪) ─────────
@@ -745,6 +828,7 @@ function onZoomChanged() {
   if (next === before) {
     // 말풍선을 보는 채로 확대·축소하면 보이는 영역이 달라진다
     if (next === 'apartment' && byHand) scheduleBoundsLoad();
+    if (next === 'gu') respreadGuMarkers(); // 구 표시끼리의 화면 거리가 달라진다
     return;
   }
 

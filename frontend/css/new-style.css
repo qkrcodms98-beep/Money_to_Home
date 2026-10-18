@@ -1142,3 +1142,19 @@
   width: 36px;
   padding: 0;
 }
+
+/* 가장 넓게 볼 때(9)는 구 표시를 56 × 56으로 줄인다. 구가 작아 70짜리 원은 서로 띄울 자리가 없다 (map-view.js의 spreadGuMarkers) */
+#kakao-map.map--far .dong-marker--gu {
+  width: 56px;
+  height: 56px;
+}
+
+#kakao-map.map--far .dong-marker--gu .dong-marker__name {
+  font-size: 11px;
+  line-height: 14px;
+}
+
+#kakao-map.map--far .dong-marker--gu .dong-marker__count {
+  font-size: var(--text-button);
+  line-height: 22px;
+}
