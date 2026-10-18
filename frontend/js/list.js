@@ -153,11 +153,29 @@ function listGauge(area) {
   const bar = listEl('span', 'list-gauge__bar');
   const fill = listEl('span', 'list-gauge__fill');
   fill.style.width = `${Math.min(Math.max(ratio / 2, 0.04), 1) * 100}%`;
-  bar.append(fill);
+  // 검은 눈금 = 집값 (100%). 막대는 200%가 가득이므로 한가운데다. 막대가 눈금을 넘으면 여유, 못 미치면 부족
+  bar.append(fill, listEl('span', 'list-gauge__mark'));
   bar.setAttribute('aria-hidden', 'true');
   const text = listEl('span', 'list-gauge__text', `집값의 ${format.comma(Math.round(ratio * 100))}%`);
   box.append(bar, text);
   return box;
+}
+
+// 게이지 보기의 기준 안내. "5년 뒤 자기자금 2억 7,000만 원 기준 · 검은 눈금 = 집값" (시안 8번)
+// 기준 금액은 서버가 준 값에서 읽는다 (평균가 − 부족자금). 아파트마다 다르면(대출 한도가 집값에 따라 달라짐) 금액을 빼고 적는다
+function listGaugeNote(apartments) {
+  const input = store.get('input');
+  const years = input.target_years;
+  const when = years === 0 ? '지금' : years ? `${years}년 뒤` : '목표 시점';
+  const what = input.loan_choice === 'none' ? '자기자금' : '쓸 수 있는 자금(자기자금 + 대출)';
+  const funds = new Set();
+  apartments.forEach((a) => a.areas.forEach((area) => funds.add(area.avg_price - area.shortage)));
+  const note = listEl('p', 'list__gauge-note');
+  note.append(document.createTextNode(`${when} ${what} `));
+  if (funds.size === 1) note.append(listEl('b', null, format.won([...funds][0])), document.createTextNode(' '));
+  note.append(document.createTextNode('기준 · '));
+  note.append(listEl('span', 'list__gauge-mark'), document.createTextNode(' 검은 눈금 = 집값'));
+  return note;
 }
 
 function listCard(apartment, handlers) {
@@ -471,6 +489,7 @@ const listView = {
     chips.append(listViewToggle(listViewMode(), options.onView));
     root.append(chips);
     result = { ...result, apartments: result.apartments.filter((a) => shown.includes(a.category)) };
+    if (listViewMode() === 'gauge' && full.apartments.length > 0) root.append(listGaugeNote(full.apartments));
 
     // 아파트는 있지만 목표할 수 있는 곳이 없음 (A6). '조건 수정'은 저축 계획 단계로 간다
     if (result.counts.now === 0 && result.counts.within === 0) {
