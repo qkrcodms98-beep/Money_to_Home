@@ -1133,3 +1133,12 @@
   min-width: 78px; /* "집값의 1,000%"까지 같은 자리. 그래서 막대 길이가 줄마다 같다 */
   text-align: right;
 }
+
+/* › 는 면적이 여럿일 때(› 1/2 버튼)만. 면적이 하나인 줄에는 두지 않는다 */
+.list .list-card:not(:has(.list-card__next))::after {
+  content: none;
+}
+
+.list .list-card:not(:has(.list-card__next)) .list-card__slide {
+  padding-right: 14px;
+}
