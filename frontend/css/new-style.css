@@ -1179,31 +1179,16 @@
   background: var(--color-text);
 }
 
-/* 게이지 보기의 기준 안내 (칩 줄 아래) */
+/* 게이지 보기의 기준 안내 (칩 줄 아래). 시안 8번 .budget 값 그대로 (위 4, 아래 6, 안쪽 10·12, 모서리 10, 12px) */
 .list__gauge-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 4px;
-  margin: 0 16px 2px;
-  padding: 9px 12px;
+  margin: 4px 16px 6px;
+  padding: 10px 12px;
   border-radius: 10px;
   background: var(--color-bg);
   color: var(--color-text-sub);
   font-size: var(--text-badge);
-  line-height: 18px;
-  word-break: keep-all;
 }
 
 .list__gauge-note b {
   color: var(--color-text);
-}
-
-.list__gauge-mark {
-  display: inline-block;
-  width: 2px;
-  height: 12px;
-  border-radius: 1px;
-  background: var(--color-text);
-  vertical-align: middle;
 }

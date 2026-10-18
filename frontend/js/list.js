@@ -161,7 +161,7 @@ function listGauge(area) {
   return box;
 }
 
-// 게이지 보기의 기준 안내. "5년 뒤 자기자금 2억 7,000만 원 기준 · 검은 눈금 = 집값" (시안 8번)
+// 게이지 보기의 기준 안내. "5년 뒤 자기자금 2억 7,000만 원 기준 · 검은 눈금" (시안 8번 문구 그대로)
 // 기준 금액은 서버가 준 값에서 읽는다 (평균가 − 부족자금). 아파트마다 다르면(대출 한도가 집값에 따라 달라짐) 금액을 빼고 적는다
 function listGaugeNote(apartments) {
   const input = store.get('input');
@@ -173,8 +173,7 @@ function listGaugeNote(apartments) {
   const note = listEl('p', 'list__gauge-note');
   note.append(document.createTextNode(`${when} ${what} `));
   if (funds.size === 1) note.append(listEl('b', null, format.won([...funds][0])), document.createTextNode(' '));
-  note.append(document.createTextNode('기준 · '));
-  note.append(listEl('span', 'list__gauge-mark'), document.createTextNode(' 검은 눈금 = 집값'));
+  note.append(document.createTextNode('기준 · 검은 눈금'));
   return note;
 }
 
