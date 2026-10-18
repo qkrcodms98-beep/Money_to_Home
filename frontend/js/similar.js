@@ -8,7 +8,6 @@
 //   similarView.load(요소, { apartmentId, areaBand }, { onPick });
 //     apartmentId : 고른 아파트 번호
 //     areaBand    : 고른 면적대. 이 면적의 평균가가 기준 가격이다
-//     origin      : 고른 아파트의 좌표 { latitude, longitude }. 거리순에 쓴다 (없으면 거리순은 구분순과 같다)
 //     onPick      : 카드를 누르면 부른다. (apartment, areaBand) — apartment는 A-24 응답의 아파트 하나 그대로이고,
 //                   areaBand는 카드에 보이던 면적대다. 그 아파트로 옮겨 가는 데 쓴다
 //   similarView.clear(요소);   그린 것을 지운다 (다른 아파트로 옮겨 갈 때)
@@ -23,7 +22,7 @@ const SIMILAR_TEXT = {
   title: '내 조건과 비슷한 아파트',
   help: '같은 동부터, 고른 면적의 평균가와 가까운 순입니다.',
   more: '다른 곳 보기',
-  sortDistance: '거리순',
+  sortArea: '면적순',
   sortNewest: '신축순',
   empty: '같은 구에 비교할 아파트가 없습니다.',
   loadFail: '비슷한 아파트를 불러오지 못했습니다.',
@@ -48,22 +47,21 @@ const similarView = (() => {
   // 보이는 여섯 곳과 정렬 (2026-10-18).
   //   기본(아무것도 누르지 않음): 구분순. 지금 가능 → 기간 내 가능 → 자금 부족. 같은 구분 안에서는 서버가 준 순서
   //                              (같은 동 먼저, 기준 가격에 가까운 순). 목록 화면의 '구분순'과 같은 차례다
-  //   거리순: 지금 보는 아파트에서 가까운 순. 좌표가 없는 곳은 뒤로
+  //   면적순: 전용면적이 넓은 순 (카드에 보이는 면적)
   //   신축순: 준공 연도가 최근인 순. 준공 연도를 모르는 곳은 뒤로
   //   누른 버튼을 다시 누르면 구분순으로 돌아간다. 다른 아파트로 옮겨 가도 고른 정렬은 남는다
   const CATEGORY_ORDER = { now: 0, within: 1, lack: 2 };
-  const lists = new WeakMap(); // 요소 → { apartments, onPick, origin: { latitude, longitude } }
-  const sorts = new WeakMap(); // 요소 → null | 'distance' | 'newest'
+  const lists = new WeakMap(); // 요소 → { apartments, onPick }
+  const sorts = new WeakMap(); // 요소 → null | 'area' | 'newest'
 
-  function sorted(apartments, sort, origin) {
+  function sorted(apartments, sort) {
     const rank = (a) => CATEGORY_ORDER[a.areas[0].category] ?? 3;
     const byCategory = (a, b) => rank(a) - rank(b);
     const list = apartments.map((apartment, index) => ({ apartment, index }));
     const tie = (x, y) => x.index - y.index; // 같으면 서버 순서
-    if (sort === 'distance' && origin && origin.latitude !== null && origin.latitude !== undefined) {
-      const far = (a) => (a.latitude === null || a.longitude === null ? Infinity
-        : (a.latitude - origin.latitude) ** 2 + ((a.longitude - origin.longitude) * Math.cos(origin.latitude * Math.PI / 180)) ** 2);
-      list.sort((x, y) => far(x.apartment) - far(y.apartment) || tie(x, y));
+    if (sort === 'area') {
+      const area = (a) => Number(a.areas[0].exclusive_area) || 0;
+      list.sort((x, y) => area(y.apartment) - area(x.apartment) || tie(x, y));
     } else if (sort === 'newest') {
       const year = (a) => (a.built_year === null || a.built_year === undefined ? -Infinity : a.built_year);
       list.sort((x, y) => year(y.apartment) - year(x.apartment) || tie(x, y));
@@ -79,7 +77,7 @@ const similarView = (() => {
     if (!data || !body) return;
     const list = el('ul', 'similar__list');
     list.setAttribute('aria-label', SIMILAR_TEXT.title);
-    sorted(data.apartments, sorts.get(container) || null, data.origin)
+    sorted(data.apartments, sorts.get(container) || null)
       .forEach((apartment) => list.append(card(apartment, data.onPick)));
     body.replaceChildren(list);
   }
@@ -91,7 +89,7 @@ const similarView = (() => {
     box.setAttribute('aria-label', '정렬');
     const mark = () => box.querySelectorAll('.similar__sort-option')
       .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === (sorts.get(container) || null))));
-    [['distance', SIMILAR_TEXT.sortDistance], ['newest', SIMILAR_TEXT.sortNewest]].forEach(([value, text]) => {
+    [['area', SIMILAR_TEXT.sortArea], ['newest', SIMILAR_TEXT.sortNewest]].forEach(([value, text]) => {
       const button = el('button', 'similar__sort-option', text);
       button.type = 'button';
       button.dataset.sort = value;
@@ -190,7 +188,7 @@ const similarView = (() => {
         body.replaceChildren(el('p', 'similar__empty', SIMILAR_TEXT.empty));
         return;
       }
-      lists.set(container, { apartments: result.apartments, onPick: handlers.onPick, origin: target.origin });
+      lists.set(container, { apartments: result.apartments, onPick: handlers.onPick });
       paintList(container);
     }).catch(() => {
       if (seqs.get(container) !== mine) return;
