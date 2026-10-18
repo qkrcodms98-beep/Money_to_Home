@@ -352,7 +352,11 @@ const aptPanel = {
     const key = JSON.stringify([apartment.id, area.area_band, guard.conditions()]);
     if (key === aptPanel.similarKey) return;
     aptPanel.similarKey = key;
-    similarView.load(box, { apartmentId: apartment.id, areaBand: area.area_band }, { onPick: aptPanel.pickSimilar });
+    similarView.load(box, {
+      apartmentId: apartment.id,
+      areaBand: area.area_band,
+      origin: { latitude: apartment.latitude, longitude: apartment.longitude }, // 거리순
+    }, { onPick: aptPanel.pickSimilar });
   },
 
   // 비슷한 아파트의 카드를 누름. apartment는 A-24 응답의 아파트, areaBand는 카드에 보이던 면적대
