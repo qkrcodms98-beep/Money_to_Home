@@ -15,7 +15,7 @@ from backend.services import calc, loan_product
 MSG_CHOOSE_LOAN = "대출 상품과 상환 기간을 골라 주세요."
 MSG_CHOOSE_YEARS = "상환 기간을 다시 골라 주세요."
 MSG_NO_APARTMENT = "아파트를 찾을 수 없습니다."  # A-06, A-07과 같은 문장
-SIMILAR_COUNT = 3  # A-24 한 번에 보여 주는 비슷한 아파트 수
+SIMILAR_COUNT = 6  # A-24 한 번에 보여 주는 비슷한 아파트 수 (2026-10-18, 예전에는 3)
 CATEGORY_ORDER = {calc.NOW: 0, calc.WITHIN: 1, calc.LACK: 2}
 
 

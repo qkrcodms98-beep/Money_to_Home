@@ -1,6 +1,6 @@
 // 비슷한 아파트 (FR-APT-17, 3차). 담당: 김목산
 //
-// 아파트 정보 탭의 기본 정보 아래(와이어프레임 C6)에 고른 아파트와 가격이 비슷한 아파트를 세 곳씩 보여 준다.
+// 아파트 정보 탭의 기본 정보 아래(와이어프레임 C6)에 고른 아파트와 가격이 비슷한 아파트를 여섯 곳씩 보여 준다 (2026-10-18, 예전에는 세 곳).
 // 아파트 창에 묶이지 않는다. 그릴 요소를 받아 그 안에만 그린다. 카드 모양은 목록의 것(list.css의 .list-card)을 같이 쓴다.
 //
 //   <div id="apt-similar"></div>   (아파트 정보 탭. 기본 정보 아래)
@@ -15,8 +15,8 @@
 //
 // A-24 POST /api/apartments/{id}/similar 를 부른다. 조건은 guard.conditions()가 만든다.
 // 순서는 서버가 정한다: 같은 동 먼저, 그다음 같은 구의 다른 동. 그 안에서 기준 가격에 가까운 순.
-// '다른 곳 보기'를 누르면 다음 세 곳(next_offset)을 부르고, 끝까지 보면 처음 세 곳으로 돌아간다.
-// 후보가 세 곳 이하면 '다른 곳 보기'를 두지 않는다.
+// '다른 곳 보기'를 누르면 다음 여섯 곳(next_offset)을 부르고, 끝까지 보면 처음 여섯 곳으로 돌아간다.
+// 후보가 한 번에 보이는 수 이하면 '다른 곳 보기'를 두지 않는다.
 // 서버에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
 
 const SIMILAR_TEXT = {
@@ -45,7 +45,7 @@ const similarView = (() => {
     return node;
   }
 
-  // 보이는 세 곳과 정렬 (2026-10-18).
+  // 보이는 여섯 곳과 정렬 (2026-10-18).
   //   기본(아무것도 누르지 않음): 구분순. 지금 가능 → 기간 내 가능 → 자금 부족. 같은 구분 안에서는 서버가 준 순서
   //                              (같은 동 먼저, 기준 가격에 가까운 순). 목록 화면의 '구분순'과 같은 차례다
   //   거리순: 지금 보는 아파트에서 가까운 순. 좌표가 없는 곳은 뒤로
@@ -127,7 +127,9 @@ const similarView = (() => {
     head.append(el('span', `badge badge--${area.category}`, SIMILAR_BADGE[area.category]));
     body.append(head);
 
-    const meta = el('p', 'list-card__meta', `${apartment.gu} ${apartment.dong} · ${format.area(area.supply_area, area.exclusive_area)}`);
+    // "광산구 도천동 · 77㎡ (전용 59㎡) · 1997년 준공". 준공 연도를 모르면 그 칸을 뺀다
+    const built = apartment.built_year ? ` · ${apartment.built_year}년 준공` : '';
+    const meta = el('p', 'list-card__meta', `${apartment.gu} ${apartment.dong} · ${format.area(area.supply_area, area.exclusive_area)}${built}`);
     if (apartment.latitude === null || apartment.longitude === null) {
       meta.append(el('span', 'list-card__tag', SIMILAR_TEXT.noCoord));
     }
@@ -166,7 +168,7 @@ const similarView = (() => {
       if (seqs.get(container) !== mine) return;
       container.removeAttribute('aria-busy');
 
-      // 후보가 세 곳보다 많을 때만 '다른 곳 보기'
+      // 후보가 한 번에 보이는 것보다 많을 때만 '다른 곳 보기'
       let button = head.querySelector('.similar__more');
       if (result.total > result.apartments.length) {
         if (!button) {

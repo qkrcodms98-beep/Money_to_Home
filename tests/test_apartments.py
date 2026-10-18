@@ -536,7 +536,8 @@ def test_invalid_bounds(client, chipyeong, where, field, detail):
 # ------------------------------------------------------------------
 @pytest.fixture
 def similar_set(db, products):
-    """고른 아파트는 21번 치평동 84㎡ 3억. 같은 동 4곳, 같은 구 다른 동 2곳, 다른 구 1곳, 평균가 없는 곳 1곳."""
+    """고른 아파트는 21번 치평동 84㎡ 3억. 같은 동 4곳, 같은 구 다른 동 5곳, 다른 구 1곳, 평균가 없는 곳 1곳.
+    한 번에 6곳이라 후보 9곳은 6곳 + 3곳으로 나뉜다."""
     north = _priced(28, "운암동", "북구아파트", [(84, 300_000_000)])
     north.gu = "북구"
     db.add_all([
@@ -547,6 +548,9 @@ def similar_set(db, products):
         _priced(25, "치평동", "비싼곳", [(114, 500_000_000)]),  # 차이 2억
         _priced(26, "광천동", "옆동1", [(84, 301_000_000)]),  # 차이 100만
         _priced(27, "쌍촌동", "옆동2", [(84, 299_000_000)]),  # 차이 100만
+        _priced(30, "광천동", "옆동3", [(84, 305_000_000)]),  # 차이 500만
+        _priced(31, "쌍촌동", "옆동4", [(84, 290_000_000)]),  # 차이 1,000만
+        _priced(32, "광천동", "옆동5", [(84, 330_000_000)]),  # 차이 3,000만
         north,
         models.Apartment(id=29, name="평균가없음", gu="서구", dong="치평동", jibun="29"),
     ])
@@ -561,17 +565,17 @@ def _similar(client, apartment_id=21, area_band=84, **body):
 def test_similar_same_dong_first_then_closest_price(client, similar_set):
     res = _similar(client).json()
     assert res["base_price"] == 300_000_000
-    assert res["total"] == 6  # 고른 곳, 북구, 평균가 없는 곳은 빠진다
-    assert [a["id"] for a in res["apartments"]] == [24, 22, 23]
-    assert (res["offset"], res["next_offset"]) == (0, 3)
+    assert res["total"] == 9  # 고른 곳, 북구, 평균가 없는 곳은 빠진다
+    # 같은 동(24, 22, 23, 25)을 가격 차이 순으로 먼저, 그다음 같은 구의 다른 동. 차이가 같으면(100만) 번호 순
+    assert [a["id"] for a in res["apartments"]] == [24, 22, 23, 25, 26, 27]
+    assert (res["offset"], res["next_offset"]) == (0, 6)
 
 
 def test_similar_refresh_goes_to_next_then_wraps(client, similar_set):
-    second = _similar(client, offset=3).json()
-    # 같은 동의 나머지(25) 다음에 같은 구의 다른 동. 차이가 같으면(100만) 번호 순
-    assert [a["id"] for a in second["apartments"]] == [25, 26, 27]
-    assert second["next_offset"] == 0  # 끝까지 봤으면 처음 세 곳으로
-    assert [a["id"] for a in _similar(client, offset=6).json()["apartments"]] == [24, 22, 23]
+    second = _similar(client, offset=6).json()
+    assert [a["id"] for a in second["apartments"]] == [30, 31, 32]  # 다른 동의 나머지 (차이 500만, 1,000만, 3,000만)
+    assert second["next_offset"] == 0  # 끝까지 봤으면 처음 여섯 곳으로
+    assert [a["id"] for a in _similar(client, offset=9).json()["apartments"]] == [24, 22, 23, 25, 26, 27]
 
 
 def test_similar_uses_closest_area(client, similar_set):
