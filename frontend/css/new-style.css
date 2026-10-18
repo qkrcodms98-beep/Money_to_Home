@@ -752,3 +752,110 @@
 #apartment-info .apt-info {
   padding-top: 10px;
 }
+
+/* 구 경계: 한 단계 연한 회색 (#636366 → #7c7c82). js/boundary.js가 처음 그릴 때 읽는다 */
+.map-body {
+  --boundary-gu: #7c7c82;
+}
+
+/* ───────── 목록 (아파트 정보 탭, 시나리오 탭과 같은 모양) ─────────
+   카드 테두리 대신 선으로 나눈 줄, 회색 작은 무리 제목, 8px 들임, 회색 바탕 배지(집 아이콘), 개수 칩은 면적 칩 모양.
+   비슷한 아파트(#apt-similar)도 .list-card를 쓰므로 여기서는 .list 안만 바꾼다 */
+.list {
+  gap: 10px;
+}
+
+.list__title {
+  color: var(--new-sheet-name);
+  font-size: 20px;
+}
+
+.list__sort-button {
+  color: var(--color-text-sub);
+  font-size: var(--text-badge);
+}
+
+/* 개수 칩: 회색 네모 칩에 구분 색 집 아이콘 */
+.list__chips {
+  gap: 6px;
+}
+
+.list__chips .chip {
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: var(--new-chip-off);
+  color: var(--new-sheet-value);
+  font-size: var(--text-badge);
+}
+
+.list__chips .chip::before,
+.list .badge::before {
+  content: '';
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  -webkit-mask: var(--icon-home) center / contain no-repeat;
+  mask: var(--icon-home) center / contain no-repeat;
+}
+
+.list__chips .chip--now::before,
+.list .badge--now::before { background: var(--color-now); }
+.list__chips .chip--within::before,
+.list .badge--within::before { background: var(--color-within); }
+.list__chips .chip--lack::before,
+.list .badge--lack::before { background: var(--color-lack); }
+
+/* 무리: 회색 작은 제목, 그 아래 선으로 나눈 줄. 정보 줄처럼 8px 들인다 */
+.list__group {
+  gap: 0;
+  padding-left: 8px;
+}
+
+.list__group-title {
+  margin: 10px 0 2px;
+  color: var(--new-sheet-section);
+  font-size: var(--text-help);
+}
+
+.list .list-card,
+.list .list-card--lack {
+  border: 0;
+  border-bottom: 1px solid var(--new-sheet-line);
+  border-radius: 0;
+}
+
+.list .list-card__slide {
+  padding: 12px 4px;
+}
+
+.list .list-card__name {
+  color: var(--new-sheet-value);
+}
+
+.list .list-card__meta,
+.list .list-card__money {
+  margin-top: 4px;
+  color: var(--new-sheet-value);
+  font-size: var(--text-badge);
+}
+
+.list .list-card__gap {
+  font-size: var(--text-help);
+}
+
+.list .badge {
+  gap: 5px;
+  height: 22px;
+  border: 1px solid var(--color-bg);
+  background: rgba(144, 144, 144, 0.08);
+  color: #0f0f0f;
+}
+
+/* 면적 넘기기 ( › 1/2 ): 세로선 없이 옅게 */
+.list .list-card__next {
+  width: 40px;
+  border-left: 0;
+  color: var(--color-text-hint);
+}
