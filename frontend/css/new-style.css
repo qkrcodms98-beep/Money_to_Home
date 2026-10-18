@@ -733,3 +733,8 @@
   margin-top: 16px;
   font-size: var(--text-badge);
 }
+
+/* 탭 줄과 첫 정보 줄(지번 주소) 사이를 10px 띄운다 */
+#apartment-info .apt-info {
+  padding-top: 10px;
+}
