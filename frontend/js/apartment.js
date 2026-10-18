@@ -50,6 +50,8 @@ const APT_NO_COORD = '위치 없음';
 const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 표시하지 못했습니다. 지도는 그대로 두었습니다.';
 // 로드뷰 (목업 C6, C6b)
 const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 가장 가까운 로드뷰를 쓴다
+const APT_ROADVIEW_TILT = -15; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
+const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보인다 (-3 ~ 3)
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
 const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
 const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아파트가 아래에 붙을 때만 둔다
@@ -340,7 +342,7 @@ const aptPanel = {
 
   // 로드뷰가 아파트를 바라보게 한다 (2026-10-18). 카카오는 바라보는 방향을 정해 주지 않아 길 방향으로 열린다.
   // 촬영 지점(로드뷰의 자리)에서 아파트 좌표로 가는 방위각(북쪽 0도, 시계 방향)을 구해 시점의 좌우 각도(pan)로 둔다.
-  // 위아래(tilt)는 0(수평), 확대(zoom)는 0
+  // 위아래(tilt)는 살짝 위(-15도, 카카오는 음수가 위), 확대(zoom)는 가장 넓게(-3). 아파트 건물이 위층까지 들어온다
   roadviewTarget: null,
   aimRoadview() {
     const rv = aptPanel.roadview;
@@ -355,7 +357,7 @@ const aptPanel = {
     const y = Math.sin(dLng) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
     const pan = (Math.atan2(y, x) / rad + 360) % 360;
-    rv.setViewpoint(new kakao.maps.Viewpoint(pan, 0, 0));
+    rv.setViewpoint(new kakao.maps.Viewpoint(pan, APT_ROADVIEW_TILT, APT_ROADVIEW_ZOOM));
   },
 
   // ───────── 비슷한 아파트 (3차, 목업 C6, 김목산의 similar.js) ─────────
