@@ -133,6 +133,8 @@ const sheet = {
     const area = document.querySelector('.map-area').clientHeight;
     if (stage === '30') return parseFloat(getComputedStyle(document.body).getPropertyValue('--sheet-height-30'));
     if (stage === '80') return area * SHEET_RATIO_80;
+    // 아파트 창의 전체는 내 조건 줄 뒤까지 올라간다 (로드뷰가 줄 아래로 살짝 들어간다, new-style.css)
+    if (sheet.mode === 'apartment') return document.querySelector('.map-app').clientHeight;
     return area;
   },
 

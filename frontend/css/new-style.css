@@ -1192,3 +1192,14 @@
 .list__gauge-note b {
   color: var(--color-text);
 }
+
+/* 아파트 창을 전체로 올리면 내 조건 줄 뒤까지 올라간다. 로드뷰 윗부분(40px)이 반투명한 내 조건 줄 아래로 들어가
+   로드뷰가 차지하는 자리가 줄어든다. 내 조건 줄은 창보다 위에 그린다. 목록의 전체는 그대로(줄 바로 아래부터) */
+.condition-bar {
+  position: relative;
+  z-index: 4; /* 아래 창(3)보다 위 */
+}
+
+.map-app[data-sheet-mode="apartment"] .sheet[data-stage="full"] {
+  height: 100%;
+}
