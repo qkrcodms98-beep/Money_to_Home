@@ -195,21 +195,19 @@
   font-size: 8px;
 }
 
-/* 접으면 "범례" 글자만 */
-.legend:has(.legend__head[aria-expanded="false"]) {
-  padding-right: 24px;
+/* 접으면 "범례" 글자만. 상자 너비와 화살표 자리는 펼쳤을 때와 같다 (화살표가 움직이지 않게) */
+.legend {
+  box-sizing: border-box;
+  width: 84px;
 }
 
-.legend__head[aria-expanded="false"] {
-  position: static;
-  width: auto;
-  height: 18px;
-}
-
-.legend__head[aria-expanded="false"] .legend__title {
-  display: inline;
-  margin-right: 4px;
+.legend:has(.legend__head[aria-expanded="false"])::before {
+  content: '범례';
+  display: block;
+  color: #202020;
   font-size: var(--text-badge);
+  font-weight: var(--font-bold);
+  line-height: 17px;
 }
 
 .legend__list {
