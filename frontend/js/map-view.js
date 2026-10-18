@@ -1249,9 +1249,9 @@ function regionCenter({ gu, dong }) {
   return place && hasCoord(place) ? { latitude: place.latitude, longitude: place.longitude } : null;
 }
 
-// 목록의 정렬 (A-05의 sort). store의 map.sort에 둔다. 모르는 값이면 구분순이다.
+// 목록의 정렬 (A-05의 sort). store의 map.sort에 둔다. 모르는 값이면 가격 낮은 순이다 (2026-10-18, 예전에는 구분순)
 const SORTS = ['category', 'price_asc', 'price_desc'];
-const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'category');
+const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'price_asc');
 
 // 조건 창에서 고른 조건 (A-05, A-12의 filters). store의 map.filters에 둔다. 조건이 하나도 없으면 null
 function currentFilters() {

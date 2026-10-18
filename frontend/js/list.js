@@ -9,7 +9,7 @@
 //   listView.render(el, result);
 //   listView.render(el, result, {
 //     where: { gu: '서구', dong: '치평동' },        // 머리의 "서구 치평동 · 23곳"
-//     sort: 'category',                              // 지금 정렬. 머리의 "정렬: 구분순"
+//     sort: 'price_asc',                             // 지금 정렬. 머리 오른쪽의 "가격 낮은 순 ▾" (없으면 가격 낮은 순)
 //     onSort: (sort) => { ... },                     // 정렬을 고름. A-05를 sort로 다시 불러 그린다. 없으면 정렬 버튼이 없다
 //     onSelect: (apartment, areaIndex) => { ... },  // 카드를 누름. 80% 아파트 창을 연다 (세환)
 //     onClose: () => { ... },                        // 닫기
@@ -38,12 +38,23 @@ const LIST_GROUPS = [
   { key: 'lack', title: '자금이 부족한 곳', chip: '부족', badge: '자금 부족' },
 ];
 
-// 정렬. 값은 A-05의 sort와 같다
+// 정렬. 값은 A-05의 sort와 같다. 처음에는 가격 낮은 순이다 (2026-10-18, 예전에는 구분순)
 const LIST_SORTS = [
-  { key: 'category', label: '구분순' },
   { key: 'price_asc', label: '가격 낮은 순' },
   { key: 'price_desc', label: '가격 높은 순' },
+  { key: 'category', label: '구분순' },
 ];
+const LIST_DEFAULT_SORT = 'price_asc';
+
+// 보기 방식 (2026-10-18). 정렬 아래의 "기본 ▾"에서 고른다. store의 map.list_view에 둔다
+//   basic: 이름, 면적·거래, 평균가 · 여유/부족
+//   gauge: 위에 더해 막대 하나. 쓸 수 있는 자금이 집값의 몇 %인지 (200% 이상이면 가득).
+//          여유가 적을수록 짧고, 부족하면 빨간 막대가 조금만 찬다
+const LIST_VIEWS = [
+  { key: 'basic', label: '기본' },
+  { key: 'gauge', label: '게이지' },
+];
+const listViewMode = () => (store.get('map').list_view === 'gauge' ? 'gauge' : 'basic');
 
 const LIST_TEXT = {
   info: '판매 중인 매물이 아니라 최근 1년 실거래 기록입니다. 금액은 가정에 따른 추정치입니다.',
@@ -92,6 +103,22 @@ function listMoneyLine(area) {
   return line;
 }
 
+// 게이지 한 줄. 쓸 수 있는 자금 = 평균가 − 부족자금 (부족자금이 음수면 여유). 둘 다 서버(A-05)가 준 값이다.
+// 막대 길이 = 자금 ÷ 평균가의 절반 (200%면 가득). 너무 짧아 안 보이지 않게 4%는 둔다
+function listGauge(area) {
+  const box = listEl('div', `list-gauge list-gauge--${area.category}`);
+  const funds = area.avg_price - area.shortage;
+  const ratio = area.avg_price > 0 ? Math.max(funds, 0) / area.avg_price : 0;
+  const bar = listEl('span', 'list-gauge__bar');
+  const fill = listEl('span', 'list-gauge__fill');
+  fill.style.width = `${Math.min(Math.max(ratio / 2, 0.04), 1) * 100}%`;
+  bar.append(fill);
+  bar.setAttribute('aria-hidden', 'true');
+  const text = listEl('span', 'list-gauge__text', `집값의 ${format.comma(Math.round(ratio * 100))}%`);
+  box.append(bar, text);
+  return box;
+}
+
 function listCard(apartment, handlers) {
   const group = LIST_GROUPS.find((g) => g.key === apartment.category);
   const card = listEl('article', `list-card list-card--${apartment.category}`);
@@ -122,6 +149,7 @@ function listCard(apartment, handlers) {
     }
     slide.append(meta);
     slide.append(listMoneyLine(area));
+    if (listViewMode() === 'gauge') slide.append(listGauge(area));
     track.append(slide);
   });
 
@@ -169,7 +197,11 @@ function listHead(result, options) {
 
   head.append(listInfo());
 
-  if (options.onSort) head.append(listSortMenu(options.sort || 'category', options.onSort));
+  // 오른쪽: 정렬 "가격 낮은 순 ▾", 그 아래 보기 방식 "기본 ▾"
+  const side = listEl('div', 'list__side');
+  if (options.onSort) side.append(listSortMenu(options.sort || LIST_DEFAULT_SORT, options.onSort));
+  if (options.onView) side.append(listPicker(LIST_VIEWS, listViewMode(), options.onView, '보기 방식', 'list__view'));
+  if (side.children.length > 0) head.append(side);
 
   head.append(listCloseButton(() => options.onClose && options.onClose()));
   return head;
@@ -205,17 +237,24 @@ function listInfo() {
   return info;
 }
 
-// "정렬: 구분순" 글자 버튼과 작은 선택 창 (B1). 고르면 창을 닫고 onSort(sort)를 부른다
+// 정렬 버튼 "가격 낮은 순 ▾"과 작은 선택 창 (B1). 고르면 창을 닫고 onSort(sort)를 부른다
 function listSortMenu(current, onSort) {
-  const wrap = listEl('div', 'list__sort');
-  const now = LIST_SORTS.find((s) => s.key === current) || LIST_SORTS[0];
-  const button = listEl('button', 'list__sort-button', `정렬: ${now.label}`);
+  return listPicker(LIST_SORTS, current, onSort, '정렬', 'list__sort');
+}
+
+// 글자 버튼과 작은 선택 창. items: [{ key, label }]. 고르면 창을 닫고 onPick(key)를 부른다 (같은 것을 고르면 닫기만)
+function listPicker(items, current, onPick, name, className) {
+  const wrap = listEl('div', `list__sort ${className}`);
+  const now = items.find((s) => s.key === current) || items[0];
+  const button = listEl('button', 'list__sort-button', now.label);
   button.type = 'button';
+  button.setAttribute('aria-label', `${name}: ${now.label}`);
   button.setAttribute('aria-haspopup', 'listbox');
   button.setAttribute('aria-expanded', 'false');
 
   const menu = listEl('ul', 'list__sort-menu');
   menu.setAttribute('role', 'listbox');
+  menu.setAttribute('aria-label', name);
   menu.hidden = true;
 
   const setOpen = (open) => {
@@ -235,7 +274,7 @@ function listSortMenu(current, onSort) {
     }
   });
 
-  LIST_SORTS.forEach((s) => {
+  items.forEach((s) => {
     const item = listEl('li');
     const option = listEl('button', 'list__sort-option', s.label);
     option.type = 'button';
@@ -244,7 +283,7 @@ function listSortMenu(current, onSort) {
     if (s.key === now.key) option.append(listEl('span', 'list__sort-check', '✓'));
     option.addEventListener('click', () => {
       setOpen(false);
-      if (s.key !== now.key) onSort(s.key);
+      if (s.key !== now.key) onPick(s.key);
     });
     item.append(option);
     menu.append(item);
@@ -277,7 +316,7 @@ function listEmpty(title, help, buttons = []) {
 const listView = {
   // A-05를 불러 그리고, 받은 결과를 돌려준다. 조건은 guard.conditions()가 만든다.
   async load(container, where, handlers = {}) {
-    const sort = store.get('map').sort || 'category';
+    const sort = store.get('map').sort || LIST_DEFAULT_SORT;
     const onSort = (next) => {
       store.set('map', { sort: next });
       listView.load(container, where, handlers).catch(() => {}); // 실패하면 load가 오류 문구를 그린다
@@ -353,7 +392,13 @@ const listView = {
 
   // A-05 응답으로 목록을 그린다. options: { where, sort, onSort, onSelect, onClose } (모두 없어도 된다)
   render(container, result, options = {}) {
-    const root = listEl('section', 'list');
+    // 보기 방식(기본 / 게이지)은 이 파일이 store에 두고, 바꾸면 같은 응답으로 다시 그린다
+    const onView = (next) => {
+      store.set('map', { list_view: next });
+      listView.render(container, result, options);
+    };
+    options = { ...options, onView };
+    const root = listEl('section', `list list--${listViewMode()}`);
     root.append(listHead(result, options));
 
     // 결과 없음 (P-05 ⑨, FR-APT-07). '조건 초기화', '조건 바꾸기'는 부르는 쪽이 넘겼을 때만
