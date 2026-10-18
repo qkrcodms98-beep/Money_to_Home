@@ -161,7 +161,7 @@
   min-width: 0;
   padding: 6px 10px 6px 7px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.72); /* 지도가 조금 더 비치게 (0.82 → 0.72) */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -201,13 +201,29 @@
   width: 84px;
 }
 
+.legend:has(.legend__head[aria-expanded="false"]) {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* .legend__item과 같다. 아이콘과 "범례"가 펼쳤을 때의 첫 줄(⌂ 지금) 자리에 온다 */
+}
+
 .legend:has(.legend__head[aria-expanded="false"])::before {
+  content: '';
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  -webkit-mask: var(--icon-home) center / contain no-repeat;
+  mask: var(--icon-home) center / contain no-repeat;
+  background: #333333;
+}
+
+.legend:has(.legend__head[aria-expanded="false"])::after {
   content: '범례';
-  display: block;
-  color: #202020;
+  color: #333333;
   font-size: var(--text-badge);
   font-weight: var(--font-bold);
   line-height: 17px;
+  white-space: nowrap;
 }
 
 .legend__list {
