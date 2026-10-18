@@ -1040,3 +1040,43 @@
   align-self: flex-start;
   margin-top: 6px;
 }
+
+/* 정렬 "구분순 ▾"을 닫기(×)에 붙인다 */
+.list__side + .list__close {
+  margin-left: -10px;
+}
+
+/* 보기 방식 아이콘 두 개: ㎡/평과 같은 회색 판 위의 흰 칸 */
+.list__chips .list__view {
+  display: flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--color-line);
+}
+
+.list__view-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+
+.list__view-option[aria-pressed="true"] {
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.list__view-option:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}

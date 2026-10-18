@@ -9,7 +9,7 @@
 //   listView.render(el, result);
 //   listView.render(el, result, {
 //     where: { gu: '서구', dong: '치평동' },        // 머리의 "서구 치평동 · 23곳"
-//     sort: 'price_asc',                             // 지금 정렬. 머리 오른쪽의 "가격 낮은 순 ▾" (없으면 가격 낮은 순)
+//     sort: 'category',                              // 지금 정렬. 머리 오른쪽의 "구분순 ▾" (없으면 구분순)
 //     onSort: (sort) => { ... },                     // 정렬을 고름. A-05를 sort로 다시 불러 그린다. 없으면 정렬 버튼이 없다
 //     onSelect: (apartment, areaIndex) => { ... },  // 카드를 누름. 80% 아파트 창을 연다 (세환)
 //     onClose: () => { ... },                        // 닫기
@@ -38,22 +38,57 @@ const LIST_GROUPS = [
   { key: 'lack', title: '자금이 부족한 곳', chip: '부족', badge: '자금 부족' },
 ];
 
-// 정렬. 값은 A-05의 sort와 같다. 처음에는 가격 낮은 순이다 (2026-10-18, 예전에는 구분순)
+// 정렬. 값은 A-05의 sort와 같다. 처음에는 구분순이다
 const LIST_SORTS = [
+  { key: 'category', label: '구분순' },
   { key: 'price_asc', label: '가격 낮은 순' },
   { key: 'price_desc', label: '가격 높은 순' },
-  { key: 'category', label: '구분순' },
 ];
-const LIST_DEFAULT_SORT = 'price_asc';
+const LIST_DEFAULT_SORT = 'category';
 
-// 보기 방식 (2026-10-18). 정렬 아래의 "기본 ▾"에서 고른다. store의 map.list_view에 둔다
+// 보기 방식 (2026-10-18). 칩 줄 오른쪽 끝의 아이콘 두 개로 고른다. store의 map.list_view에 둔다
 //   basic: 이름, 면적·거래, 평균가 · 여유/부족
 //   gauge: 위에 더해 막대 하나. 쓸 수 있는 자금이 집값의 몇 %인지 (200% 이상이면 가득).
 //          여유가 적을수록 짧고, 부족하면 빨간 막대가 조금만 찬다
 const LIST_VIEWS = [
-  { key: 'basic', label: '기본' },
-  { key: 'gauge', label: '게이지' },
+  { key: 'basic', label: '기본', icon: ['M4 7h16', 'M4 12h16', 'M4 17h16'] }, // 줄 세 개
+  { key: 'gauge', label: '게이지', icon: ['M4 8h16', 'M4 8h9', 'M4 16h16', 'M4 16h5'] }, // 막대 두 개 (앞은 찬 부분)
 ];
+
+// 보기 방식 아이콘 두 개 (기본 | 게이지). 누른 쪽이 고른 것이다. 같은 것을 누르면 아무 일도 없다
+function listViewToggle(current, onPick) {
+  const box = listEl('div', 'list__view');
+  box.setAttribute('role', 'group');
+  box.setAttribute('aria-label', '보기 방식');
+  const ns = 'http://www.w3.org/2000/svg';
+  LIST_VIEWS.forEach((v) => {
+    const button = listEl('button', `list__view-option list__view-option--${v.key}`);
+    button.type = 'button';
+    button.setAttribute('aria-label', v.label);
+    button.title = v.label;
+    button.setAttribute('aria-pressed', String(v.key === current));
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    v.icon.forEach((d, i) => {
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke-linecap', 'round');
+      // 게이지 아이콘: 막대 바탕은 옅게, 찬 부분은 진하게
+      path.setAttribute('stroke-width', v.key === 'gauge' ? '3' : '2');
+      if (v.key === 'gauge' && i % 2 === 0) path.setAttribute('stroke-opacity', '0.3');
+      svg.append(path);
+    });
+    button.append(svg);
+    button.addEventListener('click', () => { if (v.key !== current) onPick(v.key); });
+    box.append(button);
+  });
+  return box;
+}
 // 목록에 보이는 구분 (칩으로 켜고 끈다). 처음에는 셋 다
 const listShownCats = () => {
   const saved = store.get('map').list_cats;
@@ -203,7 +238,7 @@ function listHead(result, options) {
 
   head.append(listInfo());
 
-  // 오른쪽: 정렬 "가격 낮은 순 ▾". 보기 방식 "기본 ▾"은 칩 줄 오른쪽에 있다
+  // 오른쪽: 정렬 "구분순 ▾" (닫기 바로 옆). 보기 방식 아이콘(기본 | 게이지)은 칩 줄 오른쪽에 있다
   const side = listEl('div', 'list__side');
   if (options.onSort) side.append(listSortMenu(options.sort || LIST_DEFAULT_SORT, options.onSort));
   if (side.children.length > 0) head.append(side);
@@ -433,7 +468,7 @@ const listView = {
       });
       chips.append(chip);
     });
-    chips.append(listPicker(LIST_VIEWS, listViewMode(), options.onView, '보기 방식', 'list__view'));
+    chips.append(listViewToggle(listViewMode(), options.onView));
     root.append(chips);
     result = { ...result, apartments: result.apartments.filter((a) => shown.includes(a.category)) };
 
