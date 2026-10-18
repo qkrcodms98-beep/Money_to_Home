@@ -729,20 +729,46 @@ const GU_MARKER_FAR_RADIUS = 28; // 가장 넓게 볼 때(GU_MARKER_FAR_LEVEL �
 const GU_MARKER_FAR_LEVEL = 9;
 const GU_MARKER_GAP = 16;
 
+// 구 표시의 자리는 한 번만 정하고(구 → LatLng) 구 표시 수준(7 ~ 9) 모두에서 그대로 쓴다 (2026-10-18).
+// 가장 넓게 보는 수준(9)에서 겹치지 않게 정하므로 더 가까이 보면(8, 7) 원 사이가 2배, 4배로 저절로 넓어진다.
+// 예전에는 그릴 때마다 그때 받은 구 표시 좌표(조건·지역에 따라 달라지는 아파트 평균)에서 다시 벌려,
+// 다른 구나 동을 누르면 구 표시가 움직였다
+let guMarkerPlaces = null; // Map(구 → LatLng). 경계 자료가 온 뒤에 정한 것만 둔다
+
 function spreadGuMarkers(groups) {
   const { map } = mapState;
-  const projection = map.getProjection();
   const far = map.getLevel() >= GU_MARKER_FAR_LEVEL;
   document.getElementById('kakao-map').classList.toggle('map--far', far);
-  const radius = far ? GU_MARKER_FAR_RADIUS : GU_MARKER_RADIUS;
-  const points = groups.map((g) => {
-    const p = projection.containerPointFromCoords(toLatLng(g));
-    return { gu: g.gu, x: p.x, y: p.y };
+  if (guMarkerPlaces && groups.every((g) => guMarkerPlaces.has(g.gu))) return groups.map((g) => guMarkerPlaces.get(g.gu));
+
+  // 시작점은 늘 같은 값: 지역 목록(A-02)의 구 좌표(그 구 전체 아파트의 평균). 없으면 구 표시의 좌표. 이름순으로 벌린다
+  const start = new Map(groups.map((g) => [g.gu, g]));
+  mapState.regions.filter(hasCoord).forEach((r) => start.set(r.gu, r));
+  const names = [...start.keys()].sort();
+  const places = spreadGuPlaces(names.map((gu) => ({ gu, at: toLatLng(start.get(gu)) })));
+  // 경계 자료가 온 뒤에 정한 자리만 기억한다 (먼저 그리면 경계 확인 없이 벌린 자리라 나중에 다시 정한다)
+  const sample = start.get(names[0]);
+  if (mapBoundary.contains(names[0], null, sample.latitude, sample.longitude) !== null) guMarkerPlaces = places;
+  return groups.map((g) => places.get(g.gu));
+}
+
+// 구들의 자리를 가장 넓게 보는 수준(GU_MARKER_FAR_LEVEL)의 화면 크기로 벌린다. 지금 수준과 상관없이 결과가 같다.
+// items: [{ gu, at: LatLng }]. 돌려주는 것은 Map(구 → LatLng)
+function spreadGuPlaces(items) {
+  const { map } = mapState;
+  const projection = map.getProjection();
+  const radius = GU_MARKER_FAR_RADIUS;
+  // 지금 수준의 화면 좌표 → 기준 수준의 화면 좌표. 수준이 하나 올라가면 반으로 준다
+  const scale = 2 ** (map.getLevel() - GU_MARKER_FAR_LEVEL);
+  const toScreen = (x, y) => new kakao.maps.Point(x / scale, y / scale);
+  const points = items.map(({ gu, at }) => {
+    const p = projection.containerPointFromCoords(at);
+    return { gu, x: p.x * scale, y: p.y * scale };
   });
   // 원의 가운데와 둘레 여덟 점 가운데 그 구 안에 있는 점의 수 (0 ~ 9). 가운데가 밖이면 -1. 경계를 모르면 9
   const inside = (gu, x, y) => {
     const at = (dx, dy) => {
-      const c = projection.coordsFromContainerPoint(new kakao.maps.Point(x + dx, y + dy));
+      const c = projection.coordsFromContainerPoint(toScreen(x + dx, y + dy));
       return mapBoundary.contains(gu, null, c.getLat(), c.getLng()) !== false;
     };
     if (!at(0, 0)) return -1;
@@ -790,7 +816,7 @@ function spreadGuMarkers(groups) {
     }
     if (!moved) break;
   }
-  return points.map((pt) => projection.coordsFromContainerPoint(new kakao.maps.Point(pt.x, pt.y)));
+  return new Map(points.map((pt) => [pt.gu, projection.coordsFromContainerPoint(toScreen(pt.x, pt.y))]));
 }
 
 // 구 표시를 보는 채로 확대·축소하면 화면 거리가 달라지므로 다시 벌린다
