@@ -612,22 +612,124 @@
   display: none; /* 시안에 없다. 여유 금액 색으로 구분이 보인다 */
 }
 
-/* 시나리오 탭: 허용 상승률 설명과 "조건 바꿔 보기" 사이를 줄인다 */
-.scenario__change {
-  margin-top: 16px;
-  padding-top: 20px;
-}
-
-/* 아파트 정보 탭 안쪽(지번 주소 ~ 비슷한 아파트)을 탭 머리보다 8px 안으로 들인다 */
-#apartment-info .apt-info {
-  padding-left: calc(var(--page-padding) + 8px);
-}
-
-#apartment-info .apt-info__row:nth-child(2) {
-  margin-left: calc(-1 * var(--page-padding) - 8px);
-  padding-left: calc(var(--page-padding) + 8px);
-}
-
-#apt-similar {
+/* ───────── 시나리오 탭 (아파트 정보 탭과 같은 모양) ─────────
+   안쪽 8px 들임, 테두리 상자 대신 옅은 회색 판, 회색 작은 제목, 테두리 없는 회색 입력란, ㎡/평과 같은 기간 선택 */
+#scenario-panel {
   padding: 0 4px 0 8px;
+}
+
+.scenario__result {
+  margin: 4px 0 14px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--new-control-bg);
+}
+
+.scenario__lead {
+  font-size: var(--text-help);
+}
+
+.scenario__gap {
+  font-size: 24px;
+  line-height: 34px;
+}
+
+.scenario__formula {
+  font-size: var(--text-badge);
+}
+
+.scenario__need {
+  border-top-color: var(--new-sheet-line);
+}
+
+.scenario__growth-help {
+  margin-top: 2px;
+  color: var(--color-text-hint);
+  font-size: var(--text-badge);
+}
+
+/* 조건 바꿔 보기: 구분선은 창 끝까지, 안쪽은 정보 줄과 같은 들임 */
+.scenario__change {
+  margin: 16px calc(-1 * var(--page-padding) - 4px) 0 calc(-1 * var(--page-padding) - 8px);
+  padding: 18px calc(var(--page-padding) + 4px) 4px calc(var(--page-padding) + 8px);
+  border-top: 1px solid var(--new-sheet-line);
+}
+
+.scenario__change-title {
+  margin: 0 0 12px;
+  color: var(--new-sheet-section);
+  font-size: var(--text-help);
+}
+
+.scenario__field-label {
+  width: 108px; /* 정보 줄의 이름 칸과 같은 너비. 입력란이 값과 같은 자리에서 시작한다 */
+  margin-right: -12px; /* 칸 사이(gap 12px)를 빼서 값 자리에 맞춘다 */
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  font-weight: var(--font-regular);
+}
+
+.scenario__input-row {
+  height: 40px;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  background: var(--color-bg-sub);
+}
+
+.scenario__input-row:focus-within {
+  background: var(--color-bg);
+}
+
+.scenario__input {
+  font-size: var(--text-body);
+}
+
+.scenario__years {
+  gap: 2px;
+  margin: 10px 0 12px;
+  padding: 3px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-bg-sub);
+}
+
+.scenario__year {
+  height: 34px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+}
+
+.scenario__year[aria-pressed='true'] {
+  background: var(--color-bg);
+  color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.scenario__submit,
+.scenario__save {
+  height: 44px;
+  border-radius: 12px;
+  font-size: var(--text-body);
+}
+
+.scenario__save {
+  margin-top: 12px;
+  border: 0;
+  background: var(--color-bg-sub);
+  color: var(--color-text);
+}
+
+.scenario__save:disabled {
+  border: 0;
+  background: var(--color-bg-sub);
+  color: var(--color-text-hint);
+}
+
+.scenario__guide {
+  margin-top: 16px;
+  font-size: var(--text-badge);
 }
