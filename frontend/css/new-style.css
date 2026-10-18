@@ -1080,3 +1080,56 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
+
+/* 줄을 격자로 (2026-10-18). 금액 글자 폭에 따라 막대 길이와 줄바꿈이 달라지던 것을 고친다.
+     1행: [아이콘] 이름 ........ 금액
+     2행:          평균 · 면적 (금액 끝까지 넓게. 넘치면 띄어쓰기에서만 줄을 바꾼다)
+     3행:          ━━━━━━━━ 집값의 N% (게이지 보기. 금액 끝까지, 모든 줄이 같은 길이) */
+.list .list-card__slide {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+}
+
+.list .list-card__mid {
+  display: contents;
+}
+
+.list .badge,
+.list--gauge .badge {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  margin-top: 0;
+}
+
+.list .list-card__name {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.list .list-card__gap {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: right;
+}
+
+.list .list-card__meta {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.list .list-gauge {
+  grid-column: 2 / 4;
+  grid-row: 3;
+  margin-top: 6px;
+}
+
+.list .list-gauge__text {
+  min-width: 78px; /* "집값의 1,000%"까지 같은 자리. 그래서 막대 길이가 줄마다 같다 */
+  text-align: right;
+}
