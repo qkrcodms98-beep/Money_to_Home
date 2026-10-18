@@ -1203,3 +1203,20 @@
 .map-app[data-sheet-mode="apartment"] .sheet[data-stage="full"] {
   height: 100%;
 }
+
+/* 아파트 창을 전체로 올렸을 때의 내 조건 줄 (Figma 2038:235의 "내 조건 줄"): 짙은 회색 #505050 85%, 글자는 모두 흰 굵은 13px.
+   로드뷰 위에 얹혀 글자가 잘 보이게 한다. "수정"만 밑줄 */
+.map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar {
+  background: rgba(80, 80, 80, 0.85);
+}
+
+.map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar__label,
+.map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar__sentence,
+.map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar__link {
+  color: #ffffff;
+  font-weight: var(--font-bold);
+}
+
+.map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar__link--edit {
+  text-decoration: underline;
+}
