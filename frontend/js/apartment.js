@@ -319,13 +319,39 @@ const aptPanel = {
         }
         aptPanel.roadviewShow('view');
         const view = aptPanel.roadviewBox().querySelector('.apt-roadview__view');
-        if (!aptPanel.roadview) aptPanel.roadview = new kakao.maps.Roadview(view);
+        if (!aptPanel.roadview) {
+          aptPanel.roadview = new kakao.maps.Roadview(view);
+          // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 아파트 쪽을 바라보게 돌린다
+          kakao.maps.event.addListener(aptPanel.roadview, 'init', aptPanel.aimRoadview);
+          kakao.maps.event.addListener(aptPanel.roadview, 'panoid_changed', aptPanel.aimRoadview);
+        }
+        aptPanel.roadviewTarget = position;
         aptPanel.roadview.setPanoId(panoId, position);
         aptPanel.roadview.relayout();
       });
     } catch (error) {
       aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
     }
+  },
+
+  // 로드뷰가 아파트를 바라보게 한다 (2026-10-18). 카카오는 바라보는 방향을 정해 주지 않아 길 방향으로 열린다.
+  // 촬영 지점(로드뷰의 자리)에서 아파트 좌표로 가는 방위각(북쪽 0도, 시계 방향)을 구해 시점의 좌우 각도(pan)로 둔다.
+  // 위아래(tilt)는 0(수평), 확대(zoom)는 0
+  roadviewTarget: null,
+  aimRoadview() {
+    const rv = aptPanel.roadview;
+    const target = aptPanel.roadviewTarget;
+    if (!rv || !target) return;
+    const from = rv.getPosition();
+    if (!from) return;
+    const rad = Math.PI / 180;
+    const lat1 = from.getLat() * rad;
+    const lat2 = target.getLat() * rad;
+    const dLng = (target.getLng() - from.getLng()) * rad;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    const pan = (Math.atan2(y, x) / rad + 360) % 360;
+    rv.setViewpoint(new kakao.maps.Viewpoint(pan, 0, 0));
   },
 
   // ───────── 비슷한 아파트 (3차, 목업 C6, 김목산의 similar.js) ─────────
