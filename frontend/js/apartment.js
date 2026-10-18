@@ -246,11 +246,11 @@ const aptPanel = {
 
   // ───────── 로드뷰 (3차, 목업 C6, C6b) ─────────
 
-  // 로드뷰 자리가 보이는가. 전체 단계이고, 아파트 창이고, 아파트 정보 탭이 골라져 있을 때 (C6)
+  // 로드뷰 자리가 보이는가. 전체 단계이고 아파트 창일 때 (C6). 탭은 가리지 않는다:
+  // 아파트 정보 탭과 시나리오 탭 모두 전체가 되면 위에 로드뷰가 보인다 (2026-10-18, 예전에는 아파트 정보 탭만)
   roadviewVisible() {
     return (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment' &&
-      sheet.stage === 'full' &&
-      document.getElementById('apt-tab-info').getAttribute('aria-selected') === 'true';
+      sheet.stage === 'full';
   },
 
   // 로드뷰 자리. 처음 쓸 때 한 번 만들어 창의 손잡이 앞(창 맨 위)에 넣는다.
