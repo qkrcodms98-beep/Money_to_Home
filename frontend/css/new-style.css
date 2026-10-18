@@ -1134,11 +1134,11 @@
   text-align: right;
 }
 
-/* › 는 면적이 여럿일 때(› 1/2 버튼)만. 면적이 하나인 줄에는 두지 않는다 */
+/* › 는 면적이 여럿일 때(› 1/2 버튼)만 보인다. 면적이 하나인 줄도 그 자리(36px)는 비워 두어
+   금액이 모든 줄에서 같은 자리에 오게 한다 */
 .list .list-card:not(:has(.list-card__next))::after {
-  content: none;
-}
-
-.list .list-card:not(:has(.list-card__next)) .list-card__slide {
-  padding-right: 14px;
+  content: '';
+  box-sizing: border-box;
+  width: 36px;
+  padding: 0;
 }
