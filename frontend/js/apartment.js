@@ -176,6 +176,9 @@ const aptPanel = {
     }
     document.getElementById('apt-name').textContent = apartment.name;
     const badge = document.getElementById('apt-badge');
+    // 배지는 첫 줄 오른쪽, ✕ 앞에 둔다 (2026-10-18 새 스타일, 목업 6013:2048)
+    const nav = document.querySelector('.apt__nav');
+    if (badge.parentElement !== nav) nav.prepend(badge);
     badge.className = `badge badge--${area.category}`; // 고른 면적의 구분
     badge.textContent = APT_CATEGORY_NAMES[area.category];
     aptPanel.renderNoCoordTag();

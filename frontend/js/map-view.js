@@ -1542,23 +1542,43 @@ function centerFor(center, focus) {
 }
 
 // 지도를 그 지역으로 옮긴다. 경계 자료가 있으면 그 지역 전체가 들어오게, 없으면 아파트 좌표의 평균으로 (예전과 같다).
+// 구 전체를 골랐을 때(조건 창의 "○○구" 칩) 지도를 옮길 동. 아파트가 가장 많은 동이고,
+// 수가 같으면 구 전체 아파트의 무게중심에 가까운 동이다. 구 경계 전체에 맞추면 이웃 구의 동(남구 → 서구 풍암동)까지
+// 화면에 들어오므로, 아파트가 몰린 곳을 보여 준다 (2026-10-18). 자리를 모르면 null
+function busiestDong(gu) {
+  const region = mapState.regions.find((item) => item.gu === gu);
+  const dongs = region ? region.dongs.filter(hasCoord) : [];
+  if (dongs.length === 0) return null;
+  const count = (d) => d.apartment_count || 0;
+  const total = dongs.reduce((sum, d) => sum + count(d), 0) || 1;
+  const lat = dongs.reduce((sum, d) => sum + d.latitude * count(d), 0) / total;
+  const lng = dongs.reduce((sum, d) => sum + d.longitude * count(d), 0) / total;
+  const most = Math.max(...dongs.map(count));
+  const far = (d) => (d.latitude - lat) ** 2 + (d.longitude - lng) ** 2;
+  return dongs.filter((d) => count(d) === most).sort((a, b) => far(a) - far(b))[0].dong;
+}
+
 function panToRegion() {
   const { map } = mapState;
   if (!map) return;
-  const fit = regionFit(mapState.region);
+  const { gu, dong } = mapState.region;
+  // 구 전체면 아파트가 가장 많은 동으로 옮긴다. 고른 지역(목록, 경계 강조)은 구 전체 그대로다
+  const busy = dong ? null : busiestDong(gu);
+  const target = busy ? { gu, dong: busy } : mapState.region;
+  const fit = regionFit(target);
   quietZoom(500);
   if (fit) {
-    mapState.focus = { ...mapState.region, kind: mapState.region.dong ? 'dong' : 'gu' };
+    mapState.focus = { ...mapState.region, kind: dong ? 'dong' : 'gu' };
     map.setCenter(fit.center); // 가운데를 먼저 옮긴 뒤 확대 수준을 바꾼다 (바뀌는 동안에도 그 지역을 보고 있게)
     map.setLevel(fit.level);
     map.setCenter(centerFor(fit.center, fit.focus));
     return;
   }
-  // 경계로 맞추지 못했으면 동의 예외는 풀고 원래 규칙으로. 구는 구 표시 수준(7)이라 고른 구로 둔다 (지역 버튼 "북구 전체")
-  mapState.focus = mapState.region.dong ? null : { ...mapState.region, kind: 'gu' };
-  const center = regionCenter(mapState.region);
+  // 경계로 맞추지 못했으면 동의 예외는 풀고 원래 규칙으로. 구는 고른 구로 둔다 (지역 이름 "북구 전체")
+  mapState.focus = dong ? null : { ...mapState.region, kind: 'gu' };
+  const center = regionCenter(target);
   if (!center) return;
-  map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
+  map.setLevel(target.dong ? DONG_LEVEL : GU_LEVEL);
   map.setCenter(toLatLng(center));
 }
 

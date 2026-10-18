@@ -456,27 +456,6 @@
   font-size: 20px;
 }
 
-/* 배지: 칠한 배지 → 옅은 회색 바탕, 검은 글자, 앞에 구분 색 점 */
-.apt__title .badge {
-  gap: 5px;
-  border: 1px solid var(--color-bg);
-  background: rgba(144, 144, 144, 0.08);
-  color: #0f0f0f;
-}
-
-.apt__title .badge::before {
-  content: '';
-  width: 10px;
-  height: 10px;
-  -webkit-mask: var(--icon-home) center / contain no-repeat;
-  mask: var(--icon-home) center / contain no-repeat;
-  background: currentColor;
-}
-
-.apt__title .badge--now::before { background: var(--color-now); }
-.apt__title .badge--within::before { background: var(--color-within); }
-.apt__title .badge--lack::before { background: var(--color-lack); }
-
 /* 면적 칩: 둥근 알약 → 모서리 5px 네모. 고른 것은 남색, 나머지는 회색 바탕 */
 .apt__area {
   height: 28px;
@@ -517,22 +496,88 @@
   text-align: left;
 }
 
-/* 지번 주소와 도로명 주소(첫 두 줄) 뒤의 구분선. 창 끝까지 닿게 좌우 여백만큼 넓힌다 */
-.apt-info__row:nth-child(2) {
+/* 아파트 정보 탭만: 지번 주소와 도로명 주소(첫 두 줄) 뒤의 구분선, 정보 줄 끝의 구분선. 창 끝까지 닿게 좌우 여백만큼 넓힌다.
+   시나리오 탭(scenario.js)도 .apt-info 줄을 같이 쓰지만, 그쪽은 아래 "조건 바꿔 보기"에 이미 선이 있어 선을 넣지 않는다 */
+#apartment-info .apt-info__row:nth-child(2) {
   margin: 0 calc(-1 * var(--page-padding)) 8px;
   padding: 7px var(--page-padding) 15px;
   border-bottom: 1px solid var(--new-sheet-line);
 }
 
-.apt-info {
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--new-sheet-line);
+#apartment-info .apt-info {
   margin: 0 calc(-1 * var(--page-padding));
-  padding-left: var(--page-padding);
-  padding-right: var(--page-padding);
+  padding: 0 var(--page-padding) 12px;
+  border-bottom: 1px solid var(--new-sheet-line);
 }
 
-/* 비슷한 아파트: 카드 → 선으로 나눈 목록 */
+/* 아파트 창 머리 (목업 6013:2048): 첫 줄 "← 치평동 목록 … [배지] ✕", 둘째 줄 이름. ‹ › 는 시안에 없어 숨긴다.
+   배지는 apartment.js가 .apt__nav 맨 앞으로 옮긴다 */
+#apt-prev,
+#apt-next {
+  display: none;
+}
+
+.apt__nav {
+  align-items: center;
+  gap: 4px;
+}
+
+.apt__nav .badge {
+  gap: 5px;
+  border: 1px solid var(--color-bg);
+  background: rgba(144, 144, 144, 0.08);
+  color: #0f0f0f;
+}
+
+.apt__nav .badge::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  -webkit-mask: var(--icon-home) center / contain no-repeat;
+  mask: var(--icon-home) center / contain no-repeat;
+}
+
+.apt__nav .badge--now::before { background: var(--color-now); }
+.apt__nav .badge--within::before { background: var(--color-within); }
+.apt__nav .badge--lack::before { background: var(--color-lack); }
+
+/* 비슷한 아파트: 카드 → 선으로 나눈 목록. 머리 오른쪽에 조건순 | 가격순 | ↻ */
+.similar__sort {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.similar__sort-option {
+  min-height: var(--touch-size);
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--color-text-hint);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: var(--font-medium);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.similar__sort-option[aria-pressed="true"] {
+  color: #636363;
+  font-weight: var(--font-bold);
+}
+
+.similar__more {
+  width: var(--touch-size);
+  justify-content: center;
+  padding: 0;
+}
+
+.similar__more-icon {
+  font-size: 18px;
+  font-weight: var(--font-bold);
+}
+
 .similar__title {
   color: var(--new-sheet-section);
   font-size: var(--text-help);
@@ -565,4 +610,10 @@
 
 .similar__card .badge {
   display: none; /* 시안에 없다. 여유 금액 색으로 구분이 보인다 */
+}
+
+/* 시나리오 탭: 허용 상승률 설명과 "조건 바꿔 보기" 사이를 줄인다 */
+.scenario__change {
+  margin-top: 16px;
+  padding-top: 20px;
 }

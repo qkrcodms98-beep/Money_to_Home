@@ -19,9 +19,11 @@
 // 서버에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
 
 const SIMILAR_TEXT = {
-  title: '비슷한 아파트',
+  title: '내 조건과 비슷한 아파트',
   help: '같은 동부터, 고른 면적의 평균가와 가까운 순입니다.',
   more: '다른 곳 보기',
+  sortCondition: '조건순',
+  sortPrice: '가격순',
   empty: '같은 구에 비교할 아파트가 없습니다.',
   loadFail: '비슷한 아파트를 불러오지 못했습니다.',
   retry: '다시 시도',
@@ -40,6 +42,44 @@ const similarView = (() => {
     if (className) node.className = className;
     if (text !== undefined && text !== null) node.textContent = text;
     return node;
+  }
+
+  // 보이는 세 곳과 정렬. 조건순은 서버가 준 순서(같은 동 먼저, 기준 가격에 가까운 순), 가격순은 평균가가 낮은 순
+  const lists = new WeakMap(); // 요소 → { apartments, onPick }
+  const sorts = new WeakMap(); // 요소 → 'condition' | 'price'
+
+  function paintList(container) {
+    const data = lists.get(container);
+    const body = container.querySelector('.similar__body');
+    if (!data || !body) return;
+    const shown = sorts.get(container) === 'price'
+      ? [...data.apartments].sort((a, b) => a.areas[0].avg_price - b.areas[0].avg_price)
+      : data.apartments;
+    const list = el('ul', 'similar__list');
+    list.setAttribute('aria-label', SIMILAR_TEXT.title);
+    shown.forEach((apartment) => list.append(card(apartment, data.onPick)));
+    body.replaceChildren(list);
+  }
+
+  // 조건순 | 가격순. '다른 곳 보기'(↻)는 load()가 이 뒤에 붙인다
+  function sortButtons(container) {
+    const box = el('div', 'similar__sort');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', '정렬');
+    const now = sorts.get(container) || 'condition';
+    [['condition', SIMILAR_TEXT.sortCondition], ['price', SIMILAR_TEXT.sortPrice]].forEach(([value, text]) => {
+      const button = el('button', 'similar__sort-option', text);
+      button.type = 'button';
+      button.dataset.sort = value;
+      button.setAttribute('aria-pressed', String(value === now));
+      button.addEventListener('click', () => {
+        sorts.set(container, value);
+        box.querySelectorAll('.similar__sort-option').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === value)));
+        paintList(container);
+      });
+      box.append(button);
+    });
+    return box;
   }
 
   // "평균 3억 원 · 여유 2,000만 원" 또는 "부족 2,500만 원". 부족자금이 음수면 여유다 (목록 카드와 같다)
@@ -63,7 +103,7 @@ const similarView = (() => {
     head.append(el('span', `badge badge--${area.category}`, SIMILAR_BADGE[area.category]));
     body.append(head);
 
-    const meta = el('p', 'list-card__meta', `${format.area(area.supply_area, area.exclusive_area)} · ${apartment.gu} ${apartment.dong}`);
+    const meta = el('p', 'list-card__meta', `${apartment.gu} ${apartment.dong} · ${format.area(area.supply_area, area.exclusive_area)}`);
     if (apartment.latitude === null || apartment.longitude === null) {
       meta.append(el('span', 'list-card__tag', SIMILAR_TEXT.noCoord));
     }
@@ -86,7 +126,7 @@ const similarView = (() => {
     let head = container.querySelector('.similar__head');
     if (!head) {
       head = el('div', 'similar__head');
-      head.append(el('h3', 'similar__title', SIMILAR_TEXT.title));
+      head.append(el('h3', 'similar__title', SIMILAR_TEXT.title), sortButtons(container));
       container.replaceChildren(head, el('p', 'similar__help', SIMILAR_TEXT.help), el('div', 'similar__body'));
     }
     const more = head.querySelector('.similar__more');
@@ -108,8 +148,10 @@ const similarView = (() => {
         if (!button) {
           button = el('button', 'similar__more');
           button.type = 'button';
-          button.append(el('span', 'similar__more-icon', '↻'), el('span', null, SIMILAR_TEXT.more));
-          head.append(button);
+          button.setAttribute('aria-label', SIMILAR_TEXT.more);
+          button.title = SIMILAR_TEXT.more;
+          button.append(el('span', 'similar__more-icon', '↻'));
+          head.querySelector('.similar__sort').append(button);
         }
         button.disabled = false;
         button.onclick = () => load(container, target, handlers, Number(button.dataset.next));
@@ -122,10 +164,8 @@ const similarView = (() => {
         body.replaceChildren(el('p', 'similar__empty', SIMILAR_TEXT.empty));
         return;
       }
-      const list = el('ul', 'similar__list');
-      list.setAttribute('aria-label', SIMILAR_TEXT.title);
-      result.apartments.forEach((apartment) => list.append(card(apartment, handlers.onPick)));
-      body.replaceChildren(list);
+      lists.set(container, { apartments: result.apartments, onPick: handlers.onPick });
+      paintList(container);
     }).catch(() => {
       if (seqs.get(container) !== mine) return;
       container.removeAttribute('aria-busy');
@@ -145,6 +185,7 @@ const similarView = (() => {
     load: (container, target, handlers) => load(container, target, handlers, 0),
     clear(container) {
       seqs.set(container, (seqs.get(container) || 0) + 1);
+      lists.delete(container);
       container.replaceChildren();
       container.removeAttribute('aria-busy');
     },
