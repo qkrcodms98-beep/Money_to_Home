@@ -758,38 +758,44 @@
   --boundary-gu: #7c7c82;
 }
 
-/* ───────── 목록 (iOS 그룹형, 2026-10-18) ─────────
-   회색 바탕 위에 무리마다 둥근 흰 판. 판 안의 줄은 왼쪽을 띄운 가는 선으로 나눈다.
-   이름 앞에 구분 색 집 아이콘(배지 자리), 오른쪽 끝에 › (면적이 여럿이면 › 1/2).
-   머리 오른쪽에 정렬 "가격 낮은 순 ▾", 그 아래 보기 방식 "기본 ▾" (게이지를 고르면 줄마다 막대).
+/* ───────── 목록 (iOS 그룹형, 시안 5번과 같은 값, 2026-10-18) ─────────
+   창 전체(손잡이 줄, 스크롤 막대 자리 포함)가 회색 바탕. 무리마다 둥근 흰 판, 판 안의 줄은 왼쪽을 띄운 가는 선.
+   줄: 구분 색 집 아이콘 | 이름, "평균 · 면적" | 여유/부족 금액 | › (면적이 여럿이면 › 1/2).
+   머리 오른쪽에 정렬 "가격 낮은 순 ▾". 칩 줄은 지금 / 기간 내 / 부족(눌러서 켜고 끔)과 오른쪽 끝 보기 방식 "기본 ▾".
    비슷한 아파트(#apt-similar)도 .list-card를 쓰므로 여기서는 .list 안만 바꾼다 */
-#apt-list:has(.list) {
+.sheet:has(> #apt-list:not([hidden]) > .list) {
+  background: var(--color-bg-sub);
+}
+
+#apt-list:has(> .list) {
   min-height: 100%;
+  background: var(--color-bg-sub);
+  scrollbar-color: var(--color-line-strong) var(--color-bg-sub);
+}
+
+#apt-list:has(> .list)::-webkit-scrollbar-track {
   background: var(--color-bg-sub);
 }
 
 .list {
   gap: 0;
-  padding: 4px 16px 24px;
+  padding: 0 0 24px;
   background: var(--color-bg-sub);
 }
 
+/* 머리: 시안 .head (위 10, 옆 20, 아래 6) */
 .list__head {
-  align-items: flex-start;
-  padding: 4px 4px 6px;
+  padding: 10px 20px 6px;
 }
 
 .list__title {
-  align-self: center;
-  color: var(--new-sheet-name);
+  color: #1b1b1b;
   font-size: 20px;
 }
 
-/* 정렬과 보기 방식: 오른쪽에 위아래로 */
 .list__side {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   margin-left: auto;
 }
 
@@ -797,42 +803,54 @@
   margin-left: 0;
 }
 
-.list__side .list__sort-button {
-  min-height: 28px;
-  padding: 0 2px;
+.list__sort-button {
   color: var(--color-text-sub);
   font-size: var(--text-badge);
 }
 
-.list__view .list__sort-button {
-  color: var(--color-text-hint);
-}
-
-.list__head .list__close {
-  align-self: center;
-}
-
-/* 개수 칩: 흰 알약에 구분 색 집 아이콘 */
+/* 칩 줄: 시안 .chips (위 4, 옆 20, 아래 8). 켜진 칩은 흰 알약, 끈 칩은 바탕과 같은 색에 옅은 글자 */
 .list__chips {
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 6px;
-  padding: 0 4px 6px;
+  padding: 4px 20px 8px;
 }
 
 .list__chips .chip {
   gap: 5px;
-  height: 28px;
-  padding: 0 11px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 15px;
   background: var(--color-bg);
   color: var(--new-sheet-value);
+  font-family: inherit;
   font-size: var(--text-badge);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.list__chips .chip[aria-pressed="false"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  color: var(--color-text-hint);
+}
+
+.list__chips .chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.list__chips .list__view {
+  margin-left: auto;
 }
 
 .list__chips .chip::before,
 .list .badge::before {
   content: '';
   flex-shrink: 0;
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   -webkit-mask: var(--icon-home) center / contain no-repeat;
   mask: var(--icon-home) center / contain no-repeat;
 }
@@ -843,16 +861,17 @@
 .list .badge--within::before { background: var(--color-within); }
 .list__chips .chip--lack::before,
 .list .badge--lack::before { background: var(--color-lack); }
+.list__chips .chip[aria-pressed="false"]::before { background: var(--color-text-hint); }
 
-/* 무리: 회색 작은 제목 + 둥근 흰 판 */
+/* 무리: 시안 h3 (위 16, 옆 32, 아래 6, 12px 보통 굵기) + .grp (옆 16, 모서리 12) */
 .list__group {
   gap: 0;
-  margin-top: 4px;
+  margin: 0 16px;
   padding: 0;
 }
 
 .list__group-title {
-  margin: 12px 16px 6px;
+  margin: 16px 16px 6px;
   color: var(--color-text-sub);
   font-size: var(--text-badge);
   font-weight: var(--font-medium);
@@ -861,95 +880,108 @@
 .list .list-card,
 .list .list-card--lack {
   position: relative;
+  display: flex;
+  align-items: center;
   border: 0;
   border-radius: 0;
   background: var(--color-bg);
 }
 
-/* 판의 위아래 모서리 */
-.list__group > .list-card:first-of-type { border-radius: 12px 12px 0 0; }
-.list__group > .list-card:last-of-type { border-radius: 0 0 12px 12px; }
-.list__group > .list-card:first-of-type:last-of-type { border-radius: 12px; }
-.list__group-title + .list-card { border-radius: 12px 12px 0 0; }
-.list__group-title + .list-card:last-of-type { border-radius: 12px; }
+.list__group > .list-card:first-of-type { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.list__group > .list-card:last-of-type { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+.list__group:not(:has(.list__group-title)) { margin-top: 8px; }
 
-/* 줄 사이 선: 왼쪽(아이콘 뒤)부터 */
+/* 줄 사이 선: 시안처럼 왼쪽 14px(아이콘 자리)부터 오른쪽 끝까지 */
 .list .list-card + .list-card::before {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
-  left: 38px;
+  left: 14px;
   border-top: 1px solid var(--color-line);
 }
 
+/* 한 줄: 시안 .row (위아래 11, 옆 14, 사이 10) */
 .list .list-card__slide {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 11px 6px 11px 14px;
 }
 
-/* 이름 줄: 집 아이콘(배지) + 이름. 배지 글자는 화면 읽기 프로그램만 읽는다 */
-.list .list-card__head {
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-}
-
 .list .badge {
-  order: -1;
-  width: 16px;
-  height: 16px;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
   padding: 0;
   overflow: hidden;
+  border: 0;
   background: none;
   font-size: 0;
 }
 
+.list .badge::before {
+  display: block;
+}
+
+.list .list-card__mid {
+  flex: 1;
+  min-width: 0;
+}
+
 .list .list-card__name {
+  overflow: hidden;
   color: var(--color-text);
   font-size: var(--text-body);
   font-weight: var(--font-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.list .list-card__meta,
-.list .list-card__money {
-  margin: 2px 0 0 24px;
+.list .list-card__meta {
+  margin: 0;
   color: var(--color-text-sub);
   font-size: var(--text-badge);
 }
 
-.list .list-card__money {
-  color: var(--new-sheet-value);
-}
-
 .list .list-card__gap {
-  font-size: var(--text-help);
+  flex-shrink: 0;
+  font-size: var(--text-label);
+  font-weight: var(--font-bold);
+  font-variant-numeric: tabular-nums;
 }
 
-/* 오른쪽 끝 › (면적이 하나면 그냥 ›, 여럿이면 › 1/2를 누르면 다음 면적) */
+.list .list-card__gap--now { color: var(--color-now-text); }
+.list .list-card__gap--within { color: var(--color-within-text); }
+.list .list-card__gap--lack { color: var(--color-lack-text); }
+
+/* › : 면적이 하나면 그림만, 여럿이면 누르면 다음 면적 ( › 1/2 ) */
 .list .list-card:not(:has(.list-card__next))::after {
   content: '›';
-  position: absolute;
-  top: 50%;
-  right: 14px;
+  flex-shrink: 0;
+  width: 28px;
+  padding-right: 8px;
   color: var(--color-text-hint);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
-  transform: translateY(-50%);
+  text-align: center;
   pointer-events: none;
 }
 
-.list .list-card:not(:has(.list-card__next)) .list-card__slide {
-  padding-right: 34px;
-}
-
 .list .list-card__next {
-  width: 44px;
+  flex-shrink: 0;
+  width: 36px;
+  padding-right: 6px;
   border-left: 0;
   color: var(--color-text-hint);
 }
 
 .list .list-card__arrow {
-  font-size: 20px;
+  font-size: 18px;
+}
+
+.list .list-card__page {
+  font-size: 10px;
 }
 
 /* 게이지: 쓸 수 있는 자금이 집값의 몇 %인지. 여유가 적을수록 짧고, 부족하면 빨간 막대가 조금만 찬다 */
@@ -957,7 +989,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 8px 0 2px 24px;
+  margin-top: 6px;
 }
 
 .list-gauge__bar {
@@ -983,10 +1015,8 @@
 
 .list-gauge__text {
   flex-shrink: 0;
-  min-width: 64px;
   color: var(--color-text-sub);
   font-size: 11px;
-  text-align: right;
 }
 
 .list-gauge--lack .list-gauge__text {
@@ -1002,4 +1032,11 @@
 
 .list__head .list__info-wrap {
   align-self: center;
+}
+
+/* 게이지 보기에서는 집 아이콘을 이름 줄에 맞춘다 */
+.list--gauge .list .badge,
+.list--gauge .badge {
+  align-self: flex-start;
+  margin-top: 6px;
 }

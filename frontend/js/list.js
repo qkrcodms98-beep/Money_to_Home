@@ -54,6 +54,12 @@ const LIST_VIEWS = [
   { key: 'basic', label: '기본' },
   { key: 'gauge', label: '게이지' },
 ];
+// 목록에 보이는 구분 (칩으로 켜고 끈다). 처음에는 셋 다
+const listShownCats = () => {
+  const saved = store.get('map').list_cats;
+  const keys = Array.isArray(saved) ? saved.filter((k) => ['now', 'within', 'lack'].includes(k)) : [];
+  return keys.length > 0 ? keys : ['now', 'within', 'lack'];
+};
 const listViewMode = () => (store.get('map').list_view === 'gauge' ? 'gauge' : 'basic');
 
 const LIST_TEXT = {
@@ -94,13 +100,13 @@ function listEl(tag, className, text) {
   return el;
 }
 
-// "평균 3억 원" · "여유 2,000만 원" 또는 "부족 2,500만 원". 부족자금이 음수면 여유다.
-function listMoneyLine(area) {
-  const line = listEl('p', 'list-card__money');
-  line.append(listEl('span', null, `평균 ${format.won(area.avg_price)} · `));
-  const gap = area.shortage > 0 ? `부족 ${format.won(area.shortage)}` : `여유 ${format.won(-area.shortage)}`;
-  line.append(listEl('strong', `list-card__gap list-card__gap--${area.category}`, gap));
-  return line;
+// 오른쪽 금액 "+1억 2,667만" (여유) 또는 "−9,900만" (부족). 부족자금이 음수면 여유다. 화면 읽기에는 "여유 …원"으로
+function listGapShort(area) {
+  const surplus = area.shortage <= 0;
+  const amount = format.won(Math.abs(area.shortage)).replace(/ ?원$/, '');
+  const gap = listEl('strong', `list-card__gap list-card__gap--${area.category}`, `${surplus ? '+' : '−'}${amount}`);
+  gap.setAttribute('aria-label', `${surplus ? '여유' : '부족'} ${format.won(Math.abs(area.shortage))}`);
+  return gap;
 }
 
 // 게이지 한 줄. 쓸 수 있는 자금 = 평균가 − 부족자금 (부족자금이 음수면 여유). 둘 다 서버(A-05)가 준 값이다.
@@ -134,12 +140,11 @@ function listCard(apartment, handlers) {
   apartment.areas.forEach((area) => {
     const areaGroup = LIST_GROUPS.find((g) => g.key === area.category);
     const slide = listEl('div', 'list-card__slide');
-    const head = listEl('div', 'list-card__head');
-    head.append(listEl('h3', 'list-card__name', apartment.name));
-    head.append(listEl('span', `badge badge--${area.category}`, areaGroup.badge));
-    slide.append(head);
-
-    const meta = listEl('p', 'list-card__meta', `${format.area(area.supply_area, area.exclusive_area)} · 거래 ${format.comma(area.trade_count)}건`);
+    // 시안 5번 (iOS 그룹형, 2026-10-18): 구분 아이콘 | 이름, "평균 · 면적" | 여유/부족 금액 | ›
+    slide.append(listEl('span', `badge badge--${area.category}`, areaGroup.badge)); // 글자는 화면 읽기용, 보이는 것은 집 아이콘
+    const mid = listEl('div', 'list-card__mid');
+    mid.append(listEl('h3', 'list-card__name', apartment.name));
+    const meta = listEl('p', 'list-card__meta', `평균 ${format.won(area.avg_price).replace(/ ?원$/, '')} · ${format.area(area.supply_area, area.exclusive_area)}`);
     if (apartment.latitude === null || apartment.longitude === null) {
       meta.append(listEl('span', 'list-card__tag', LIST_TEXT.noCoord));
     }
@@ -147,9 +152,10 @@ function listCard(apartment, handlers) {
     if (area.over_price_cap) {
       meta.append(listEl('span', 'list-card__tag list-card__tag--cap', LIST_TEXT.overCap));
     }
-    slide.append(meta);
-    slide.append(listMoneyLine(area));
-    if (listViewMode() === 'gauge') slide.append(listGauge(area));
+    mid.append(meta);
+    if (listViewMode() === 'gauge') mid.append(listGauge(area));
+    slide.append(mid);
+    slide.append(listGapShort(area));
     track.append(slide);
   });
 
@@ -197,10 +203,9 @@ function listHead(result, options) {
 
   head.append(listInfo());
 
-  // 오른쪽: 정렬 "가격 낮은 순 ▾", 그 아래 보기 방식 "기본 ▾"
+  // 오른쪽: 정렬 "가격 낮은 순 ▾". 보기 방식 "기본 ▾"은 칩 줄 오른쪽에 있다
   const side = listEl('div', 'list__side');
   if (options.onSort) side.append(listSortMenu(options.sort || LIST_DEFAULT_SORT, options.onSort));
-  if (options.onView) side.append(listPicker(LIST_VIEWS, listViewMode(), options.onView, '보기 방식', 'list__view'));
   if (side.children.length > 0) head.append(side);
 
   head.append(listCloseButton(() => options.onClose && options.onClose()));
@@ -393,9 +398,10 @@ const listView = {
   // A-05 응답으로 목록을 그린다. options: { where, sort, onSort, onSelect, onClose } (모두 없어도 된다)
   render(container, result, options = {}) {
     // 보기 방식(기본 / 게이지)은 이 파일이 store에 두고, 바꾸면 같은 응답으로 다시 그린다
+    const full = result; // 칩으로 걸러도 다시 그릴 때는 받은 응답 전체로
     const onView = (next) => {
       store.set('map', { list_view: next });
-      listView.render(container, result, options);
+      listView.render(container, full, options);
     };
     options = { ...options, onView };
     const root = listEl('section', `list list--${listViewMode()}`);
@@ -411,9 +417,25 @@ const listView = {
       return;
     }
 
+    // 칩: 지금 / 기간 내 / 부족. 누르면 그 구분을 목록에서 켜고 끈다 (2026-10-18). 하나는 늘 켜져 있다.
+    // 고른 것은 store의 map.list_cats에 둔다. 개수는 늘 서버가 준 전체 개수다. 오른쪽 끝에 보기 방식 "기본 ▾"
+    const shown = listShownCats();
     const chips = listEl('div', 'list__chips');
-    LIST_GROUPS.forEach((g) => chips.append(listEl('span', `chip chip--${g.key}`, `${g.chip} ${format.comma(result.counts[g.key])}`)));
+    LIST_GROUPS.forEach((g) => {
+      const chip = listEl('button', `chip chip--${g.key}`, `${g.chip} ${format.comma(result.counts[g.key])}`);
+      chip.type = 'button';
+      chip.setAttribute('aria-pressed', String(shown.includes(g.key)));
+      chip.addEventListener('click', () => {
+        const next = shown.includes(g.key) ? shown.filter((k) => k !== g.key) : [...shown, g.key];
+        if (next.length === 0) return; // 다 끄지는 않는다
+        store.set('map', { list_cats: next });
+        listView.render(container, full, options);
+      });
+      chips.append(chip);
+    });
+    chips.append(listPicker(LIST_VIEWS, listViewMode(), options.onView, '보기 방식', 'list__view'));
     root.append(chips);
+    result = { ...result, apartments: result.apartments.filter((a) => shown.includes(a.category)) };
 
     // 아파트는 있지만 목표할 수 있는 곳이 없음 (A6). '조건 수정'은 저축 계획 단계로 간다
     if (result.counts.now === 0 && result.counts.within === 0) {
