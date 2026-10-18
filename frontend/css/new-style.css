@@ -617,3 +617,17 @@
   margin-top: 16px;
   padding-top: 20px;
 }
+
+/* 아파트 정보 탭 안쪽(지번 주소 ~ 비슷한 아파트)을 탭 머리보다 8px 안으로 들인다 */
+#apartment-info .apt-info {
+  padding-left: calc(var(--page-padding) + 8px);
+}
+
+#apartment-info .apt-info__row:nth-child(2) {
+  margin-left: calc(-1 * var(--page-padding) - 8px);
+  padding-left: calc(var(--page-padding) + 8px);
+}
+
+#apt-similar {
+  padding: 0 4px 0 8px;
+}
