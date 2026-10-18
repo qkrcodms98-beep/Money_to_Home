@@ -291,14 +291,18 @@ const aptPanel = {
   },
 
   // 보일 때만 그린다. 같은 아파트면 다시 찾지 않는다 (창이 움직임을 마치면 크기만 맞춘다).
+  // 아파트를 열면(30%부터) 미리 찾아 그려 둔다 (2026-10-18). 전체가 아닐 때는 같은 크기로 창 뒤에 숨겨 두고
+  // (.apt-roadview--parked), 전체가 되면 그 자리에서 창과 함께 올라온다. 그래서 전체가 된 뒤 기다리지 않는다
   renderRoadview() {
     const { apartment } = aptPanel;
     const box = aptPanel.roadviewBox();
     const visible = Boolean(apartment) && aptPanel.roadviewVisible();
-    box.hidden = !visible;
-    if (!visible) return;
+    const open = Boolean(apartment) && (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment';
+    box.hidden = !open;
+    box.classList.toggle('apt-roadview--parked', open && !visible);
+    if (!open) return;
     if (aptPanel.roadviewFor === apartment.id) {
-      if (aptPanel.roadview && !sheet.moving) aptPanel.roadview.relayout();
+      if (visible && aptPanel.roadview && !sheet.moving) aptPanel.roadview.relayout();
       return;
     }
     aptPanel.roadviewFor = apartment.id;

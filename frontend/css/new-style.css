@@ -1230,3 +1230,16 @@
 .apt-roadview__view [id^="_al_"] {
   display: none !important;
 }
+
+/* 미리 그려 둔 로드뷰 (전체가 아닐 때). 크기는 그대로(창 폭 × 황금비) 두어 사진을 받아 두고, 창 맨 위 뒤쪽에 숨긴다.
+   전체가 되면 이 표시가 빠져 손잡이 위 제자리로 들어간다 (apartment.js의 renderRoadview) */
+.apt-roadview.apt-roadview--parked {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: -1;
+  margin: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
