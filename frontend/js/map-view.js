@@ -620,7 +620,7 @@ function showFacilityOnMap(kindName, item) {
   if (!mapState.map || !kind || !item || !item.place_name || !apartment || !services) return;
   closeFacilityName();
   const seq = ++mapState.facilityFindSeq; // 찾는 사이에 다른 줄을 누르면 앞의 것을 버린다
-  findFacilityPlace(item, apartment).then((place) => {
+  findFacilityPlace(item, apartment, kind.code).then((place) => {
     if (!place || seq !== mapState.facilityFindSeq || !selectedApartment() || selectedApartment().id !== apartment.id) return;
     mapState.facilityPin = { kind, place };
     if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
@@ -635,7 +635,8 @@ function showFacilityOnMap(kindName, item) {
 
 // A-06의 시설 하나를 카카오 장소 검색으로 찾아 지도에 쓸 장소로 바꾼다. 못 찾으면 null
 // 아파트에서 가까운 순으로 찾고, 이름이 같은 곳(지하철은 그 출구)을 고른다. distance는 A-06 값으로 바꿔 둔다
-function findFacilityPlace(item, apartment) {
+// 지하철 출구가 아니면 그 분류(code, 학교 SC4 등) 안에서만 찾는다. 안 그러면 "광주여대점" 같은 가게가 앞에 와서 못 찾는다
+function findFacilityPlace(item, apartment, code) {
   const { Places, Status, SortBy } = kakao.maps.services;
   const station = String(item.place_name).split(' ')[0];
   const exit = item.kind === 'subway' && item.exit_no !== null && item.exit_no !== undefined ? Number(item.exit_no) : null;
@@ -649,7 +650,9 @@ function findFacilityPlace(item, apartment) {
       new Places().keywordSearch(query, (data, status) => {
         const found = status === Status.OK ? (data || []).find(matches) || null : null;
         resolve(found ? { ...found, distance: Number(item.distance) } : null);
-      }, { location: toLatLng(apartment), radius, sort: SortBy.DISTANCE });
+      }, {
+        location: toLatLng(apartment), radius, sort: SortBy.DISTANCE, ...(exit === null && code ? { category_group_code: code } : {}),
+      });
     } catch (error) {
       resolve(null);
     }
