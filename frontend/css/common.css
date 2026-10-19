@@ -26,6 +26,9 @@
   --color-primary-soft: #eaf3ff;
   --color-on-primary: #ffffff;
 
+  /* 로고의 금색 (동전). 스플래시의 "to"에도 쓴다 */
+  --color-brand-gold: #ffc23d;
+
   /* 꺼진 버튼 */
   --color-disabled: #e5e5ea;
   --color-on-disabled: #aeaeb2;
@@ -68,6 +71,7 @@
   --font-bold: 700;
 
   /* 글자 크기 */
+  --text-splash: 38px; /* 스플래시의 서비스 이름 */
   --text-display: 28px; /* 시작 화면의 큰 제목. 줄 높이 38px */
   --text-value: 26px; /* 입력란의 값 */
   --text-title: 24px; /* 입력 화면의 제목. 줄 높이 34px */
