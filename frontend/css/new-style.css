@@ -1385,5 +1385,5 @@
 /* 고른 구·동의 경계: 연보라 → 남색 (2026-10-19). 동 묶음 표시(연보라)와 헷갈리지 않고, 면적 칩·선택 표시의 남색과 이어진다.
    칠의 진하기는 js/boundary.js의 BOUNDARY_STYLE (pickedDong 6%) */
 .map-body {
-  --boundary-picked: #043870;
+  --boundary-picked: #0b4fa0; /* 칩의 #043870은 가는 선으로 그리면 검게 보여 한 단계 밝고 채도 높은 남색으로 */
 }
