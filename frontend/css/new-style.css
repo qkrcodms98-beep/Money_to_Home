@@ -1243,3 +1243,9 @@
   visibility: hidden;
   pointer-events: none;
 }
+
+/* 조건 창은 검색 줄을 가리지 않는다. 창의 위 끝이 검색 줄 아래 8px까지만 올라온다.
+   검색 줄의 아래 끝 = 내 조건 줄(40) + 검색 줄 위 여백(7) + 높이(40) = 87px */
+.filter-sheet {
+  max-height: calc(100% - var(--condition-bar-height) - 7px - 40px - 8px);
+}
