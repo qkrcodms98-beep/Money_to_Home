@@ -277,11 +277,11 @@ body[data-page='share'] {
 
 #share-scenario .apt-info__label {
   flex-shrink: 0;
-  width: 108px;
-  padding-right: 10px;
+  min-width: 128px; /* 지도 화면 시나리오 탭(new-style.css #scenario-panel)과 같다. "예상 월 상환액 ?"가 한 줄에 */
+  padding-right: 15px;
   color: var(--color-text-sub);
   font-size: var(--text-help);
-  word-break: keep-all;
+  white-space: nowrap;
 }
 
 #share-scenario .apt-info__value {
