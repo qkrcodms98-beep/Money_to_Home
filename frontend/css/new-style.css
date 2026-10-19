@@ -1394,3 +1394,9 @@
 #apt-list {
   overflow-anchor: none;
 }
+
+/* 시나리오 탭: "예상 월 상환액 (?)"의 ?가 아래로 꺾이지 않게 이름표를 한 줄로 두고 칸을 넓힌다 (2026-10-19) */
+#apartment-scenario .apt-info__label {
+  width: 124px;
+  white-space: nowrap;
+}
