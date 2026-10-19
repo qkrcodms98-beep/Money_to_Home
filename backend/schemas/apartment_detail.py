@@ -34,6 +34,8 @@ class FacilityDetail(BaseModel):
     exit_no: int | None  # 지하철역의 출구 번호. 못 찾았으면 null (distance는 역까지)
     place_count: int  # 반경 안의 수
     radius: int  # 찾은 반경. m
+    latitude: float | None = None  # 그 곳의 좌표 (지도에서 아파트와 점선으로 잇는다). 지하철역은 가장 가까운 출구
+    longitude: float | None = None
 
 
 class ApartmentDetailOut(BaseModel):

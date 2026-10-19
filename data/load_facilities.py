@@ -32,13 +32,14 @@
   university   5km    대학교, 같은 방법. 1km 안에는 거의 없어 5km
   반경 안에 없으면 이름과 거리를 비운다 (화면은 "근처에 없음"). 시설을 지어내지 않는다.
   place_count는 반경 안의 수(카카오의 total_count). 병원은 받은 쪽(최대 45곳)에서 동물병원을 뺀 수다.
+  latitude, longitude는 그 곳의 좌표다. 지하철역은 가장 가까운 출구의 좌표 (2026-10-19 더함. 지도에서 아파트와 점선으로 잇는다).
 
 넣는 곳
   apartment_facilities   넣을 때마다 전부 지우고 파일의 값으로 다시 넣는다. 몇 번을 돌려도 결과가 같다
   data_collections       dataset 'facilities', 기준일은 받은 날 가운데 가장 늦은 날. 마지막 줄과 기준일·줄 수가 같으면 더하지 않는다
 
 남기는 파일
-  data/facilities.csv    받은 결과 (구, 동, 지번, 아파트명, 종류, 이름, 거리, 출구, 수, 반경, 받은 날).
+  data/facilities.csv    받은 결과 (구, 동, 지번, 아파트명, 종류, 이름, 거리, 출구, 수, 반경, 위도, 경도, 받은 날).
                          아파트를 찾을 때마다 적으므로 중간에 멈춰도 다시 돌리면 남은 것부터 찾는다.
                          전체를 받은 뒤 저장소에 올려 팀이 나눠 쓴다. 시험(--limit) 때 생긴 것은 올리지 않는다.
 
@@ -86,7 +87,8 @@ MAX_RETRY = 3
 TIMEOUT_SECONDS = 10
 
 OUT_PATH = BASE_DIR / "data" / "facilities.csv"
-OUT_COLS = ["gu", "dong", "jibun", "name", "kind", "place_name", "distance", "exit_no", "place_count", "radius", "collected_on"]
+OUT_COLS = ["gu", "dong", "jibun", "name", "kind", "place_name", "distance", "exit_no", "place_count", "radius",
+            "latitude", "longitude", "collected_on"]
 SOURCE = "카카오 로컬 API (장소 검색)"
 
 
@@ -143,8 +145,10 @@ def near_params(apartment, radius):
     return {"x": str(apartment["longitude"]), "y": str(apartment["latitude"]), "radius": radius, "sort": "distance"}
 
 
-def found(kind, radius, place=None, count=0, distance=None, exit_no=None):
-    """CSV 한 줄의 값 부분. place가 없으면 반경 안에 없는 것이다"""
+def found(kind, radius, place=None, count=0, distance=None, exit_no=None, point=None):
+    """CSV 한 줄의 값 부분. place가 없으면 반경 안에 없는 것이다.
+    point는 (경도, 위도) 글자. 없으면 그 곳의 좌표. 지하철역은 출구의 좌표를 넘긴다 (지도에서 아파트와 잇는 점선의 끝)"""
+    x, y = point if point else ((place.get("x"), place.get("y")) if place else ("", ""))
     return {
         "kind": kind,
         "place_name": place["place_name"] if place else "",
@@ -152,11 +156,13 @@ def found(kind, radius, place=None, count=0, distance=None, exit_no=None):
         "exit_no": "" if exit_no is None else str(exit_no),
         "place_count": str(count),
         "radius": str(radius),
+        "latitude": y or "",
+        "longitude": x or "",
     }
 
 
 def nearest_exit(session, key, apartment, station):
-    """역에서 가장 가까운 출구 (번호, 거리 m). 못 찾으면 None.
+    """역에서 가장 가까운 출구 (번호, 거리 m, 경도, 위도). 못 찾으면 None.
 
     카카오의 역 이름은 "김대중컨벤션센터역 광주1호선", 출구 이름은 "김대중컨벤션센터역 광주1호선 5번출구"다.
     "○○역 출구"로는 출구가 나오지 않아 "○○역 1번출구" ~ "○○역 8번출구"를 하나씩 묻는다 (광주1호선은 6번까지).
@@ -174,7 +180,7 @@ def nearest_exit(session, key, apartment, station):
                     and re.search(rf"\s{number}번\s*출구$", name)):
                 distance = int(place["distance"])
                 if best is None or distance < best[1]:
-                    best = (number, distance)
+                    best = (number, distance, place.get("x"), place.get("y"))
                 break
     return best
 
@@ -205,7 +211,8 @@ def by_category(session, key, apartment, kind, code):
     if kind == "subway":
         exit_found = nearest_exit(session, key, apartment, place)
         if exit_found:
-            return found(kind, RADIUS, place, count, distance=exit_found[1], exit_no=exit_found[0])
+            return found(kind, RADIUS, place, count, distance=exit_found[1], exit_no=exit_found[0],
+                         point=(exit_found[2], exit_found[3]))
     return found(kind, RADIUS, place, count)
 
 
@@ -274,6 +281,12 @@ def to_int(value):
     return int(value) if str(value or "").strip() else None
 
 
+def to_coord(value):
+    """카카오의 좌표 글자를 소수점 아래 7자리로 (DECIMAL(10,7)). 없으면 None (예전 CSV에는 좌표 칸이 없다)"""
+    text = str(value or "").strip()
+    return round(float(text), 7) if text else None
+
+
 def load_into_db(conn, rows, dry_run):
     """파일의 값으로 apartment_facilities를 다시 채운다. 전부 지운 뒤 넣으므로 몇 번을 돌려도 결과가 같다"""
     cur = conn.cursor()
@@ -287,12 +300,12 @@ def load_into_db(conn, rows, dry_run):
             continue
         values.append((
             apartment_id, r["kind"], r["place_name"] or None, to_int(r["distance"]), to_int(r["exit_no"]),
-            to_int(r["place_count"]) or 0, to_int(r["radius"]),
+            to_int(r["place_count"]) or 0, to_int(r["radius"]), to_coord(r.get("latitude")), to_coord(r.get("longitude")),
         ))
     cur.execute("DELETE FROM apartment_facilities")
     cur.executemany(
-        "INSERT INTO apartment_facilities (apartment_id, kind, place_name, distance, exit_no, place_count, radius) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        "INSERT INTO apartment_facilities (apartment_id, kind, place_name, distance, exit_no, place_count, radius, latitude, longitude) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
         values,
     )
     base = max((r["collected_on"] for r in rows if r.get("collected_on")), default=None)

@@ -2,7 +2,9 @@
 
 data/load_facilities.py가 카카오 장소 검색으로 미리 받아 넣는다. 서버는 읽기만 한다 (NFR-08).
 """
-from sqlalchemy import ForeignKey, Integer, SmallInteger, String
+from decimal import Decimal
+
+from sqlalchemy import ForeignKey, Integer, Numeric, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database import Base
@@ -18,3 +20,5 @@ class ApartmentFacility(Base):
     exit_no: Mapped[int | None] = mapped_column(SmallInteger)  # 지하철역의 출구 번호
     place_count: Mapped[int] = mapped_column(Integer, default=0)  # 반경 안의 수
     radius: Mapped[int] = mapped_column(Integer)  # m
+    latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))  # 그 곳의 위도. 지하철역은 가장 가까운 출구
+    longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))

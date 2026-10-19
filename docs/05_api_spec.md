@@ -258,8 +258,8 @@
     }
   ],
   "facilities": [
-    { "kind": "subway", "place_name": "김대중컨벤션센터역 광주1호선", "distance": 330, "exit_no": 5, "place_count": 2, "radius": 1000 },
-    { "kind": "mart", "place_name": null, "distance": null, "exit_no": null, "place_count": 0, "radius": 1000 }
+    { "kind": "subway", "place_name": "김대중컨벤션센터역 광주1호선", "distance": 330, "exit_no": 5, "place_count": 2, "radius": 1000, "latitude": 35.1436210, "longitude": 126.8412899 },
+    { "kind": "mart", "place_name": null, "distance": null, "exit_no": null, "place_count": 0, "radius": 1000, "latitude": null, "longitude": null }
   ],
   "facilities_base_date": "2026-10-19"
 }
@@ -270,6 +270,7 @@
 - `facilities`는 주변 시설이다 (FR-MAP-23, 2026-10-19). `data/load_facilities.py`가 카카오 장소 검색으로 미리 받아 `apartment_facilities`에 넣은 값을 그대로 준다. 서버는 카카오를 부르지 않는다 (NFR-08).
   - 순서: `subway`, `school`, `mart`, `convenience`, `hospital`, `elementary`, `middle`, `high`, `university`.
   - `place_name`과 `distance`가 null이면 반경(`radius`, m) 안에 없는 것이다. `distance`는 직선거리(m)이고, 지하철역은 가장 가까운 출구(`exit_no`)까지다. 출구를 못 찾았으면 `exit_no`가 null이고 거리는 역까지다.
+  - `latitude`, `longitude`는 그 곳의 좌표다 (지하철역은 그 출구). 지도에서 고른 아파트와 시설을 잇는 데 쓴다. 화면은 이 좌표를 쓰고 장소 검색을 부르지 않는다 (2026-10-19).
   - 아직 받지 않았으면 빈 목록이고 `facilities_base_date`는 null이다.
 - 없는 번호면 404, "아파트를 찾을 수 없습니다."
 

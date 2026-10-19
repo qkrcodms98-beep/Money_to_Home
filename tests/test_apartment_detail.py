@@ -95,9 +95,10 @@ def test_search_still_works(client, apartments):
 # ------------------------------------------------------------------
 # 주변 시설 (FR-MAP-23). data/load_facilities.py가 미리 넣은 apartment_facilities를 그대로 준다
 # ------------------------------------------------------------------
-def _facility(kind, name, distance, count, radius=1000, exit_no=None):
+def _facility(kind, name, distance, count, radius=1000, exit_no=None, lat=None, lng=None):
     return models.ApartmentFacility(
         apartment_id=12, kind=kind, place_name=name, distance=distance, exit_no=exit_no, place_count=count, radius=radius,
+        latitude=lat, longitude=lng,
     )
 
 
@@ -107,7 +108,7 @@ def facilities(db, apartments):
     db.add_all([
         _facility("university", "광주여자대학교", 1752, 2, radius=5000),
         _facility("mart", None, None, 0),
-        _facility("subway", "김대중컨벤션센터역 광주1호선", 330, 2, exit_no=5),
+        _facility("subway", "김대중컨벤션센터역 광주1호선", 330, 2, exit_no=5, lat="35.1466500", lng="126.8414200"),
         _facility("school", "전남고등학교", 130, 4),
         models.DataCollection(dataset="facilities", source="카카오 로컬 API (장소 검색)", base_date=date(2026, 10, 1)),
         models.DataCollection(dataset="facilities", source="카카오 로컬 API (장소 검색)", base_date=date(2026, 10, 19)),
@@ -120,11 +121,11 @@ def test_facilities_in_screen_order(client, facilities):
     assert [f["kind"] for f in body["facilities"]] == ["subway", "school", "mart", "university"]
     assert body["facilities"][0] == {
         "kind": "subway", "place_name": "김대중컨벤션센터역 광주1호선", "distance": 330, "exit_no": 5,
-        "place_count": 2, "radius": 1000,
+        "place_count": 2, "radius": 1000, "latitude": 35.14665, "longitude": 126.84142,  # 지하철은 출구의 좌표
     }
     # 반경 안에 없으면 이름과 거리가 null ("근처에 없음")
     assert body["facilities"][2] == {"kind": "mart", "place_name": None, "distance": None, "exit_no": None,
-                                     "place_count": 0, "radius": 1000}
+                                     "place_count": 0, "radius": 1000, "latitude": None, "longitude": None}
     assert body["facilities_base_date"] == "2026-10-19"
 
 
