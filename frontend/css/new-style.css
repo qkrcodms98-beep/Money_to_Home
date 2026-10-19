@@ -538,8 +538,7 @@
   border-bottom: 1px solid var(--new-sheet-line);
 }
 
-/* 아파트 창 머리 (목업 6013:2048): 첫 줄 "← 치평동 목록 … [배지] ✕", 둘째 줄 이름. ‹ › 는 시안에 없어 숨긴다.
-   배지는 apartment.js가 .apt__nav 맨 앞으로 옮긴다 */
+/* 아파트 창 머리 (2026-10-19): 첫 줄 "← 치평동 목록 … 공유 ✕", 둘째 줄 이름(길면 줄바꿈)과 오른쪽 배지. ‹ › 는 시안에 없어 숨긴다 */
 #apt-prev,
 #apt-next {
   display: none;
@@ -550,14 +549,14 @@
   gap: 4px;
 }
 
-.apt__nav .badge {
+.apt__title .badge {
   gap: 5px;
   border: 1px solid var(--color-bg);
   background: rgba(144, 144, 144, 0.08);
   color: #0f0f0f;
 }
 
-.apt__nav .badge::before {
+.apt__title .badge::before {
   content: '';
   width: 10px;
   height: 10px;
@@ -565,9 +564,9 @@
   mask: var(--icon-home) center / contain no-repeat;
 }
 
-.apt__nav .badge--now::before { background: var(--color-now); }
-.apt__nav .badge--within::before { background: var(--color-within); }
-.apt__nav .badge--lack::before { background: var(--color-lack); }
+.apt__title .badge--now::before { background: var(--color-now); }
+.apt__title .badge--within::before { background: var(--color-within); }
+.apt__title .badge--lack::before { background: var(--color-lack); }
 
 /* 비슷한 아파트: 카드 → 선으로 나눈 목록. 머리 오른쪽에 조건순 | 가격순 | ↻ */
 .similar__sort {
@@ -1358,4 +1357,32 @@
   .my-location::before {
     display: none;
   }
+}
+
+/* 이름 줄: 이름은 자르지 않고 줄을 바꾼다. 배지는 오른쪽 위에 붙고 줄어들지 않는다 (2026-10-19) */
+.apt__title-row .apt__title {
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.apt__title-row .apt__name {
+  overflow: visible;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.apt__title-row .apt__title .badge {
+  margin-top: 2px; /* 이름 첫 줄 가운데에 맞춘다 */
+}
+
+/* 첫 줄은 "← 목록"이 없으면 비어 있으므로 공유 · ✕를 오른쪽 끝에 */
+.apt__top {
+  justify-content: flex-end;
+}
+
+.apt__top:has(.apt__back:not([hidden])) {
+  justify-content: space-between;
 }
