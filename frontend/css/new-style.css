@@ -1281,3 +1281,13 @@
   padding-right: 15px;
   white-space: nowrap;
 }
+
+/* 아파트 창 머리 줄의 공유 아이콘 (share.js). 옆의 닫기 ✕와 크기를 맞춘다 (2026-10-19) */
+.apt__nav .share-action--share {
+  width: 40px;
+}
+
+.apt__nav .share-action--share .share-icon {
+  width: 18px;
+  height: 18px;
+}
