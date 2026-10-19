@@ -1358,3 +1358,17 @@
 .scenario-charts + .scenario__change {
   margin-top: 2px;
 }
+
+/* 그래프 판 안 위아래 여백 (2026-10-19). 그래프와 판 가장자리, 범례 사이를 띄운다 */
+.scenario-chart {
+  padding: 18px 8px 14px;
+}
+
+.scenario-chart svg + .scenario-chart__legend,
+.scenario-chart svg + .scenario-chart__src {
+  margin-top: 10px;
+}
+
+.scenario-chart-block {
+  margin-bottom: 24px;
+}
