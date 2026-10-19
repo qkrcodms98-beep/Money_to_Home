@@ -1251,7 +1251,8 @@
 }
 
 /* ───────── 시나리오 탭의 그래프 (js/scenario-charts.js) ─────────
-   "조건 바꿔 보기" 위. 위아래 구분선은 창 끝까지, 그래프마다 옅은 회색 판 */
+   "조건 바꿔 보기" 위. 판 없이 그래프가 창 양 끝 가까이(12 · 16px)까지 넓게 그려진다 (2026-10-19).
+   그래프의 폭은 scenario-charts.js가 글 폭 + SCENARIO_CHART_BLEED(28px)로 잰다. 아래 margin과 같이 고친다 */
 .scenario-charts {
   margin: 16px calc(-1 * var(--page-padding) - 4px) 0 calc(-1 * var(--page-padding) - 8px);
   padding: 18px calc(var(--page-padding) + 4px) 0 calc(var(--page-padding) + 8px);
@@ -1265,55 +1266,11 @@
 .scenario-charts__title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 10px;
+  gap: 4px;
+  margin: 0 0 12px;
   color: var(--new-sheet-section);
   font-size: var(--text-help);
   font-weight: var(--font-bold);
-}
-
-/* (?) : 연한 회색 동그라미에 조금 진한 물음표. 누르는 영역은 둘레로 넓힌다 */
-.scenario-charts__info {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--color-line);
-  color: var(--color-text-sub);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: var(--font-bold);
-  line-height: 1;
-  cursor: pointer;
-}
-
-.scenario-charts__info::after {
-  content: '';
-  position: absolute;
-  inset: -13px;
-}
-
-.scenario-charts__info[aria-expanded="true"] {
-  background: var(--color-line-strong);
-  color: var(--color-text);
-}
-
-.scenario-charts__help {
-  margin: -4px 0 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--color-bg-sub);
-  color: var(--color-text-sub);
-  font-size: 11px;
-}
-
-.scenario-charts__help[hidden] {
-  display: none;
 }
 
 .scenario-charts__wait {
@@ -1323,22 +1280,25 @@
 }
 
 .scenario-chart-block {
-  margin-bottom: 18px;
+  margin-bottom: 26px;
 }
 
-/* 판: 그래프가 크게 보이게 안쪽 여백을 줄였다. 제목과 설명은 판 위(.scenario-chart-block) */
 .scenario-chart {
-  padding: 8px 6px 8px;
-  border-radius: 12px;
-  background: var(--new-control-bg);
+  margin: 0 -12px 0 -16px; /* 글 폭보다 넓게: 왼쪽 16, 오른쪽 12 (합 28 = SCENARIO_CHART_BLEED) */
+}
+
+.scenario-chart svg {
+  display: block;
+  overflow: visible;
+  font-family: var(--font-family);
 }
 
 .scenario-chart__title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 3px;
-  font-size: var(--text-label);
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: var(--text-body);
   font-weight: var(--font-bold);
 }
 
@@ -1346,59 +1306,55 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
   background: var(--color-text);
   color: var(--color-on-primary);
   font-size: 11px;
 }
 
 .scenario-chart__say {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   color: var(--new-sheet-value);
-  font-size: var(--text-badge);
+  font-size: var(--text-help);
 }
 
 .scenario-chart__say b {
   color: var(--color-primary);
 }
 
-.scenario-chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-  font-family: var(--font-family);
+.scenario-chart__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 6px;
+  padding: 0 12px 0 16px;
 }
 
 .scenario-chart__legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-top: 6px;
+  gap: 12px;
   color: var(--color-text-sub);
   font-size: 11px;
 }
 
 .scenario-chart__legend i {
   display: inline-block;
-  width: 14px;
-  height: 0;
   margin-right: 4px;
-  border-top: 2px solid;
-  vertical-align: middle;
+  vertical-align: -1px;
 }
 
 .scenario-chart__legend i.scenario-chart__dot {
-  width: 8px;
-  height: 8px;
-  border: 0;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
 }
 
 .scenario-chart__src {
-  margin: 6px 0 0;
+  margin: 0;
   color: var(--color-text-hint);
   font-size: 10px;
 }
