@@ -47,8 +47,8 @@ const BOUNDARY_STYLE = {
   mask: { fillOpacity: 0.16 },
   gu: { strokeWeight: 2, strokeOpacity: 0.55 },
   hdong: { strokeWeight: 1, strokeOpacity: 0.9 },
-  pickedGu: { strokeWeight: 3, strokeOpacity: 0.9, fillOpacity: 0.06 },
-  pickedDong: { strokeWeight: 3, strokeOpacity: 1, fillOpacity: 0.2 },
+  pickedGu: { strokeWeight: 2.5, strokeOpacity: 0.9, fillOpacity: 0.04 },
+  pickedDong: { strokeWeight: 2.5, strokeOpacity: 1, fillOpacity: 0.06 }, // 남색 (2026-10-19). 칠을 옅게 해 아래 이름과 길이 보이게
 };
 const BOUNDARY_Z = { mask: 1, fill: 2, hdong: 3, gu: 4, picked: 6 };
 

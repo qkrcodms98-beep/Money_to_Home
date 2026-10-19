@@ -1381,3 +1381,25 @@
 .scenario-chart__say b {
   white-space: nowrap;
 }
+
+/* 고른 구·동의 경계: 연보라 → 남색 (2026-10-19). 동 묶음 표시(연보라)와 헷갈리지 않고, 면적 칩·선택 표시의 남색과 이어진다.
+   칠의 진하기는 js/boundary.js의 BOUNDARY_STYLE (pickedDong 6%) */
+.map-body {
+  --boundary-picked: #0b4fa0; /* 칩의 #043870은 가는 선으로 그리면 검게 보여 한 단계 밝고 채도 높은 남색으로 */
+}
+
+/* 창이 커지거나(30% → 100%) 위에 로드뷰가 들어올 때 브라우저가 보던 자리를 따라 스크롤을 옮기지 않게 한다.
+   그래야 다른 아파트를 열면 늘 맨 위에서 시작한다 (2026-10-19) */
+.apt__panels,
+#apt-list {
+  overflow-anchor: none;
+}
+
+/* 시나리오 탭: "예상 월 상환액 (?)"의 ?가 아래로 꺾이지 않게 이름표를 한 줄로 두고 칸을 넓힌다.
+   이름과 값 사이도 아파트 정보 탭보다 5px 더 띄운다 (2026-10-19) */
+#scenario-panel .apt-info__label {
+  width: auto;
+  min-width: 128px;
+  padding-right: 15px;
+  white-space: nowrap;
+}

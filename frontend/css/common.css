@@ -26,6 +26,9 @@
   --color-primary-soft: #eaf3ff;
   --color-on-primary: #ffffff;
 
+  /* 로고의 금색 (동전). 스플래시의 "to"에도 쓴다 */
+  --color-brand-gold: #ffc23d;
+
   /* 꺼진 버튼 */
   --color-disabled: #e5e5ea;
   --color-on-disabled: #aeaeb2;
@@ -68,6 +71,7 @@
   --font-bold: 700;
 
   /* 글자 크기 */
+  --text-splash: 38px; /* 스플래시의 서비스 이름 */
   --text-display: 28px; /* 시작 화면의 큰 제목. 줄 높이 38px */
   --text-value: 26px; /* 입력란의 값 */
   --text-title: 24px; /* 입력 화면의 제목. 줄 높이 34px */
@@ -115,6 +119,56 @@ body {
   font-weight: var(--font-regular);
   line-height: var(--line-height);
   word-break: keep-all;
+  /* 선택과 누름 표시 (2026-10-19). 앱처럼 화면 부품(버튼, 칩, 탭, 지도, 말풍선, 손잡이, 제목·라벨)은 글자가 선택되지 않고,
+     휴대폰에서 누를 때 파랗게 덮이는 강조와 길게 누를 때의 메뉴도 뜨지 않는다.
+     입력란과 사용자가 복사할 만한 내용은 아래 "선택할 수 있는 것"에서 다시 연다 */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* 그림은 끌어 옮기지 않는다 (지도 위 아이콘, 로고) */
+img,
+svg {
+  -webkit-user-drag: none;
+}
+
+/* ───────── 선택할 수 있는 것 ─────────
+   입력란, 그리고 복사할 만한 내용: 아파트 이름, 정보 줄의 값(주소, 금액, 면적…), 시나리오의 금액과 식,
+   입력 요약 · 시작 화면의 저장한 값, 저장한 결과의 이름과 결과, 안내 문구, 오류 문구, 용어 설명.
+   길게 눌러 복사하는 메뉴도 여기서는 뜬다 */
+input,
+textarea,
+select,
+[contenteditable="true"],
+.apt__name,
+.apt-info__value,
+.scenario__gap,
+.scenario__formula,
+.scenario__need-value,
+.scenario__growth-help,
+.summary-card__row dd,
+.saved-box__row dd,
+.saved__card-name,
+.saved__card-result,
+.saved__card-conditions,
+.notice,
+.field__error,
+.list-card__name,
+.glossary__bubble,
+.info-tip__text,
+.list__tip {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* 단, 누르는 줄 안의 이름은 누르기가 우선이다 (목록·비슷한 아파트의 카드는 버튼이라 선택하지 않는다) */
+button .list-card__name {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* ───────── 위 여백 ─────────

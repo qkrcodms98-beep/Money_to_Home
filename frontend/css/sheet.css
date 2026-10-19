@@ -634,6 +634,144 @@
   text-align: right;
 }
 
+/* 주변 시설 (FR-MAP-23, 와이어프레임 C6). 기본 정보와 비슷한 아파트 사이.
+   글자는 new-style.css의 기본 정보 줄(이름 13 회색, 값 14 왼쪽)과 비슷한 아파트 제목에 맞춘다. 그 색이 없으면 common.css의 색 */
+.apt-near {
+  margin: 0 calc(-1 * var(--page-padding));
+  padding: 16px var(--page-padding) 12px;
+  border-bottom: 1px solid var(--new-sheet-line, var(--color-line));
+}
+
+.apt-near__title {
+  margin: 0 0 4px;
+  color: var(--new-sheet-section, var(--color-text));
+  font-size: var(--text-help);
+  font-weight: var(--font-bold);
+  line-height: var(--line-height);
+}
+
+.apt-near__list {
+  margin: 0;
+}
+
+.apt-near__row {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+  line-height: var(--line-height);
+}
+
+.apt-near__label {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  width: 108px;
+  padding-right: 10px;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+}
+
+/* 학교 줄 오른쪽의 ⌄ (apartment.js의 toggleSchools). 누르는 영역은 44px이지만 줄 높이는 그대로 두도록 위아래를 겹친다 */
+.apt-near__toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  margin: -10px -12px -10px auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.apt-near__toggle .apt-near__icon {
+  fill: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.apt-near__toggle[aria-expanded='true'] .apt-near__icon {
+  transform: rotate(180deg);
+}
+
+/* 펼친 학교 종류별 줄. 그림 자리만큼 들여 쓰고 조금 작게 */
+.apt-near__sub {
+  margin: 0 0 4px;
+  padding-left: 24px;
+}
+
+.apt-near__row--sub {
+  padding: 4px 0;
+}
+
+.apt-near__row--sub .apt-near__label {
+  width: 84px;
+}
+
+.apt-near__row--sub .apt-near__value {
+  font-size: var(--text-help);
+}
+
+/* 지하철 출구 번호 (apartment.js의 nearFill). 역 출구 표지처럼 노란 바탕에 검은 굵은 숫자.
+   글자 크기에 맞춘 작은 상자라 줄 높이를 바꾸지 않는다. 노란색은 common.css에 없어 이 묶음에서만 쓰는 이름으로 둔다 */
+.apt-near {
+  --apt-exit-bg: #ffd400;
+  --apt-exit-text: #1c1c1e;
+}
+
+/* 지하철역 줄: 출구 상자부터는 늘 다음 줄 ("역 이름 노선" / "[5]번 출구까지 383m"). 화면 폭과 상관없이 같은 모양 */
+.apt-near__keep {
+  display: block;
+  white-space: nowrap;
+}
+
+.apt-near__exit {
+  display: inline-block;
+  min-width: 1.35em;
+  margin: 0 1px;
+  padding: 0 0.3em;
+  border-radius: 0.3em;
+  background: var(--apt-exit-bg);
+  color: var(--apt-exit-text);
+  font-size: 0.86em;
+  font-weight: var(--font-bold);
+  line-height: 1.5;
+  text-align: center;
+  vertical-align: 0.05em;
+}
+
+/* 줄 앞의 작은 그림 (apartment.js의 aptNearIcon). 파란 계열로 종류를 한눈에 */
+.apt-near__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: var(--color-primary);
+}
+
+.apt-near__value {
+  min-width: 0;
+  margin: 0;
+  color: var(--new-sheet-value, var(--color-text));
+  font-size: var(--text-label);
+  font-weight: var(--font-medium);
+  word-break: keep-all;
+}
+
+/* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준 · 직선거리" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */
+.apt-near__source {
+  margin: 6px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-badge);
+  line-height: 1.4;
+}
+
+.apt-near__source:empty {
+  display: none;
+}
+
 /* 좌표가 없는 아파트의 안내 (P-06 ⑱, 목업 4009:604). 아파트 정보 탭 맨 위의 점선 상자 */
 .apt-info__notice {
   margin: 0 0 8px;
