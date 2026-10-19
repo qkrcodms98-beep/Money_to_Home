@@ -837,3 +837,254 @@
 #kakao-map svg:not(.marker__shape) * {
   pointer-events: none !important;
 }
+
+/* ───────── 지도 위 주변 시설 (map-view.js의 renderFacilities) ─────────
+   축척 100m 이하에서 나온다. 44px 누름 자리 가운데에 색 동그라미, 누르면 위에 이름.
+   시설 종류의 색은 common.css에 없는 색이라 여기서만 쓰는 변수로 둔다.
+     지하철역: 광주 1호선의 초록  학교: 어린이 보호구역의 노랑  대형마트: 주황  편의점: 보라  병원: 빨강 */
+.facility {
+  --facility-color: var(--color-primary);
+  --facility-icon: var(--color-on-primary);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.facility--sw8 { --facility-color: #00a37a; }
+.facility--sc4 { --facility-color: #ffc000; --facility-icon: #1c1c1e; }
+.facility--mt1 { --facility-color: #f76707; }
+.facility--cs2 { --facility-color: #7950f2; }
+.facility--hp8 { --facility-color: #e03131; }
+
+.facility__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--color-bg);
+  border-radius: 50%;
+  background: var(--facility-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.facility__icon {
+  width: 15px;
+  height: 15px;
+  fill: var(--facility-icon);
+}
+
+.facility__name {
+  position: absolute;
+  bottom: calc(100% - 6px);
+  left: 50%;
+  display: none;
+  padding: 4px 8px;
+  border: 1px solid var(--facility-color);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.facility[aria-expanded='true'] .facility__name {
+  display: block;
+}
+
+.facility[aria-expanded='true'] .facility__dot {
+  transform: scale(1.15);
+}
+
+/* 고른 아파트 → 누른 시설의 점선 (map-view.js의 drawFacilityLink)
+   아파트 자리에 단 0×0 상자에서 SVG 선이 시설까지 뻗는다. 처음 한 번은 진한 점선이 뻗어 가고(--grow),
+   그다음부터는 흐린 점선 위로 굵은 칸(__lead) 하나가 아파트에서 시설 쪽으로 한 칸씩 옮겨 간다. 칸 길이와 간격은 map-view.js가 정한다.
+   거리는 선 위가 아니라 시설 이름표의 이름 옆(.facility__distance)에 띄운다. */
+.facility-link {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.facility-link__svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+}
+
+.facility-link__line,
+.facility-link__lead {
+  stroke: var(--facility-color);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 1px var(--color-bg));
+}
+
+.facility-link__line {
+  stroke-width: 4;
+  opacity: 0.45;
+  transition: opacity 0.3s ease, stroke-width 0.3s ease;
+}
+
+/* 처음 한 번 뻗어 가는 동안: 진하고 굵은 점선만 보이고 굵은 칸은 숨긴다 (map-view.js의 drawFacilityLink) */
+.facility-link--grow .facility-link__line {
+  stroke-width: 5;
+  opacity: 1;
+}
+
+.facility-link--grow .facility-link__lead {
+  display: none;
+}
+
+.facility-link__lead {
+  stroke-width: 8;
+}
+
+/* 동작 줄이기: 굵은 칸 없이 진한 점선만 */
+.facility-link--still .facility-link__line {
+  opacity: 1;
+}
+
+/* 이름표 안의 거리. 시설 색 바탕의 작은 칩 */
+.facility__distance {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--facility-color);
+  color: var(--facility-icon);
+  font-size: var(--text-badge);
+  font-weight: var(--font-bold);
+  line-height: 1.5;
+}
+
+.facility__distance[hidden] {
+  display: none;
+}
+
+/* 점선이 닿았을 때 시설 아이콘이 한 번 커졌다 돌아온다 */
+.facility--arrived .facility__dot {
+  animation: facility-arrive 0.4s ease-out;
+}
+
+@keyframes facility-arrive {
+  50% {
+    transform: scale(1.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facility--arrived .facility__dot {
+    animation: none;
+  }
+}
+
+/* ───────── 시설 체크 칸 (map-view.js의 renderFacilityFilter) ─────────
+   지도 아래 왼쪽, 축척·목록 줄 위에 세로로 쌓는다. 자리는 임시다 (2026-10-19, 세환이 나중에 정한다).
+   아이콘이 나오는 축척(100m 이하)에서만 보인다.
+   체크를 풀면 칩이 흐려지고 아이콘이 회색이 된다. 칸마다 누르는 자리는 44px 높이다 (칩은 30px, 위아래 여백까지 누를 수 있다). */
+.facility-filter {
+  position: absolute;
+  bottom: 56px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: bottom var(--sheet-duration) var(--sheet-ease-up);
+}
+
+.facility-filter[hidden] {
+  display: none;
+}
+
+.facility-filter__item {
+  position: relative; /* 색(--facility-color)은 함께 붙인 .facility--sw8 같은 이름이 정한다 */
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: var(--touch-size);
+  cursor: pointer;
+}
+
+.facility-filter__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.facility-filter__chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 9px 0 4px;
+  border: 1px solid var(--facility-color);
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-badge);
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.facility-filter__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--facility-color);
+}
+
+.facility-filter__dot .facility__icon {
+  width: 12px;
+  height: 12px;
+}
+
+.facility-filter__input:not(:checked) + .facility-filter__chip {
+  border-color: var(--color-line-strong);
+  color: var(--color-text-hint);
+  box-shadow: none;
+}
+
+.facility-filter__input:not(:checked) + .facility-filter__chip .facility-filter__dot {
+  background: var(--color-line-strong);
+}
+
+.facility-filter__input:focus-visible + .facility-filter__chip {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 아파트 창 30%: 창 위로 올린다. 80% 이상: 숨긴다 */
+.map-app[data-sheet="30"] .facility-filter {
+  bottom: calc(var(--sheet-height-30) + 4px);
+}
+
+.map-app[data-sheet="80"] .facility-filter,
+.map-app[data-sheet="full"] .facility-filter {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facility-filter {
+    transition: none;
+  }
+}

@@ -8,8 +8,8 @@
   <link rel="stylesheet" href="css/common.css?v=20261019-1">
   <!-- ?v= 는 버전 표시다. 이 화면이 부르는 CSS나 JS를 고치면 그 파일의 숫자를 올린다. 브라우저가 예전 파일을 캐시에서 꺼내 쓰지 않게 한다. -->
   <link rel="stylesheet" href="css/list.css?v=20261015-2">
-  <link rel="stylesheet" href="css/map.css?v=20261015-13">
-  <link rel="stylesheet" href="css/sheet.css?v=20261019-5">
+  <link rel="stylesheet" href="css/map.css?v=20261019-8">
+  <link rel="stylesheet" href="css/sheet.css?v=20261019-7">
   <link rel="stylesheet" href="css/similar.css?v=20261015-3">
   <link rel="stylesheet" href="css/glossary.css?v=20261015-2">
   <link rel="stylesheet" href="css/scenario.css?v=20261015-2">
@@ -125,6 +125,10 @@
       </p>
     </div>
 
+    <!-- 왼쪽 아래(축척·목록 줄 위, 세로): 주변 시설 체크 칸. 종류마다 지도의 아이콘을 가리고 보인다 (map-view.js의 renderFacilityFilter가 채운다)
+         아이콘이 나오는 축척(100m 이하)에서만 보인다. 자리는 임시 (2026-10-19) -->
+    <div class="facility-filter" id="facility-filter" role="group" aria-label="지도에 보일 주변 시설" hidden></div>
+
     <!-- 가운데 아래: 축척. 확대 수준에 따라 거리와 막대 길이가 바뀐다 (map-view.js의 renderScale) -->
     <div class="map-scale" aria-hidden="true">
       <span class="map-scale__label" id="scale-label">200m</span>
@@ -234,9 +238,9 @@
   <!-- 시나리오 탭의 그래프 두 개 (실거래, 같은 동 안의 위치). A-27을 부른다 -->
   <script src="js/scenario-charts.js?v=20261019-6"></script>
   <script src="js/similar.js?v=20261019-1"></script>
-  <script src="js/apartment.js?v=20261019-6"></script>
+  <script src="js/apartment.js?v=20261019-9"></script>
   <!-- 광주 5개 구 경계 (FR-MAP-28). map-view.js가 쓰므로 그보다 먼저 불러온다 -->
   <script src="js/boundary.js?v=20261019-1"></script>
-  <script src="js/map-view.js?v=20261019-4"></script>
+  <script src="js/map-view.js?v=20261019-17"></script>
 </body>
 </html>
