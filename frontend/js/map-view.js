@@ -133,14 +133,14 @@ async function loadKakaoKey() {
   return config.kakao_js_key;
 }
 
-// SDK를 불러온다. 지도 그림만 쓴다. libraries=services(주소 → 좌표)는 넣지 않는다.
+// SDK를 불러온다. libraries=services는 아파트 창의 주변 시설(장소 검색, apartment.js)에 쓴다. 주소 → 좌표 변환에는 쓰지 않는다.
 function loadKakaoSdk(key) {
   if (window.kakao && window.kakao.maps && window.kakao.maps.Map) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('카카오맵을 불러오는 시간이 지났습니다.')), SDK_TIMEOUT_MS);
     const script = document.createElement('script');
-    script.src = `${KAKAO_SDK_URL}?appkey=${encodeURIComponent(key)}&autoload=false`;
+    script.src = `${KAKAO_SDK_URL}?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`;
     script.onload = () => {
       if (!window.kakao || !window.kakao.maps) {
         clearTimeout(timer);

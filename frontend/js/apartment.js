@@ -23,6 +23,14 @@
 //     카드를 누르면 그 아파트로 넘어간다. map-view.js가 넘겨준 handlers.onPickSimilar를 부른다
 //     (없으면 지금 지도에 있는 아파트만 ‹ ›와 같이 넘긴다).
 //     similar.js를 불러오지 않았으면 아무것도 하지 않는다.
+//   주변 시설 (3차, FR-MAP-23, T-MAP-23. 와이어프레임 C6): 기본 정보와 비슷한 아파트 사이에 둔다.
+//     지하철역, 학교, 대형마트, 편의점, 병원 다섯 줄(앞에 작은 그림). 학교 줄의 ⌄로 초·중·고·대학교를 펼친다. 줄마다 반경 1km 안에서 가장 가까운 곳의 이름과 직선거리.
+//     지하철역은 가장 가까운 출구까지 ("김대중컨벤션센터역 광주1호선 5번 출구까지 383m"), 나머지는 "전남고등학교 130m".
+//     1km 안에 없으면 "근처에 없음".
+//     수는 적지 않는다 (2026-10-19 세환 결정. 요구사항은 수와 거리라 팀장 확인 필요). 병원은 동물병원을 뺀다.
+//     카카오맵의 장소 검색(kakao.maps.services.Places, 브라우저에서 부름. 서버 API 없음)으로 구한다.
+//     map-view.js가 SDK를 libraries=services로 불러와야 쓸 수 있다. 쓸 수 없거나 좌표가 없으면 묶음을 두지 않는다.
+//     아파트마다 한 번만 찾고 기억해 둔다.
 //   좌표가 없는 아파트 (P-06 ⑱, 목업 4009:492): 이름과 배지 옆에 "위치 없음"을 붙이고,
 //     아파트 정보 탭의 맨 위에 점선 안내를 둔다. 목록에서 열었을 때만 생긴다 (지도에는 표시가 없다).
 //   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
@@ -56,6 +64,53 @@ const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습�
 const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
 const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아파트가 아래에 붙을 때만 둔다
 
+// 주변 시설 (FR-MAP-23, 와이어프레임 C6). 카카오맵 장소 검색의 분류 코드
+const APT_NEAR_TITLE = '주변 시설';
+const APT_NEAR_RADIUS = 1000; // 아파트 좌표에서 이 거리(m) 안을 찾는다
+const APT_NEAR_SKIP = '동물'; // 카카오의 "병원" 분류에는 동물병원도 들어 있다. 분류 이름에 이 말이 있으면 뺀다
+const APT_NEAR_EXITS = 8; // 지하철역은 1 ~ 8번 출구 가운데 가장 가까운 출구를 찾는다 (광주1호선은 6번까지)
+// icon: 줄 앞의 작은 그림 (24 × 24 SVG path. 직접 그린 단순한 모양)
+const APT_NEAR_KINDS = [
+  { code: 'SW8', label: '지하철역', icon: 'M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-3 3l2 3h-2.4l-2-3H9.4l-2 3H5l2-3a3 3 0 0 1-3-3V6a4 4 0 0 1 4-4zM6 6v4h12V6H6zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z' },
+  { code: 'SC4', label: '학교', icon: 'M12 3l10 5-10 5L2 8l10-5zM6 11.2l6 3 6-3V16c0 1.9-2.7 4-6 4s-6-2.1-6-4v-4.8zM20 9.5h1.5V15H20V9.5z' },
+  { code: 'MT1', label: '대형마트', icon: 'M2 3h3.2l.7 3H21l-2 8.5a2 2 0 0 1-2 1.5H9a2 2 0 0 1-2-1.5L4.2 5H2V3zm7 15a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 9 18zm8 0a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5z' },
+  { code: 'CS2', label: '편의점', icon: 'M4 3h16l1.5 5a3 3 0 0 1-2.5 3.2V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8.8A3 3 0 0 1 2.5 8L4 3zm3 10v6h4v-4h2v4h4v-6H7zm-1.2-8L4.6 8.4a1 1 0 0 0 1 1.1h12.8a1 1 0 0 0 1-1.1L18.2 5H5.8z' },
+  { code: 'HP8', label: '병원', icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm4.5 4v3.5H7v3h3.5V17h3v-3.5H17v-3h-3.5V7h-3z' },
+];
+// 학교 줄의 ⌄를 누르면 펼치는 종류별 학교. 카카오의 학교 분류(SC4)에서 이름으로 찾고, 분류 이름에 같은 말이 있는 곳만 쓴다.
+// 대학교는 드물어서 5km 안을 찾는다 (1km 안에는 거의 없다. 2026-10-19 치평동·마륵동·화정동에서 확인)
+const APT_NEAR_SCHOOLS = [
+  { word: '초등학교', radius: APT_NEAR_RADIUS },
+  { word: '중학교', radius: APT_NEAR_RADIUS },
+  { word: '고등학교', radius: APT_NEAR_RADIUS },
+  { word: '대학교', radius: 5000 },
+];
+const APT_NEAR_MORE = '학교 종류별로 보기';
+const APT_NEAR_LESS = '학교 종류별 접기';
+const APT_NEAR_LOADING = '찾는 중…';
+const APT_NEAR_NONE = '근처에 없음'; // 1km 안에 없을 때
+const APT_NEAR_FAIL = '불러오지 못했습니다';
+
+// 주변 시설 줄 앞의 작은 그림. 글자와 같은 색을 쓰고 화면 읽기에서는 건너뛴다
+function aptNearIcon(path) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'apt-near__icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const shape = document.createElementNS(NS, 'path');
+  shape.setAttribute('d', path);
+  shape.setAttribute('fill-rule', 'evenodd');
+  svg.append(shape);
+  return svg;
+}
+
+// 카카오가 준 직선거리(m 글자)를 "383m", 1km부터는 "4.5km"로
+function aptNearDistance(meters) {
+  const value = Number(meters);
+  return value < 1000 ? `${format.comma(value)}m` : `${(Math.round(value / 100) / 10).toLocaleString('ko-KR')}km`;
+}
+
 // "기본 정보" 제목 (목업 C6)
 const aptInfoTitle = () => {
   const title = document.createElement('h3');
@@ -77,6 +132,8 @@ const aptPanel = {
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
   loading: new Set(), // 받는 중인 아파트 번호
   failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
+  nearFound: new Map(), // 아파트 번호 → 주변 시설 줄의 글자 (찾은 것만 둔다)
+  nearSchools: new Map(), // 아파트 번호 → 학교 종류별 글자 (⌄를 펼쳐 찾은 것만 둔다)
   roadview: null, // 카카오 로드뷰 (처음 보일 때 한 번 만든다)
   roadviewFor: null, // 로드뷰 자리에 마지막으로 그린 아파트 번호
   similarKey: null, // 비슷한 아파트를 마지막으로 부른 것 (아파트 번호, 면적대, 조건)
@@ -387,6 +444,225 @@ const aptPanel = {
     similarView.load(box, { apartmentId: apartment.id, areaBand: area.area_band }, { onPick: aptPanel.pickSimilar });
   },
 
+  // ───────── 주변 시설 (3차, FR-MAP-23, 와이어프레임 C6) ─────────
+
+  // 카카오맵 장소 검색을 쓸 수 있는가 (map-view.js가 SDK를 libraries=services로 불러왔는가)
+  nearReady: () => typeof kakao !== 'undefined' && kakao.maps && kakao.maps.services && typeof kakao.maps.services.Places === 'function',
+
+  // 주변 시설 자리. 쓸 수 없으면 null. 제목과 네 줄(이름 칸과 값 칸)을 한 번만 만든다
+  nearBox() {
+    if (!aptPanel.nearReady()) return null;
+    let box = document.getElementById('apt-near');
+    if (box) return box;
+    box = document.createElement('section');
+    box.id = 'apt-near';
+    box.className = 'apt-near';
+    const title = document.createElement('h3');
+    title.className = 'apt-near__title';
+    title.textContent = APT_NEAR_TITLE;
+    const list = document.createElement('dl');
+    list.className = 'apt-near__list';
+    APT_NEAR_KINDS.forEach(({ code, label, icon }) => {
+      const row = document.createElement('div');
+      row.className = 'apt-near__row';
+      const term = document.createElement('dt');
+      term.className = 'apt-near__label';
+      term.append(aptNearIcon(icon), document.createTextNode(label));
+      const desc = document.createElement('dd');
+      desc.className = 'apt-near__value';
+      desc.dataset.code = code;
+      row.append(term, desc);
+      list.append(row);
+      if (code === 'SC4') {
+        // 학교: 오른쪽 ⌄로 초·중·고·대학교를 펼친다. 처음에는 접어 두고 가장 가까운 학교만 보인다
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'apt-near__toggle';
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', APT_NEAR_MORE);
+        toggle.append(aptNearIcon('M6.4 8.6L12 14.2l5.6-5.6L19 10l-7 7-7-7 1.4-1.4z'));
+        toggle.addEventListener('click', () => aptPanel.toggleSchools());
+        row.append(toggle);
+        const sub = document.createElement('div');
+        sub.className = 'apt-near__sub';
+        sub.id = 'apt-near-schools';
+        sub.hidden = true;
+        APT_NEAR_SCHOOLS.forEach(({ word }) => {
+          const subRow = document.createElement('div');
+          subRow.className = 'apt-near__row apt-near__row--sub';
+          const subTerm = document.createElement('dt');
+          subTerm.className = 'apt-near__label';
+          subTerm.textContent = word;
+          const subDesc = document.createElement('dd');
+          subDesc.className = 'apt-near__value';
+          subDesc.dataset.school = word;
+          subRow.append(subTerm, subDesc);
+          sub.append(subRow);
+        });
+        toggle.setAttribute('aria-controls', sub.id);
+        list.append(sub);
+      }
+    });
+    box.append(title, list);
+    return box;
+  },
+
+  // 학교 줄의 ⌄. 펼칠 때 처음 한 번만 찾는다 (아파트마다 기억)
+  toggleSchools() {
+    const box = document.getElementById('apt-near');
+    const { apartment } = aptPanel;
+    if (!box || !apartment) return;
+    const toggle = box.querySelector('.apt-near__toggle');
+    const sub = box.querySelector('.apt-near__sub');
+    const open = toggle.getAttribute('aria-expanded') !== 'true';
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? APT_NEAR_LESS : APT_NEAR_MORE);
+    sub.hidden = !open;
+    if (!open) return;
+    const id = apartment.id;
+    const fill = (texts) => {
+      if (box.dataset.apartmentId !== String(id)) return;
+      sub.querySelectorAll('.apt-near__value').forEach((cell) => aptPanel.nearFill(cell, texts[cell.dataset.school]));
+    };
+    const known = aptPanel.nearSchools.get(id);
+    if (known) {
+      fill(known);
+      return;
+    }
+    fill(Object.fromEntries(APT_NEAR_SCHOOLS.map(({ word }) => [word, APT_NEAR_LOADING])));
+    aptPanel.findSchools(apartment).then((texts) => {
+      if (!Object.values(texts).includes(APT_NEAR_FAIL)) aptPanel.nearSchools.set(id, texts);
+      fill(texts);
+    });
+  },
+
+  // 초·중·고·대학교 가운데 가장 가까운 곳. { 초등학교: "치평초등학교 227m", 대학교: "광주여자대학교 4.5km", ... }
+  async findSchools(apartment) {
+    const places = new kakao.maps.services.Places();
+    const location = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
+    const one = ({ word, radius }) => new Promise((resolve) => {
+      try {
+        places.keywordSearch(word, (data, status) => {
+          const { Status } = kakao.maps.services;
+          if (status !== Status.OK && status !== Status.ZERO_RESULT) {
+            resolve(APT_NEAR_FAIL);
+            return;
+          }
+          const found = (data || []).find((place) => String(place.category_name || '').includes(word));
+          resolve(found ? aptPanel.nearText(found) : APT_NEAR_NONE);
+        }, { category_group_code: 'SC4', location, radius, sort: kakao.maps.services.SortBy.DISTANCE });
+      } catch (error) {
+        resolve(APT_NEAR_FAIL);
+      }
+    });
+    const texts = await Promise.all(APT_NEAR_SCHOOLS.map(one));
+    return Object.fromEntries(APT_NEAR_SCHOOLS.map(({ word }, index) => [word, texts[index]]));
+  },
+
+  // 지금 아파트의 주변 시설을 채운다. 같은 아파트면 다시 찾지 않는다. 좌표가 없으면 묶음을 숨긴다
+  renderNear() {
+    const { apartment } = aptPanel;
+    const box = aptPanel.nearBox();
+    if (!box || !apartment) return;
+    box.hidden = !aptHasCoord(apartment);
+    if (box.hidden || box.dataset.apartmentId === String(apartment.id)) return;
+    box.dataset.apartmentId = String(apartment.id);
+    const id = apartment.id;
+    // 다른 아파트로 바뀌면 학교 종류별 묶음은 접는다
+    const toggle = box.querySelector('.apt-near__toggle');
+    if (toggle && toggle.getAttribute('aria-expanded') === 'true') aptPanel.toggleSchools();
+    const fill = (texts) => {
+      if (box.dataset.apartmentId !== String(id)) return; // 찾는 사이에 다른 아파트로 넘겼다
+      box.querySelectorAll('.apt-near__value[data-code]').forEach((cell) => {
+        aptPanel.nearFill(cell, texts[cell.dataset.code]);
+      });
+    };
+    const known = aptPanel.nearFound.get(id);
+    if (known) {
+      fill(known);
+      return;
+    }
+    fill(Object.fromEntries(APT_NEAR_KINDS.map(({ code }) => [code, APT_NEAR_LOADING])));
+    aptPanel.findNear(apartment).then((texts) => {
+      if (!Object.values(texts).includes(APT_NEAR_FAIL)) aptPanel.nearFound.set(id, texts); // 실패한 것은 다음에 다시 찾는다
+      fill(texts);
+    });
+  },
+
+  // 네 가지를 카카오맵 장소 검색으로 찾는다. { SW8: "김대중컨벤션센터역 광주1호선 5번 출구까지 383m", SC4: "전남고등학교 130m", ... }
+  // 지하철역은 가장 가까운 역을 찾은 뒤, 그 역의 1 ~ 8번 출구를 이름으로 찾아 가장 가까운 출구를 적는다.
+  async findNear(apartment) {
+    const places = new kakao.maps.services.Places();
+    const location = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
+    const options = { location, radius: APT_NEAR_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE };
+    const one = (code) => new Promise((resolve) => {
+      try {
+        places.categorySearch(code, (data, status) => {
+          const { Status } = kakao.maps.services;
+          if (status !== Status.OK && status !== Status.ZERO_RESULT) {
+            resolve(APT_NEAR_FAIL);
+            return;
+          }
+          // 가까운 순으로 온다 (한 번에 15곳). 동물병원을 빼고 첫째 곳
+          const nearest = (data || []).find((place) => !String(place.category_name || '').includes(APT_NEAR_SKIP));
+          if (!nearest) resolve(APT_NEAR_NONE);
+          else if (code === 'SW8') aptPanel.nearExit(places, location, nearest).then(resolve);
+          else resolve(aptPanel.nearText(nearest));
+        }, options);
+      } catch (error) {
+        resolve(APT_NEAR_FAIL);
+      }
+    });
+    const texts = await Promise.all(APT_NEAR_KINDS.map(({ code }) => one(code)));
+    return Object.fromEntries(APT_NEAR_KINDS.map(({ code }, index) => [code, texts[index]]));
+  },
+
+  // "전남고등학교 130m" (거리는 카카오가 준 직선거리 m)
+  nearText(nearest) {
+    return `${nearest.place_name} ${aptNearDistance(nearest.distance)}`;
+  },
+
+  // 역에서 가장 가까운 출구. 화면에는 "김대중컨벤션센터역 광주1호선 [5]번 출구까지 383m" ([5]는 노란 번호 상자)
+  // { before: "김대중컨벤션센터역 광주1호선 ", exit: "5", after: "번 출구까지 383m" }를 돌려준다
+  // 카카오의 역 이름은 "김대중컨벤션센터역 광주1호선", 출구 이름은 "김대중컨벤션센터역 광주1호선 5번출구"다.
+  // 출구를 하나도 못 찾으면 역까지의 거리를 적는다 ("상무역 광주1호선까지 718m")
+  async nearExit(places, location, station) {
+    const [stationName, line] = station.place_name.split(' ');
+    const label = line ? `${stationName} ${line}` : stationName;
+    const options = { location, sort: kakao.maps.services.SortBy.DISTANCE };
+    const exit = (number) => new Promise((resolve) => {
+      try {
+        places.keywordSearch(`${stationName} ${number}번출구`, (data, status) => {
+          const found = status === kakao.maps.services.Status.OK && (data || []).find((place) =>
+            String(place.category_name || '').includes('지하철출구') && place.place_name.startsWith(stationName) &&
+            new RegExp(`\\s${number}번\\s*출구$`).test(place.place_name));
+          resolve(found ? { number, distance: Number(found.distance) } : null);
+        }, options);
+      } catch (error) {
+        resolve(null);
+      }
+    });
+    const exits = (await Promise.all(Array.from({ length: APT_NEAR_EXITS }, (_, index) => exit(index + 1)))).filter(Boolean);
+    if (!exits.length) return `${label}까지 ${aptNearDistance(station.distance)}`;
+    const best = exits.reduce((a, b) => (b.distance < a.distance ? b : a));
+    return { before: `${label} `, exit: String(best.number), after: `번 출구까지 ${aptNearDistance(best.distance)}` };
+  },
+
+  // 한 칸을 채운다. 글자이면 그대로, 출구이면 번호를 지하철 출구 표지처럼 작은 노란 상자로 (sheet.css .apt-near__exit)
+  nearFill(cell, value) {
+    if (typeof value === 'string') {
+      cell.textContent = value;
+      return;
+    }
+    const badge = document.createElement('span');
+    badge.className = 'apt-near__exit';
+    badge.textContent = value.exit;
+    const keep = document.createElement('span'); // "[5]번 출구까지 383m"는 늘 다음 줄에 한 덩어리로 (sheet.css)
+    keep.className = 'apt-near__keep';
+    keep.append(badge, value.after);
+    cell.replaceChildren(document.createTextNode(value.before), keep);
+  },
+
   // 비슷한 아파트의 카드를 누름. apartment는 A-24 응답의 아파트, areaBand는 카드에 보이던 면적대
   //   map-view.js의 onPickSimilar에 맡긴다. 같은 동이든 다른 동이든 지도를 한 번에(setCenter) 옮긴다.
   //   (‹ ›의 onMove는 panTo로 부드럽게 옮기는데, 실제 카카오맵의 panTo는 80%의 좁은 지도에서 가운데에 멈추지 않을 때가 있었다)
@@ -423,10 +699,12 @@ const aptPanel = {
     const panel = document.getElementById('apartment-info');
     const notice = aptPanel.noCoordNotice(); // 좌표가 없으면 맨 위에 (받는 중에도 보인다)
     const similar = aptPanel.similarBox(); // 비슷한 아파트 자리. 같은 요소를 다시 붙이므로 그려 둔 카드가 남는다
-    // rows: 정보 줄을 그릴 때만 "기본 정보" 제목을 붙인다 (비슷한 아파트가 있을 때만)
+    const near = aptPanel.nearBox(); // 주변 시설 자리. 같은 요소를 다시 붙이므로 찾아 둔 값이 남는다
+    // rows: 정보 줄을 그릴 때만 "기본 정보" 제목과 주변 시설을 붙인다 (제목은 비슷한 아파트가 있을 때만)
     const show = (content, rows = false) => {
       const title = rows && similar ? aptInfoTitle() : null;
-      panel.replaceChildren(...[notice, title, content, similar].filter(Boolean));
+      panel.replaceChildren(...[notice, title, content, rows ? near : null, similar].filter(Boolean));
+      if (rows) aptPanel.renderNear();
       aptPanel.renderSimilar();
     };
     const detail = aptPanel.details.get(apartment.id);
