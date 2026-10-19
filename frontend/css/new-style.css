@@ -1381,3 +1381,9 @@
 .scenario-chart__say b {
   white-space: nowrap;
 }
+
+/* 고른 구·동의 경계: 연보라 → 남색 (2026-10-19). 동 묶음 표시(연보라)와 헷갈리지 않고, 면적 칩·선택 표시의 남색과 이어진다.
+   칠의 진하기는 js/boundary.js의 BOUNDARY_STYLE (pickedDong 6%) */
+.map-body {
+  --boundary-picked: #043870;
+}
