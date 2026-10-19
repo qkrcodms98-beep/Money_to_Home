@@ -240,7 +240,7 @@ const aptPanel = {
     titleRow.hidden = false;
     if (listPlace) back.textContent = `← ${listPlace} 목록`;
     if (title.parentElement !== titleRow) titleRow.append(title);
-    document.getElementById('apt-name').textContent = apartment.name;
+    format.keepWords(document.getElementById('apt-name'), apartment.name); // 띄어쓰기에서만 줄바꿈
     const badge = document.getElementById('apt-badge');
     badge.className = `badge badge--${area.category}`; // 고른 면적의 구분
     badge.textContent = APT_CATEGORY_NAMES[area.category];

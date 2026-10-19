@@ -128,7 +128,7 @@ const sharePage = {
   renderHead() {
     const d = sharePage.detail;
     document.title = `${d.name} · 머니 to 홈`;
-    document.getElementById('share-name').textContent = d.name;
+    format.keepWords(document.getElementById('share-name'), d.name); // 띄어쓰기에서만 줄바꿈 (아파트 창과 같다)
     document.getElementById('share-place').textContent = `${d.gu} ${d.dong}`;
     document.getElementById('share-actions').replaceChildren(shareView.shareButton(() => sharePage.shareTarget()));
     sharePage.renderAreas();
