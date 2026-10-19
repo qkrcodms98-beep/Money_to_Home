@@ -13,11 +13,13 @@
   <link rel="stylesheet" href="css/similar.css?v=20261015-3">
   <link rel="stylesheet" href="css/glossary.css?v=20261015-2">
   <link rel="stylesheet" href="css/scenario.css?v=20261015-2">
+  <link rel="stylesheet" href="css/scenario-charts.css?v=20261019-1">
+  <link rel="stylesheet" href="css/share.css?v=20261019-2">
   <link rel="stylesheet" href="css/search.css?v=20261015-2">
   <link rel="stylesheet" href="css/filter.css?v=20261015-2">
   <link rel="stylesheet" href="css/region.css?v=20261015-2">
   <!-- 새 스타일 (2026-10-18). 위의 모양을 덮어쓴다. 빼면 예전 모양 -->
-  <link rel="stylesheet" href="css/new-style.css?v=20261019-13">
+  <link rel="stylesheet" href="css/new-style.css?v=20261019-15">
 </head>
 <body class="map-body">
   <!-- P-05 ① 지도 기본. Figma "확정 목업 v3"의 "v3 · P-05 ① 지도 기본" (node 2037:3).
@@ -234,7 +236,9 @@
   <!-- 시나리오 탭의 그래프 두 개 (실거래, 같은 동 안의 위치). A-27을 부른다 -->
   <script src="js/scenario-charts.js?v=20261019-6"></script>
   <script src="js/similar.js?v=20261019-1"></script>
-  <script src="js/apartment.js?v=20261019-7"></script>
+  <!-- 공유 · 주소 복사 (김목산). apartment.js가 쓰므로 그보다 먼저 -->
+  <script src="js/share.js?v=20261019-2"></script>
+  <script src="js/apartment.js?v=20261019-8"></script>
   <!-- 광주 5개 구 경계 (FR-MAP-28). map-view.js가 쓰므로 그보다 먼저 불러온다 -->
   <script src="js/boundary.js?v=20261019-1"></script>
   <script src="js/map-view.js?v=20261019-5"></script>
