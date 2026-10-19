@@ -23,6 +23,12 @@
 //     카드를 누르면 그 아파트로 넘어간다. map-view.js가 넘겨준 handlers.onPickSimilar를 부른다
 //     (없으면 지금 지도에 있는 아파트만 ‹ ›와 같이 넘긴다).
 //     similar.js를 불러오지 않았으면 아무것도 하지 않는다.
+//   주변 시설 (3차, FR-MAP-23, T-MAP-23. 와이어프레임 C6): 기본 정보와 비슷한 아파트 사이에 둔다.
+//     지하철역, 학교, 대형마트, 편의점, 병원 다섯 줄(앞에 작은 그림). 학교 줄의 ⌄로 초·중·고·대학교를 펼친다. 줄마다 반경 1km 안에서 가장 가까운 곳의 이름과 직선거리.
+//     지하철역은 가장 가까운 출구까지 ("김대중컨벤션센터역 광주1호선 5번 출구까지 330m"), 나머지는 "전남고등학교 130m".
+//     1km 안에 없으면 "근처에 없음". 대학교만 5km 안. 병원은 동물병원을 뺀다. 수는 적지 않는다 (2026-10-19 세환 결정).
+//     값은 A-06의 facilities다. data/load_facilities.py가 카카오 장소 검색으로 미리 받아 DB에 넣은 것이라 화면은 카카오를 부르지 않는다
+//     (NFR-08, 2026-10-19 팀장 결정). 맨 아래에 받은 날을 적는다. 받은 값이 없거나 좌표가 없으면 묶음을 두지 않는다.
 //   좌표가 없는 아파트 (P-06 ⑱, 목업 4009:492): 이름과 배지 옆에 "위치 없음"을 붙이고,
 //     아파트 정보 탭의 맨 위에 점선 안내를 둔다. 목록에서 열었을 때만 생긴다 (지도에는 표시가 없다).
 //   시나리오:    박채은의 scenario.js가 #scenario-panel에 그린다.
@@ -55,6 +61,48 @@ const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보�
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
 const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
 const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아파트가 아래에 붙을 때만 둔다
+
+// 주변 시설 (FR-MAP-23, 와이어프레임 C6). kind는 A-06 facilities의 kind
+const APT_NEAR_TITLE = '주변 시설';
+// icon: 줄 앞의 작은 그림 (24 × 24 SVG path. 직접 그린 단순한 모양)
+const APT_NEAR_KINDS = [
+  { kind: 'subway', label: '지하철역', icon: 'M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-3 3l2 3h-2.4l-2-3H9.4l-2 3H5l2-3a3 3 0 0 1-3-3V6a4 4 0 0 1 4-4zM6 6v4h12V6H6zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z' },
+  { kind: 'school', label: '학교', icon: 'M12 3l10 5-10 5L2 8l10-5zM6 11.2l6 3 6-3V16c0 1.9-2.7 4-6 4s-6-2.1-6-4v-4.8zM20 9.5h1.5V15H20V9.5z' },
+  { kind: 'mart', label: '대형마트', icon: 'M2 3h3.2l.7 3H21l-2 8.5a2 2 0 0 1-2 1.5H9a2 2 0 0 1-2-1.5L4.2 5H2V3zm7 15a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 9 18zm8 0a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5z' },
+  { kind: 'convenience', label: '편의점', icon: 'M4 3h16l1.5 5a3 3 0 0 1-2.5 3.2V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8.8A3 3 0 0 1 2.5 8L4 3zm3 10v6h4v-4h2v4h4v-6H7zm-1.2-8L4.6 8.4a1 1 0 0 0 1 1.1h12.8a1 1 0 0 0 1-1.1L18.2 5H5.8z' },
+  { kind: 'hospital', label: '병원', icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm4.5 4v3.5H7v3h3.5V17h3v-3.5H17v-3h-3.5V7h-3z' },
+];
+// 학교 줄의 ⌄를 누르면 펼치는 종류별 학교
+const APT_NEAR_SCHOOLS = [
+  { kind: 'elementary', label: '초등학교' },
+  { kind: 'middle', label: '중학교' },
+  { kind: 'high', label: '고등학교' },
+  { kind: 'university', label: '대학교' },
+];
+const APT_NEAR_MORE = '학교 종류별로 보기';
+const APT_NEAR_LESS = '학교 종류별 접기';
+const APT_NEAR_NONE = '근처에 없음'; // 반경 안에 없을 때
+const APT_NEAR_SOURCE = '카카오 장소 정보'; // 맨 아래 출처. 뒤에 받은 날과 "직선거리"를 붙인다
+
+// 주변 시설 줄 앞의 작은 그림. 글자와 같은 색을 쓰고 화면 읽기에서는 건너뛴다
+function aptNearIcon(path) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'apt-near__icon');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const shape = document.createElementNS(NS, 'path');
+  shape.setAttribute('d', path);
+  shape.setAttribute('fill-rule', 'evenodd');
+  svg.append(shape);
+  return svg;
+}
+
+// 직선거리(m)를 "383m", 1km부터는 "4.5km"로
+function aptNearDistance(meters) {
+  const value = Number(meters);
+  return value < 1000 ? `${format.comma(value)}m` : `${(Math.round(value / 100) / 10).toLocaleString('ko-KR')}km`;
+}
 
 // "기본 정보" 제목 (목업 C6)
 const aptInfoTitle = () => {
@@ -397,6 +445,121 @@ const aptPanel = {
     similarView.load(box, { apartmentId: apartment.id, areaBand: area.area_band }, { onPick: aptPanel.pickSimilar });
   },
 
+  // ───────── 주변 시설 (3차, FR-MAP-23, 와이어프레임 C6) ─────────
+
+  // 주변 시설 자리. 제목, 다섯 줄(이름 칸과 값 칸), 학교 종류별 네 줄, 출처를 한 번만 만든다
+  nearBox() {
+    let box = document.getElementById('apt-near');
+    if (box) return box;
+    box = document.createElement('section');
+    box.id = 'apt-near';
+    box.className = 'apt-near';
+    const title = document.createElement('h3');
+    title.className = 'apt-near__title';
+    title.textContent = APT_NEAR_TITLE;
+    const list = document.createElement('dl');
+    list.className = 'apt-near__list';
+    const makeRow = (label, kind, icon) => {
+      const row = document.createElement('div');
+      row.className = 'apt-near__row';
+      const term = document.createElement('dt');
+      term.className = 'apt-near__label';
+      if (icon) term.append(aptNearIcon(icon));
+      term.append(document.createTextNode(label));
+      const desc = document.createElement('dd');
+      desc.className = 'apt-near__value';
+      desc.dataset.kind = kind;
+      row.append(term, desc);
+      return row;
+    };
+    APT_NEAR_KINDS.forEach(({ kind, label, icon }) => {
+      const row = makeRow(label, kind, icon);
+      list.append(row);
+      if (kind === 'school') {
+        // 학교: 오른쪽 ⌄로 초·중·고·대학교를 펼친다. 처음에는 접어 두고 가장 가까운 학교만 보인다
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'apt-near__toggle';
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', APT_NEAR_MORE);
+        toggle.append(aptNearIcon('M6.4 8.6L12 14.2l5.6-5.6L19 10l-7 7-7-7 1.4-1.4z'));
+        toggle.addEventListener('click', () => aptPanel.toggleSchools());
+        row.append(toggle);
+        const sub = document.createElement('div');
+        sub.className = 'apt-near__sub';
+        sub.id = 'apt-near-schools';
+        sub.hidden = true;
+        APT_NEAR_SCHOOLS.forEach((school) => {
+          const subRow = makeRow(school.label, school.kind);
+          subRow.classList.add('apt-near__row--sub');
+          sub.append(subRow);
+        });
+        toggle.setAttribute('aria-controls', sub.id);
+        list.append(sub);
+      }
+    });
+    const source = document.createElement('p');
+    source.className = 'apt-near__source';
+    box.append(title, list, source);
+    return box;
+  },
+
+  // 학교 줄의 ⌄. 값은 이미 채워 두었으므로 펼치고 접기만 한다. open을 주면 그 상태로
+  toggleSchools(open) {
+    const box = document.getElementById('apt-near');
+    if (!box) return;
+    const toggle = box.querySelector('.apt-near__toggle');
+    const next = open === undefined ? toggle.getAttribute('aria-expanded') !== 'true' : open;
+    toggle.setAttribute('aria-expanded', String(next));
+    toggle.setAttribute('aria-label', next ? APT_NEAR_LESS : APT_NEAR_MORE);
+    box.querySelector('.apt-near__sub').hidden = !next;
+  },
+
+  // A-06의 facilities로 주변 시설을 채운다. 받은 값이 없거나 좌표가 없으면 묶음을 숨긴다
+  renderNear(detail) {
+    const { apartment } = aptPanel;
+    const box = aptPanel.nearBox();
+    const items = (detail && detail.facilities) || [];
+    box.hidden = !apartment || !aptHasCoord(apartment) || !items.length;
+    if (box.hidden) return;
+    if (box.dataset.apartmentId !== String(apartment.id)) aptPanel.toggleSchools(false); // 다른 아파트로 바뀌면 학교 종류별 묶음은 접는다
+    box.dataset.apartmentId = String(apartment.id);
+    const byKind = new Map(items.map((item) => [item.kind, item]));
+    box.querySelectorAll('.apt-near__value').forEach((cell) => {
+      const item = byKind.get(cell.dataset.kind);
+      aptPanel.nearFill(cell, item ? aptPanel.nearValue(item) : APT_NEAR_NONE);
+    });
+    const [year, month, day] = (detail.facilities_base_date || '').split('-');
+    box.querySelector('.apt-near__source').textContent = year
+      ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준 · 직선거리`
+      : '';
+  },
+
+  // 한 줄의 값. "전남고등학교 130m". 지하철역은 { before, exit, after } (출구 번호를 노란 상자로)
+  // 출구를 못 찾은 역은 "상무역 광주1호선까지 718m"
+  nearValue(item) {
+    if (!item.place_name) return APT_NEAR_NONE;
+    const distance = aptNearDistance(item.distance);
+    if (item.kind !== 'subway') return `${item.place_name} ${distance}`;
+    if (item.exit_no === null || item.exit_no === undefined) return `${item.place_name}까지 ${distance}`;
+    return { before: `${item.place_name} `, exit: String(item.exit_no), after: `번 출구까지 ${distance}` };
+  },
+
+  // 한 칸을 채운다. 글자이면 그대로, 출구이면 번호를 지하철 출구 표지처럼 작은 노란 상자로 (sheet.css .apt-near__exit)
+  nearFill(cell, value) {
+    if (typeof value === 'string') {
+      cell.textContent = value;
+      return;
+    }
+    const badge = document.createElement('span');
+    badge.className = 'apt-near__exit';
+    badge.textContent = value.exit;
+    const keep = document.createElement('span'); // "[5]번 출구까지 383m"는 늘 다음 줄에 한 덩어리로 (sheet.css)
+    keep.className = 'apt-near__keep';
+    keep.append(badge, value.after);
+    cell.replaceChildren(document.createTextNode(value.before), keep);
+  },
+
   // 비슷한 아파트의 카드를 누름. apartment는 A-24 응답의 아파트, areaBand는 카드에 보이던 면적대
   //   map-view.js의 onPickSimilar에 맡긴다. 같은 동이든 다른 동이든 지도를 한 번에(setCenter) 옮긴다.
   //   (‹ ›의 onMove는 panTo로 부드럽게 옮기는데, 실제 카카오맵의 panTo는 80%의 좁은 지도에서 가운데에 멈추지 않을 때가 있었다)
@@ -433,10 +596,12 @@ const aptPanel = {
     const panel = document.getElementById('apartment-info');
     const notice = aptPanel.noCoordNotice(); // 좌표가 없으면 맨 위에 (받는 중에도 보인다)
     const similar = aptPanel.similarBox(); // 비슷한 아파트 자리. 같은 요소를 다시 붙이므로 그려 둔 카드가 남는다
-    // rows: 정보 줄을 그릴 때만 "기본 정보" 제목을 붙인다 (비슷한 아파트가 있을 때만)
+    const near = aptPanel.nearBox(); // 주변 시설 자리. 같은 요소를 다시 붙인다
+    // rows: 정보 줄을 그릴 때만 "기본 정보" 제목과 주변 시설을 붙인다 (제목은 비슷한 아파트가 있을 때만)
     const show = (content, rows = false) => {
       const title = rows && similar ? aptInfoTitle() : null;
-      panel.replaceChildren(...[notice, title, content, similar].filter(Boolean));
+      panel.replaceChildren(...[notice, title, content, rows ? near : null, similar].filter(Boolean));
+      if (rows) aptPanel.renderNear(aptPanel.details.get(apartment.id));
       aptPanel.renderSimilar();
     };
     const detail = aptPanel.details.get(apartment.id);

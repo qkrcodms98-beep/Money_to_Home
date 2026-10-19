@@ -23,6 +23,19 @@ class AreaDetail(BaseModel):
     period_end: date
 
 
+class FacilityDetail(BaseModel):
+    """주변 시설 한 줄. apartment_facilities 표의 한 줄 (FR-MAP-23)"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: str  # subway, school, mart, convenience, hospital, elementary, middle, high, university
+    place_name: str | None  # 가장 가까운 곳. 반경 안에 없으면 null ("근처에 없음")
+    distance: int | None  # 직선거리. m. 지하철역은 가장 가까운 출구까지
+    exit_no: int | None  # 지하철역의 출구 번호. 못 찾았으면 null (distance는 역까지)
+    place_count: int  # 반경 안의 수
+    radius: int  # 찾은 반경. m
+
+
 class ApartmentDetailOut(BaseModel):
     """A-06 응답"""
 
@@ -40,3 +53,5 @@ class ApartmentDetailOut(BaseModel):
     households: int | None  # 세대수. 아직 없어서 null
     households_base_date: date | None = None  # 세대수의 기준일. 세대수를 모르면 null
     areas: list[AreaDetail] = []  # 평균가가 낮은 순. router가 services.apartment_detail.areas()로 채운다
+    facilities: list[FacilityDetail] = []  # 주변 시설. 아직 받지 않았으면 빈 목록. 순서는 services.apartment_detail.FACILITY_ORDER
+    facilities_base_date: date | None = None  # 주변 시설을 받은 날. 시설이 없으면 null

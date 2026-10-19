@@ -11,7 +11,7 @@ class DataCollection(Base):
     __tablename__ = "data_collections"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    dataset: Mapped[str] = mapped_column(String(20))  # trades, coordinates, supply_area, households
+    dataset: Mapped[str] = mapped_column(String(20))  # trades, coordinates, supply_area, households, facilities
     source: Mapped[str] = mapped_column(String(100))  # 받은 곳
     base_date: Mapped[date] = mapped_column(Date)
     row_count: Mapped[int | None] = mapped_column(Integer)

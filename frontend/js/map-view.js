@@ -133,7 +133,8 @@ async function loadKakaoKey() {
   return config.kakao_js_key;
 }
 
-// SDK를 불러온다. 지도 그림만 쓴다. libraries=services(주소 → 좌표)는 넣지 않는다.
+// SDK를 불러온다. 지도 그림만 쓴다. libraries=services(장소 검색, 주소 → 좌표)는 넣지 않는다.
+// 주변 시설도 data/load_facilities.py가 미리 받아 둔 것을 A-06으로 받는다 (NFR-08).
 function loadKakaoSdk(key) {
   if (window.kakao && window.kakao.maps && window.kakao.maps.Map) return Promise.resolve();
 
