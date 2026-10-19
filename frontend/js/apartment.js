@@ -122,6 +122,18 @@ const aptPanel = {
     aptPanel.listPlace = listPlace;
     aptPanel.selectTab('apt-tab-info');
     aptPanel.render();
+    aptPanel.scrollTop(); // 다른 아파트(또는 다시 연 아파트)는 늘 맨 위의 기본 상태에서 시작한다 (2026-10-19)
+  },
+
+  // 아파트 창의 내용을 맨 위로. 앞 아파트에서 내려 둔 자리가 다음 아파트에 남지 않게 한다
+  // 창이 아직 숨겨져 있으면(목록에서 넘어올 때) 스크롤이 먹지 않으므로 보이게 된 다음 그림에서 한 번 더 한다
+  scrollTop() {
+    const reset = () => {
+      const panels = document.querySelector('.apt__panels');
+      if (panels) panels.scrollTop = 0;
+    };
+    reset();
+    requestAnimationFrame(reset);
   },
 
   // ‹ › : 지도에 보이는 아파트를 목록의 순서로 넘긴다. 처음과 끝에서는 그 방향 버튼을 끈다.
@@ -134,6 +146,9 @@ const aptPanel = {
   },
 
   selectTab(tabId) {
+    // 탭을 바꾸면 그 탭의 맨 위부터 보여 준다 (아파트 정보 ↔ 시나리오)
+    const changed = document.getElementById(tabId).getAttribute('aria-selected') !== 'true';
+    if (changed) aptPanel.scrollTop();
     document.querySelectorAll('.apt__tab').forEach((tab) => {
       const selected = tab.id === tabId;
       tab.setAttribute('aria-selected', String(selected));
