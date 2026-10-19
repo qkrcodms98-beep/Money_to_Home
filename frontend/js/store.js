@@ -8,7 +8,7 @@
 //   input : age, annual_income, current_assets,
 //           loan_choice, loan_product_id, repayment_years,
 //           monthly_saving, target_years
-//   place : 보던 단계와 질문, "처음부터 다시 입력"을 골랐는지
+//   place : 보던 단계와 질문, "처음부터 다시 입력"을 골랐는지, 스플래시를 봤는지(splash_seen)
 //   map   : 구와 동, 조건, 정렬, 면적 단위, 자금 부족 표시, 지도의 가운데와 확대 수준
 //
 // 주민등록번호는 넣지 않는다. 만 나이만 넣는다 (NFR-25).

@@ -5,10 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>머니 to 홈</title>
   <!-- 모든 화면이 common.css를 먼저, 화면의 CSS를 그 뒤에 불러 쓴다. -->
-  <link rel="stylesheet" href="css/common.css?v=20261019-1">
-  <link rel="stylesheet" href="css/index.css?v=20261015-1">
+  <link rel="stylesheet" href="css/common.css?v=20261019-2">
+  <link rel="stylesheet" href="css/index.css?v=20261019-1">
 </head>
 <body>
+  <!-- 스플래시. 탭을 처음 열 때만 1초 동안 화면 전체를 덮었다가 사라진다 (js/splash.js). 처음에는 숨겨 둔다.
+       꾸밈이므로 화면 읽기 프로그램에는 읽히지 않게 한다. -->
+  <div class="splash" id="splash" aria-hidden="true" hidden>
+    <img class="splash__logo" src="img/logo-splash.svg?v=20261019-1" alt="">
+    <p class="splash__name">머니 <span class="splash__to">to</span> 홈</p>
+  </div>
+
   <!-- P-01 시작 화면. Figma "확정 목업 v3"의 P-01 ① ~ ⑤. 모바일에는 헤더가 없다.
        처음에는 ① 기본(로그인하지 않음)으로 그려 두고, 로그인 상태를 물어본 뒤 js/index.js가 ② ~ ⑤로 바꾼다. -->
   <div class="top-space"></div>
@@ -17,7 +24,7 @@
     <main class="page start">
       <!-- ⑤ 로그인 시간이 끝남. 로고 자리에 둔다 -->
       <p class="notice start__expired" id="start-expired" hidden>30분 동안 사용하지 않아 로그아웃되었습니다. 입력하던 값은 이 기기에 남아 있습니다.</p>
-      <img class="start__logo" id="start-logo" src="img/logo.svg" alt="">
+      <img class="start__logo" id="start-logo" src="img/logo.svg?v=20261019-1" alt="">
 
       <h1 class="title title--display" id="start-title">내 자산과 저축, 대출로<br>목표할 수 있는 집을<br>지도에서 찾아보세요</h1>
       <p class="subtitle" id="start-subtitle">광주 5개 구 아파트의 최근 1년 실거래가로 계산합니다.</p>
@@ -84,6 +91,7 @@
   <script src="js/guard.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/account.js?v=20261014-1"></script>
+  <script src="js/splash.js?v=20261019-1"></script>
   <script src="js/index.js?v=20261015-1"></script>
 </body>
 </html>
