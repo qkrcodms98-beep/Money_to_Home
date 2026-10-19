@@ -153,13 +153,11 @@ const shareView = (() => {
     const cardText = el('div', 'share__card-text');
     cardText.append(el('strong', 'share__name'), el('span', 'share__area'));
     card.append(badge, cardText);
-    const label = el('label', 'share__label', SHARE_TEXT.linkLabel);
-    label.htmlFor = 'share-link';
-    const input = el('input', 'share__input');
+    const label = el('p', 'share__label', SHARE_TEXT.linkLabel);
+    label.id = 'share-link-label';
+    const input = el('div', 'share__link'); // 보여 주기만 한다. 글자는 선택되지 않는다 (share.css)
     input.id = 'share-link';
-    input.type = 'text';
-    input.readOnly = true;
-    input.addEventListener('focus', () => input.select());
+    input.setAttribute('aria-labelledby', 'share-link-label');
     const copyButton = el('button', 'button button--primary share__button');
     copyButton.type = 'button';
     copyButton.dataset.role = 'copy-link';
@@ -212,12 +210,17 @@ const shareView = (() => {
   async function copyLink() {
     const input = dialog.querySelector('#share-link');
     const fail = dialog.querySelector('.share__fail');
-    const done = await copy(input.value);
+    const done = await copy(input.textContent);
     fail.hidden = done;
     fail.textContent = done ? '' : SHARE_TEXT.copyFail;
     if (!done) {
-      input.focus();
-      input.select();
+      // 복사가 안 되는 브라우저: 칸의 글자를 직접 선택할 수 있게 풀고 선택해 둔다
+      input.classList.add('share__link--selectable');
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
       return;
     }
     setCopyButton(true);
@@ -238,7 +241,9 @@ const shareView = (() => {
     const link = linkFor(target);
     dialog.querySelectorAll('.share__name').forEach((node) => { node.textContent = target.name || ''; });
     dialog.querySelectorAll('.share__area').forEach((node) => { node.textContent = areaText(target); });
-    dialog.querySelector('#share-link').value = link;
+    const linkBox = dialog.querySelector('#share-link');
+    linkBox.textContent = link;
+    linkBox.classList.remove('share__link--selectable');
     // QR코드는 열 때 미리 그려 둔다. 두 화면의 높이가 같아서 넘어갈 때 창이 들썩이지 않는다
     const box = dialog.querySelector('.share__qr');
     if (box.dataset.link !== link) {

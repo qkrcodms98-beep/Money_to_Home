@@ -10,29 +10,49 @@
   height: var(--touch-size);
   padding: 0;
   border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-text-sub);
+  background: transparent; /* 누를 때도 바탕을 칠하지 않는다. 옆 글자를 가리지 않게 아이콘 색만 바꾼다 */
+  color: var(--color-text-hint);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: color 0.2s ease, transform 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.share-action:hover {
-  background: var(--color-bg-sub);
+.share-action--share {
+  color: var(--color-text-sub);
+}
+
+.share-action:hover,
+.share-action:focus-visible {
   color: var(--color-text);
 }
 
 .share-action:active {
-  transform: scale(0.92);
+  color: var(--color-text);
+  transform: scale(0.9);
 }
 
 .share-action:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .share-action .share-icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* 주소 옆의 복사는 글자 크기에 맞춰 작게 보이되, 누르는 영역은 44px을 지킨다 (위아래만 겹치게 해서 줄 높이는 그대로) */
+.share-action--copy {
+  width: 36px;
+  margin: -12px -8px -12px 0;
+  vertical-align: middle;
+}
+
+.share-action--copy .share-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.share-icon {
   width: 22px;
   height: 22px;
 }
@@ -221,24 +241,33 @@
   font-weight: var(--font-bold);
 }
 
-.share__input {
+/* 공유 링크 칸. 보여 주기만 하고 글자는 선택되지 않는다 (user-select: none). 복사는 [링크 복사]로 한다.
+   복사가 안 되는 브라우저에서만 share__link--selectable을 붙여 직접 선택할 수 있게 푼다 */
+.share__link {
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
   width: 100%;
   height: var(--input-height);
   margin-bottom: 14px;
   padding: 0 14px;
+  overflow: hidden;
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-card);
   background: var(--color-bg);
   color: var(--color-text-sub);
-  font-family: inherit;
   font-size: var(--text-label);
+  white-space: nowrap;
   text-overflow: ellipsis;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
 }
 
-.share__input:focus {
+.share__link--selectable {
+  -webkit-user-select: all;
+  user-select: all;
   border-color: var(--color-primary);
-  outline: none;
 }
 
 .share__fail {

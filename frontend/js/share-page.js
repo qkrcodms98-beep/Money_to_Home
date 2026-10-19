@@ -48,6 +48,19 @@ const sharePage = {
     sharePage.wantedArea = Number(query.get('area')) || null;
     document.getElementById('share-tab-info').addEventListener('click', () => sharePage.showTab('info'));
     document.getElementById('share-tab-scenario').addEventListener('click', () => sharePage.showTab('scenario'));
+    // ㎡/평. 지도 화면과 같은 값(store의 map.area_unit)을 쓴다
+    document.querySelectorAll('.share-page__unit-option').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.dataset.unit === sharePage.unit()) return;
+        store.set('map', { area_unit: button.dataset.unit });
+        sharePage.renderUnit();
+        if (sharePage.detail) {
+          sharePage.renderAreas();
+          sharePage.renderInfo();
+        }
+      });
+    });
+    sharePage.renderUnit();
     sharePage.load(id);
   },
 
@@ -98,6 +111,14 @@ const sharePage = {
     return sharePage.detail.areas[sharePage.areaIndex];
   },
 
+  unit: () => (store.get('map').area_unit === 'pyeong' ? 'pyeong' : 'm2'),
+
+  renderUnit() {
+    document.querySelectorAll('.share-page__unit-option').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.unit === sharePage.unit()));
+    });
+  },
+
   shareTarget() {
     const d = sharePage.detail;
     const a = sharePage.area();
@@ -110,9 +131,13 @@ const sharePage = {
     document.getElementById('share-name').textContent = d.name;
     document.getElementById('share-place').textContent = `${d.gu} ${d.dong}`;
     document.getElementById('share-actions').replaceChildren(shareView.shareButton(() => sharePage.shareTarget()));
+    sharePage.renderAreas();
+  },
+
+  renderAreas() {
     const box = document.getElementById('share-areas');
-    box.replaceChildren(...d.areas.map((area, index) => {
-      const chip = sharePage.el('button', 'share-page__area', format.area(area.supply_area, area.exclusive_area));
+    box.replaceChildren(...sharePage.detail.areas.map((area, index) => {
+      const chip = sharePage.el('button', 'share-page__area', format.area(area.supply_area, area.exclusive_area, sharePage.unit()));
       chip.type = 'button';
       chip.setAttribute('aria-pressed', String(index === sharePage.areaIndex));
       chip.addEventListener('click', () => {
@@ -151,7 +176,7 @@ const sharePage = {
       ['지번 주소', `${d.gu} ${d.dong} ${d.jibun}`, true],
       ['도로명 주소', d.road_address, true],
       ['준공 연도', d.built_year === null ? null : `${d.built_year}년`],
-      ['면적', format.area(area.supply_area, area.exclusive_area)],
+      ['면적', format.area(area.supply_area, area.exclusive_area, sharePage.unit())],
       ['실거래 평균가', format.won(area.avg_price)],
       ['최근 1년 거래', trade],
       ['세대수', households],
@@ -252,7 +277,7 @@ const sharePage = {
         badge.hidden = !area ? true : badge.hidden;
         return;
       }
-      badge.className = `badge badge--${area.category}`;
+      badge.className = `share-page__badge share-page__badge--${area.category}`;
       badge.textContent = SHARE_PAGE_BADGE[area.category];
       badge.hidden = false;
     } catch (error) {

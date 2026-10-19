@@ -7,8 +7,8 @@
   <link rel="stylesheet" href="css/common.css?v=20261015-2">
   <link rel="stylesheet" href="css/glossary.css?v=20261015-2">
   <link rel="stylesheet" href="css/scenario.css?v=20261015-2">
-  <link rel="stylesheet" href="css/share.css?v=20261019-1">
-  <link rel="stylesheet" href="css/share-page.css?v=20261019-1">
+  <link rel="stylesheet" href="css/share.css?v=20261019-2">
+  <link rel="stylesheet" href="css/share-page.css?v=20261019-2">
 </head>
 <body data-page="share">
   <!-- 공유받은 아파트 (3차, FR-APT-18). 담당: 김목산
@@ -18,15 +18,21 @@
   <div class="top-space"></div>
 
   <main class="share-page" id="share-page">
+    <!-- 머리: 지도 화면의 아파트 창(새 스타일)과 같은 모양. 이름 · 구분 배지 · 공유, 그 아래 면적 칩과 ㎡/평 -->
     <header class="share-page__head">
-      <a class="share-page__back" href="index.html" id="share-back" aria-label="처음 화면으로">‹</a>
       <div class="share-page__title-row">
         <h1 class="share-page__name" id="share-name"></h1>
-        <span class="badge" id="share-badge" hidden></span>
+        <span class="share-page__badge" id="share-badge" hidden></span>
         <span class="share-page__actions" id="share-actions"></span>
       </div>
       <p class="share-page__place" id="share-place"></p>
-      <div class="share-page__areas" id="share-areas" role="group" aria-label="면적"></div>
+      <div class="share-page__area-row">
+        <div class="share-page__areas" id="share-areas" role="group" aria-label="면적"></div>
+        <div class="share-page__unit" role="group" aria-label="면적 단위">
+          <button type="button" class="share-page__unit-option" data-unit="m2" aria-pressed="true">㎡</button>
+          <button type="button" class="share-page__unit-option" data-unit="pyeong" aria-pressed="false">평</button>
+        </div>
+      </div>
     </header>
 
     <div class="share-page__tabs" role="tablist">
@@ -56,7 +62,7 @@
   <script src="js/glossary.js?v=20261015-2"></script>
   <script src="js/scenario.js?v=20261019-1"></script>
   <script src="js/scenario-charts.js?v=20261019-6"></script>
-  <script src="js/share.js?v=20261019-1"></script>
-  <script src="js/share-page.js?v=20261019-1"></script>
+  <script src="js/share.js?v=20261019-2"></script>
+  <script src="js/share-page.js?v=20261019-2"></script>
 </body>
 </html>
