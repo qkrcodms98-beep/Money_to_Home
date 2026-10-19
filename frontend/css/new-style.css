@@ -1301,3 +1301,61 @@
   width: 18px;
   height: 18px;
 }
+
+/* 내 위치 (map-view.js의 showMyLocation): 흰 테두리 파란 점 + 그림자, 고리 두 개가 1초 차이로 퍼져 나간다 (시안 2번, 2026-10-19).
+   틀(.my-location)은 투명하고, ::after가 점, ::before와 틀의 그림자가 퍼지는 고리다 (점 위로 고리가 덮이지 않게).
+   위치는 저장하지 않고 서버로 보내지 않는다 (NFR-23). 움직임 줄이기를 켜면 고리는 멈추고 점만 남는다 */
+.my-location {
+  width: 18px;
+  height: 18px;
+  background: none;
+  animation: my-location-ring 2s ease-out 1s infinite;
+}
+
+.my-location::before,
+.my-location::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.my-location::before {
+  background: var(--color-primary);
+  opacity: 0.35;
+  animation: my-location-pulse 2s ease-out infinite;
+}
+
+.my-location::after {
+  border: 3px solid var(--color-bg);
+  background: var(--color-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes my-location-pulse {
+  to {
+    opacity: 0;
+    transform: scale(4);
+  }
+}
+
+/* 둘째 고리: 틀의 그림자가 27px까지 퍼지며 옅어진다 (틀은 가운데 맞춤에 transform을 쓰므로 크기를 바꾸지 않는다) */
+@keyframes my-location-ring {
+  from {
+    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.35);
+  }
+  to {
+    box-shadow: 0 0 0 27px rgba(0, 122, 255, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-location,
+  .my-location::before {
+    animation: none;
+  }
+
+  .my-location::before {
+    display: none;
+  }
+}
