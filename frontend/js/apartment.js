@@ -126,14 +126,9 @@ const aptPanel = {
   },
 
   // 아파트 창의 내용을 맨 위로. 앞 아파트에서 내려 둔 자리가 다음 아파트에 남지 않게 한다
-  // 창이 아직 숨겨져 있으면(목록에서 넘어올 때) 스크롤이 먹지 않으므로 보이게 된 다음 그림에서 한 번 더 한다
+  // 창이 숨겨져 있거나 높이가 없으면(30%) 스크롤이 먹지 않는다. 그때는 sheet가 보이게 된 때 한다
   scrollTop() {
-    const reset = () => {
-      const panels = document.querySelector('.apt__panels');
-      if (panels) panels.scrollTop = 0;
-    };
-    reset();
-    requestAnimationFrame(reset);
+    sheet.scrollToTop(document.querySelector('.apt__panels'));
   },
 
   // ‹ › : 지도에 보이는 아파트를 목록의 순서로 넘긴다. 처음과 끝에서는 그 방향 버튼을 끈다.
