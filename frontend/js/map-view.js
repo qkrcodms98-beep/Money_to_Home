@@ -1172,7 +1172,19 @@ async function openSimilar(apartment, areaBand) {
 function openList() {
   if (!mapState.data && !mapState.loadFailed) return; // 받지 못했으면 목록 자리에 오류와 "다시 시도"가 있다
   selectMarker(null);
+  scrollListTop();
   sheet.show('80', 'list');
+}
+
+// 목록은 열 때마다 맨 위(첫 무리)부터 보여 준다 (2026-10-19). 앞에서 내려 둔 자리가 남지 않게
+// 아파트 창에서 넘어올 때는 목록이 아직 숨겨져 있어 스크롤이 먹지 않으므로 보이게 된 다음 그림에서 한 번 더 한다
+function scrollListTop() {
+  const reset = () => {
+    const list = document.getElementById('apt-list');
+    if (list) list.scrollTop = 0;
+  };
+  reset();
+  requestAnimationFrame(reset);
 }
 
 // 목록의 카드 → 아파트 80% (P-06 ⑦). 카드에서 보던 면적으로 연다.
@@ -1183,9 +1195,10 @@ function openApartmentFromList(apartment, areaIndex) {
   sheet.show('80', 'apartment');
 }
 
-// "← 치평동 목록". 목록은 이미 그려 두었으므로 다시 그리지 않는다.
+// "← 치평동 목록". 목록은 이미 그려 두었으므로 다시 그리지 않는다. 목록 버튼과 같이 맨 위부터 보여 준다
 function backToList() {
   selectMarker(null);
+  scrollListTop();
   sheet.show('80', 'list');
 }
 

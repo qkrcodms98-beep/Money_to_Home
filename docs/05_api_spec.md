@@ -6,7 +6,7 @@
 | 작성일 | 2026-10-11 |
 | 기준 문서 | `docs/02_requirements.md` (v1.10), `docs/03_ui_design.md` (v1.5), `docs/03_ui_design_wireframe.md`, `docs/04_database_design.md` (v0.3), `docs/06_architecture.md` (v0.2) |
 | 서버 | FastAPI |
-| API | 26개. 1차 12개, 2차 7개, 3차 7개 |
+| API | 27개. 1차 12개, 2차 7개, 3차 8개 (A-27을 2026-10-18에 더했다) |
 
 ## 목차
 
@@ -61,6 +61,7 @@
 | A-24 | POST | `/api/apartments/{id}/similar` | 비슷한 아파트 | | 3차 |
 | A-25 | GET | `/api/regions/{gu}/price-trend` | 구별 집값 변동 | | 3차 (자료 미정, N-06) |
 | A-26 | GET | `/api/config` | 화면에 필요한 설정 (지도 키) | | 1차 |
+| A-27 | GET | `/api/apartments/{id}/price-history?area_band=` | 그 면적의 최근 1년 실거래와 같은 동 같은 면적 아파트의 평균가 (시나리오 탭 그래프) | | 3차 |
 
 - "로그인 필요"인 API는 로그인하지 않은 요청을 서버가 거부한다 (NFR-10).
 - 1차 동안에는 로그인 기능이 없다. A-08 ~ A-11은 고정된 테스트 사용자 한 명의 값을 읽고 쓴다 (T-USER-08). 2차에 로그인을 붙여도 주소와 모양은 그대로다.
