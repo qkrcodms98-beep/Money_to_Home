@@ -72,6 +72,8 @@ const SHEET_FLICK_TIME = 100; // 손을 떼기 전 이 시간(ms) 동안의 움�
 
 const sheet = {
   stage: null, // '30' | '80' | 'full' | null
+  shownMode: null, // 지금 보이는 내용 ('list' | 'apartment'). 닫혀 있으면 null. 바뀌면 맨 위로 (apply)
+  topPending: null, // 맨 위로 보내야 하는데 높이가 0이라(30% 단계) 아직 못 보낸 스크롤 요소. 높이가 생기면 apply가 보낸다
   mode: null, // 'list' | 'apartment' | null
   phase: 'closed', // 'closed' | 'opening' | 'open' | 'closing'
   moving: false, // 올라오거나 높이가 바뀌는 중인가 (끄는 중에도 true)
@@ -111,6 +113,12 @@ const sheet = {
   },
 
   isOwnHistory: () => Boolean(history.state && history.state[SHEET_HISTORY_KEY]),
+  // 스크롤 요소를 맨 위로. 높이가 0인 요소는 크롬이 0을 무시하고 커질 때 앞 자리를 되살리므로, 높이가 생기면 다시 한다
+  scrollToTop(scroller) {
+    scroller.scrollTop = 0;
+    sheet.topPending = scroller.clientHeight > 0 ? null : scroller;
+  },
+
   isShown: () => sheet.phase === 'opening' || sheet.phase === 'open',
 
   // 움직이는 시간(ms). sheet.css의 --sheet-duration을 읽는다.
@@ -420,6 +428,16 @@ const sheet = {
 
     document.getElementById('apt-list').hidden = mode !== 'list';
     document.getElementById('apartment-panel').hidden = mode !== 'apartment';
+    // 닫혀 있다가 열리거나 목록 ↔ 아파트로 바뀌면 새로 보이는 쪽을 맨 위부터 보여 준다 (2026-10-19).
+    // 숨겨져 있던 요소는 스크롤이 먹지 않으므로, 보이게 된 이 자리에서 한다
+    const showing = sheet.isShown() ? mode : null;
+    if (showing && showing !== sheet.shownMode) {
+      const scroller = showing === 'list' ? document.getElementById('apt-list') : document.querySelector('.apt__panels');
+      if (scroller) sheet.scrollToTop(scroller);
+    } else if (sheet.topPending && sheet.topPending.clientHeight > 0) {
+      sheet.scrollToTop(sheet.topPending); // 30%에서 높이가 없던 내용이 창을 키워 보이게 됐다
+    }
+    sheet.shownMode = showing;
     document.getElementById('sheet-handle').setAttribute('aria-label', stage === 'full' ? '창 줄이기' : '창 키우기');
 
     sheet.listeners.forEach((listener) => listener());
