@@ -65,4 +65,18 @@ const format = {
   // 복사하는 주소 (FR-APT-18). 화면에는 "농성동 654-34", "천변우로 329-10"만 보여 주고,
   // 복사할 때는 시도와 구를 붙여 "전남광주통합특별시 서구 농성동 654-34"로 넣는다 (2026-10-19)
   fullAddress: (gu, rest) => `${SIDO_NAME} ${gu} ${rest}`,
+
+  // 이름을 띄어쓰기에서만 줄바꿈되게 넣는다 (2026-10-19). "세계수영선수촌 / 중흥에스-클래스 센트럴"
+  // 낱말마다 .keep-word(common.css)로 묶어 하이픈이나 글자 중간에서 꺾이지 않게 한다. 글자 자체는 그대로라 복사하면 원래 이름이다.
+  // 한 낱말이 한 줄보다 길 때만 그 안에서 꺾인다
+  keepWords(element, text) {
+    const parts = String(text).split(/(\s+)/);
+    element.replaceChildren(...parts.filter((part) => part !== '').map((part) => {
+      if (/^\s+$/.test(part)) return document.createTextNode(part);
+      const word = document.createElement('span');
+      word.className = 'keep-word';
+      word.textContent = part;
+      return word;
+    }));
+  },
 };

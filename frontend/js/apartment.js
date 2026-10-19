@@ -231,23 +231,17 @@ const aptPanel = {
     const area = apartment.areas[areaIndex];
     const unit = aptPanel.unit();
 
-    // 이름과 배지. 목록에서 열었으면 첫 줄에 "← ○○ 목록"을 두고 이름은 다음 줄로 (목업 2038:486)
+    // 이름과 배지는 늘 둘째 줄 (2026-10-19). 첫 줄은 "← ○○ 목록"(목록에서 열었을 때만)과 오른쪽의 공유 · ✕.
+    // 이름이 ✕와 한 줄에 있으면 길 때 잘려서, 둘째 줄에서 줄을 바꿔 다 보여 준다. 배지는 이름 오른쪽
     const title = document.getElementById('apt-title');
     const back = document.getElementById('apt-back');
     const titleRow = document.getElementById('apt-title-row');
     back.hidden = !listPlace;
-    titleRow.hidden = !listPlace;
-    if (listPlace) {
-      back.textContent = `← ${listPlace} 목록`;
-      titleRow.append(title);
-    } else {
-      document.getElementById('apt-lead').append(title);
-    }
-    document.getElementById('apt-name').textContent = apartment.name;
+    titleRow.hidden = false;
+    if (listPlace) back.textContent = `← ${listPlace} 목록`;
+    if (title.parentElement !== titleRow) titleRow.append(title);
+    format.keepWords(document.getElementById('apt-name'), apartment.name); // 띄어쓰기에서만 줄바꿈
     const badge = document.getElementById('apt-badge');
-    // 배지는 첫 줄 오른쪽, ✕ 앞에 둔다 (2026-10-18 새 스타일, 목업 6013:2048)
-    const nav = document.querySelector('.apt__nav');
-    if (badge.parentElement !== nav) nav.prepend(badge);
     badge.className = `badge badge--${area.category}`; // 고른 면적의 구분
     badge.textContent = APT_CATEGORY_NAMES[area.category];
     aptPanel.renderNoCoordTag();
