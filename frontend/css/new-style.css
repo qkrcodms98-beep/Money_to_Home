@@ -8,6 +8,8 @@
 
 .map-body {
   --new-control-bg: #f7f7f7; /* 지도 버튼 바탕 */
+  --new-control-glass: rgba(120, 120, 128, 0.16); /* 지도 위 떠 있는 버튼 바탕. 회색을 옅게 깔아 있는 듯 없는 듯 (2026-10-19) */
+  --new-control-glass-line: rgba(255, 255, 255, 0.45); /* 확대 · 축소 사이 선 */
   --new-bar-bg: rgba(242, 242, 242, 0.9); /* 내 조건 줄. 지도가 살짝 비친다 */
   --new-bar-text: #515151;
   --new-list-bg: rgba(0, 122, 255, 0.9); /* 목록 버튼 */
@@ -37,13 +39,21 @@
   text-decoration: none;
 }
 
-/* 지도 버튼 (㎡/평, 현재 위치, 확대·축소): 흰색 → 아주 옅은 회색 */
-.map-button {
-  background: var(--new-control-bg);
+/* 지도 버튼 (㎡/평, 현재 위치, 확대·축소): 반투명 회색에 그림자 없이. 지도가 비쳐 보여 있는 듯 없는 듯 (2026-10-19) */
+.map-controls .map-button {
+  background: var(--new-control-glass);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .zoom-buttons {
-  background: var(--color-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+.zoom-buttons .map-button + .map-button {
+  border-top-color: var(--new-control-glass-line);
 }
 
 /* 목록 버튼: 68 × 36, 살짝 비치는 파랑 */
