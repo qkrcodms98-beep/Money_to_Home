@@ -52,6 +52,7 @@ def test_apartment_with_areas_cheapest_first(client, apartments):
              "min_price": 400_000_000, "max_price": 440_000_000, "trade_count": 6,
              "period_start": "2025-10-01", "period_end": "2026-09-30"},
         ],
+        "facilities": [], "facilities_base_date": None,
     }
 
 
@@ -89,3 +90,45 @@ def test_search_still_works(client, apartments):
     # 같은 /api/apartments 아래의 A-05(POST /search)가 A-06과 겹치지 않는다
     res = client.get("/api/apartments/search")
     assert res.status_code == 422  # "search"는 번호가 아니다. A-05는 POST다
+
+
+# ------------------------------------------------------------------
+# 주변 시설 (FR-MAP-23). data/load_facilities.py가 미리 넣은 apartment_facilities를 그대로 준다
+# ------------------------------------------------------------------
+def _facility(kind, name, distance, count, radius=1000, exit_no=None):
+    return models.ApartmentFacility(
+        apartment_id=12, kind=kind, place_name=name, distance=distance, exit_no=exit_no, place_count=count, radius=radius,
+    )
+
+
+@pytest.fixture
+def facilities(db, apartments):
+    """가아파트에만 시설. 일부러 화면 순서와 다르게 넣는다. 기준일 기록 두 줄"""
+    db.add_all([
+        _facility("university", "광주여자대학교", 1752, 2, radius=5000),
+        _facility("mart", None, None, 0),
+        _facility("subway", "김대중컨벤션센터역 광주1호선", 330, 2, exit_no=5),
+        _facility("school", "전남고등학교", 130, 4),
+        models.DataCollection(dataset="facilities", source="카카오 로컬 API (장소 검색)", base_date=date(2026, 10, 1)),
+        models.DataCollection(dataset="facilities", source="카카오 로컬 API (장소 검색)", base_date=date(2026, 10, 19)),
+    ])
+    db.commit()
+
+
+def test_facilities_in_screen_order(client, facilities):
+    body = client.get("/api/apartments/12").json()
+    assert [f["kind"] for f in body["facilities"]] == ["subway", "school", "mart", "university"]
+    assert body["facilities"][0] == {
+        "kind": "subway", "place_name": "김대중컨벤션센터역 광주1호선", "distance": 330, "exit_no": 5,
+        "place_count": 2, "radius": 1000,
+    }
+    # 반경 안에 없으면 이름과 거리가 null ("근처에 없음")
+    assert body["facilities"][2] == {"kind": "mart", "place_name": None, "distance": None, "exit_no": None,
+                                     "place_count": 0, "radius": 1000}
+    assert body["facilities_base_date"] == "2026-10-19"
+
+
+def test_no_facilities_has_no_base_date(client, facilities):
+    body = client.get("/api/apartments/13").json()
+    assert body["facilities"] == []
+    assert body["facilities_base_date"] is None

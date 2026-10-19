@@ -232,8 +232,8 @@
 | 항목 | 내용 |
 | --- | --- |
 | 쓰는 화면 | P-06의 아파트 정보 탭 |
-| 근거 | FR-APT-01, 12, 13, 15, 16, FR-MAP-07 |
-| 읽는 표 | `apartments`, `apartment_prices`, `data_collections` |
+| 근거 | FR-APT-01, 12, 13, 15, 16, FR-MAP-07, 23 |
+| 읽는 표 | `apartments`, `apartment_prices`, `apartment_facilities`, `data_collections` |
 
 응답 200
 
@@ -256,12 +256,21 @@
       "avg_price": 300000000, "min_price": 270000000, "max_price": 330000000,
       "trade_count": 14, "period_start": "2025-10-07", "period_end": "2026-10-02"
     }
-  ]
+  ],
+  "facilities": [
+    { "kind": "subway", "place_name": "김대중컨벤션센터역 광주1호선", "distance": 330, "exit_no": 5, "place_count": 2, "radius": 1000 },
+    { "kind": "mart", "place_name": null, "distance": null, "exit_no": null, "place_count": 0, "radius": 1000 }
+  ],
+  "facilities_base_date": "2026-10-19"
 }
 ```
 
 - 재무 조건이 필요 없어 GET이다. 구분과 여유·부족 금액은 A-05와 A-07이 준다.
 - `areas`는 평균가가 낮은 순이다.
+- `facilities`는 주변 시설이다 (FR-MAP-23, 2026-10-19). `data/load_facilities.py`가 카카오 장소 검색으로 미리 받아 `apartment_facilities`에 넣은 값을 그대로 준다. 서버는 카카오를 부르지 않는다 (NFR-08).
+  - 순서: `subway`, `school`, `mart`, `convenience`, `hospital`, `elementary`, `middle`, `high`, `university`.
+  - `place_name`과 `distance`가 null이면 반경(`radius`, m) 안에 없는 것이다. `distance`는 직선거리(m)이고, 지하철역은 가장 가까운 출구(`exit_no`)까지다. 출구를 못 찾았으면 `exit_no`가 null이고 거리는 역까지다.
+  - 아직 받지 않았으면 빈 목록이고 `facilities_base_date`는 null이다.
 - 없는 번호면 404, "아파트를 찾을 수 없습니다."
 
 #### A-13 `GET /api/data-status` 수집 기준일 (2차)
@@ -674,7 +683,7 @@
 | A-25 | `GET /api/regions/{gu}/price-trend` | | 구의 집값 변동. 자료가 정해지지 않았다 (N-06, N-07). | FR-PLAN-06, 10 |
 
 - A-21은 화면이 계산 결과를 보내지 않는다. 조건과 아파트만 받고 **서버가 다시 계산해서 저장한다.** 화면에서 고친 숫자가 저장되는 일을 막는다 (NFR-13).
-- 주변 시설(FR-MAP-23)과 로드뷰(FR-MAP-09)는 화면이 카카오맵을 직접 쓴다. 우리 서버의 API는 없다.
+- 로드뷰(FR-MAP-09)는 화면이 카카오맵을 직접 쓴다. 우리 서버의 API는 없다. 주변 시설(FR-MAP-23)은 미리 받아 둔 값을 A-06의 `facilities`로 준다 (2026-10-19).
 - A-24 비슷한 아파트의 기준 (2026-10-14에 정함)
   - 기준 가격은 고른 아파트의 고른 면적의 평균가다. 없는 아파트나 면적이면 404 "아파트를 찾을 수 없습니다."
   - 후보는 같은 구에서 평균가가 있는 아파트다 (고른 아파트는 뺀다). 아파트마다 면적과 상관없이 평균가가 기준 가격에 가장 가까운 면적 하나로 견준다.
@@ -835,7 +844,7 @@ API가 있어야 지킬 수 있는 요구사항만 적었다.
 | FR-PLAN-04, 05 | A-04, A-07 |
 | FR-PLAN-06, 10 | A-25 |
 | FR-PLAN-08, 09 | A-07 |
-| FR-APT-01, 13, 15, 16 | A-06 |
+| FR-APT-01, 13, 15, 16, FR-MAP-23 | A-06 |
 | FR-APT-02 | A-02, A-05 |
 | FR-APT-03, 06, 09, 10 | A-05의 `filters`, `sort` |
 | FR-APT-04, 05, 07, 12 | A-05 |

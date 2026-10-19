@@ -54,7 +54,7 @@
 6. **오류 응답은 `{"detail": "...", "field": "..."}` 한 모양이다.** router에서는 `backend.errors.ApiError`를 낸다. 내부 정보(SQL, 경로)를 응답에 넣지 않는다.
 7. **키와 비밀번호를 코드에 적지 않는다.** `.env`에만 두고 `backend.config.settings`로 읽는다. `.env`의 값을 출력하거나 문서에 적지 않는다.
 8. **주민등록번호를 저장하거나 서버에 보내지 않는다.** 화면에서 만 나이를 계산하는 데만 쓴다. 실명, 연락처, 계좌번호, 주소, 위치도 모으지 않는다.
-9. **요청을 처리하는 중에 외부 API를 부르지 않는다.** 실거래가와 좌표는 `data/`의 스크립트가 미리 DB에 넣는다.
+9. **요청을 처리하는 중에 외부 API를 부르지 않는다.** 실거래가, 좌표, 주변 시설은 `data/`의 스크립트가 미리 DB에 넣는다 (주변 시설은 `data/load_facilities.py`, 2026-10-19). 화면도 카카오 장소 검색(`libraries=services`)을 쓰지 않는다.
 10. **계산과 탐색 API는 요청에 든 값만 쓴다.** 로그인 정보와 `profiles` 표를 읽지 않는다.
 11. **서버나 DB에서 온 글자를 화면에 넣을 때 `textContent`를 쓴다.** `innerHTML`에 넣지 않는다.
 12. **쓰지 않는 말**: "구매 가능", "승인", "추천", "10년 후 집값". 대신 "지금 가능", "기간 내 가능", "자금 부족"을 쓴다.
@@ -78,7 +78,7 @@
 | 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 여덟 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py`, `schemas/plan.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `css/region.css`, `css/new-style.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js`, `js/region.js`, `js/scenario-charts.js` |
 | 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `services/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/loan.js`, `css/loan.css`, `js/scenario.js`, `css/scenario.css` |
 | 김목산 (자료와 탐색) | `backend/routers/apartments.py`, `services/apartment.py`, `schemas/apartment.py`, `data/collect_trades.py`, `data/load_trades.py`, `frontend/js/list.js`, `css/list.css` |
-| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py`, `data/geocode.py`, `data/geocoded.csv`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
+| 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py`, `data/geocode.py`, `data/geocoded.csv`, `data/load_facilities.py`, `data/facilities.csv`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
 
 네 명 모두 화면, 서버, DB를 다 쓴다. 기능 하나를 화면부터 DB까지 한 사람이 맡는다. 순서는 `docs/roles.md`에 있다.
 
