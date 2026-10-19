@@ -164,16 +164,34 @@ select,
 .list-card__name,
 .glossary__bubble,
 .info-tip__text,
-.list__tip {
+.list__tip,
+/* 10-19에 더한 화면: 주변 시설의 곳 이름과 거리, 대출 "자세히"의 상품명 · 조건 · 자격 조건,
+   시나리오 그래프 위 문장과 출처, 공유받은 화면의 이름 · 지역 · 정보 줄의 값 */
+.apt-near__value,
+.sheet__title,
+.sheet__row dd,
+.sheet__list,
+.scenario-chart__say,
+.scenario-chart__src,
+.share-page__name,
+.share-page__place,
+.share-page__value,
+.share-page__missing-text {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
 }
 
-/* 단, 누르는 줄 안의 이름은 누르기가 우선이다 (목록·비슷한 아파트의 카드는 버튼이라 선택하지 않는다) */
-button .list-card__name {
+/* 단, 누르는 줄 안의 이름은 누르기가 우선이다 (목록·비슷한 아파트의 카드는 버튼이라 선택하지 않는다).
+   선택할 수 있는 글자 옆의 복사 · 공유 아이콘(share.js)도 글자를 끌어 고를 때 같이 잡히지 않게 한다.
+   공유 창 같은 <dialog>는 열리면 맨 위층에 올라가 body의 설정을 물려받지 않으므로 여기서 다시 막는다.
+   공유 창의 링크 칸(.share__link)은 [링크 복사]로만 복사하고, 복사가 안 되는 브라우저에서만 고를 수 있다 (share.css) */
+button .list-card__name,
+.share-action,
+dialog {
   -webkit-user-select: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
 }
 
