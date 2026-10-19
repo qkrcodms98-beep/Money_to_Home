@@ -188,7 +188,8 @@ function createMap(center) {
   });
   hideKakaoScale();
   // 경계 (js/boundary.js). 행정동 선은 동 표시가 나오기 전(말풍선 수준)에서만 그린다
-  mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL });
+  // 경계가 오면 구 표시를 경계 안으로 다시 벌린다 (먼저 그려졌으면 경계 확인 없이 벌려져 있다)
+  mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL }).then(() => respreadGuMarkers());
   return map;
 }
 
@@ -704,9 +705,11 @@ function renderAreaMarkers(level) {
   if (groups === null) loadSummary(level);
   if (!Array.isArray(groups)) return;
   const gu = level === 'gu';
-  mapState.markers = groups.filter(hasCoord).map((group) => {
+  const shown = groups.filter(hasCoord);
+  const places = gu ? spreadGuMarkers(shown) : null; // 구 표시는 서로 겹치지 않게 벌린다
+  mapState.markers = shown.map((group, i) => {
     const overlay = new kakao.maps.CustomOverlay({
-      position: toLatLng(group),
+      position: places ? places[i] : toLatLng(group),
       content: createAreaMarkerElement(
         group,
         gu ? group.gu : group.dong,
@@ -719,8 +722,121 @@ function renderAreaMarkers(level) {
       clickable: false, // 말풍선과 같다 (onTap)
     });
     overlay.setMap(mapState.map);
+    overlay.group = group;
     return overlay;
   });
+}
+
+// 구 표시를 서로 벌린다 (2026-10-18). 아파트 좌표 평균에 두면 서구·남구·동구처럼 가운데가 몰린 구는 넓게 볼 때 원이 겹친다.
+// 화면에서 원끼리 GU_MARKER_GAP만큼 떨어지게 조금씩 밀어내되, 원 둘레까지 그 구의 경계 안에 있는 자리로만 옮긴다
+// (다른 구를 침범하지 않게). 경계 자료가 아직 없으면 경계 확인 없이 벌린다. 돌려주는 것은 표시마다의 LatLng
+const GU_MARKER_RADIUS = 35; // map.css의 .dong-marker--gu (70 × 70)
+const GU_MARKER_FAR_RADIUS = 28; // 가장 넓게 볼 때(GU_MARKER_FAR_LEVEL 이상)는 56 × 56 (new-style.css의 .map--far)
+const GU_MARKER_FAR_LEVEL = 9;
+const GU_MARKER_GAP = 16;
+// 구 표시 자리 보정 (가장 넓게 보는 수준의 화면 px, 오른쪽·아래가 +). 남구는 서구 경계선에 걸쳐 보여 오른쪽 아래로 (2026-10-18)
+const GU_MARKER_NUDGE = { 남구: { x: 8, y: 14 } }; // 오른쪽 8, 아래 14: 원 둘레 8곳 중 7곳이 남구 안, 동구와 76px
+
+// 구 표시의 자리는 한 번만 정하고(구 → LatLng) 구 표시 수준(7 ~ 9) 모두에서 그대로 쓴다 (2026-10-18).
+// 가장 넓게 보는 수준(9)에서 겹치지 않게 정하므로 더 가까이 보면(8, 7) 원 사이가 2배, 4배로 저절로 넓어진다.
+// 예전에는 그릴 때마다 그때 받은 구 표시 좌표(조건·지역에 따라 달라지는 아파트 평균)에서 다시 벌려,
+// 다른 구나 동을 누르면 구 표시가 움직였다
+let guMarkerPlaces = null; // Map(구 → LatLng). 경계 자료가 온 뒤에 정한 것만 둔다
+
+function spreadGuMarkers(groups) {
+  const { map } = mapState;
+  const far = map.getLevel() >= GU_MARKER_FAR_LEVEL;
+  document.getElementById('kakao-map').classList.toggle('map--far', far);
+  if (guMarkerPlaces && groups.every((g) => guMarkerPlaces.has(g.gu))) return groups.map((g) => guMarkerPlaces.get(g.gu));
+
+  // 시작점은 늘 같은 값: 지역 목록(A-02)의 구 좌표(그 구 전체 아파트의 평균). 없으면 구 표시의 좌표. 이름순으로 벌린다
+  const start = new Map(groups.map((g) => [g.gu, g]));
+  mapState.regions.filter(hasCoord).forEach((r) => start.set(r.gu, r));
+  const names = [...start.keys()].sort();
+  const places = spreadGuPlaces(names.map((gu) => ({ gu, at: toLatLng(start.get(gu)) })));
+  // 경계 자료가 온 뒤에 정한 자리만 기억한다 (먼저 그리면 경계 확인 없이 벌린 자리라 나중에 다시 정한다)
+  const sample = start.get(names[0]);
+  if (mapBoundary.contains(names[0], null, sample.latitude, sample.longitude) !== null) guMarkerPlaces = places;
+  return groups.map((g) => places.get(g.gu));
+}
+
+// 구들의 자리를 가장 넓게 보는 수준(GU_MARKER_FAR_LEVEL)의 화면 크기로 벌린다. 지금 수준과 상관없이 결과가 같다.
+// items: [{ gu, at: LatLng }]. 돌려주는 것은 Map(구 → LatLng)
+function spreadGuPlaces(items) {
+  const { map } = mapState;
+  const projection = map.getProjection();
+  const radius = GU_MARKER_FAR_RADIUS;
+  // 지금 수준의 화면 좌표 → 기준 수준의 화면 좌표. 수준이 하나 올라가면 반으로 준다
+  const scale = 2 ** (map.getLevel() - GU_MARKER_FAR_LEVEL);
+  const toScreen = (x, y) => new kakao.maps.Point(x / scale, y / scale);
+  const points = items.map(({ gu, at }) => {
+    const p = projection.containerPointFromCoords(at);
+    return { gu, x: p.x * scale, y: p.y * scale };
+  });
+  // 원의 가운데와 둘레 여덟 점 가운데 그 구 안에 있는 점의 수 (0 ~ 9). 가운데가 밖이면 -1. 경계를 모르면 9
+  const inside = (gu, x, y) => {
+    const at = (dx, dy) => {
+      const c = projection.coordsFromContainerPoint(toScreen(x + dx, y + dy));
+      return mapBoundary.contains(gu, null, c.getLat(), c.getLng()) !== false;
+    };
+    if (!at(0, 0)) return -1;
+    let count = 1;
+    for (let k = 0; k < 8; k += 1) {
+      const a = (Math.PI / 4) * k;
+      if (at(Math.cos(a) * radius, Math.sin(a) * radius)) count += 1;
+    }
+    return count;
+  };
+  // 옮겨도 되는 자리: 가운데는 반드시 그 구 안. 둘레는 지금보다 더 밖으로 나가지 않거나, 거의(7점 이상) 안이면 된다.
+  // 가장 넓게 볼 때(9)는 구가 원보다 작아 둘레까지 다 넣을 수 없으므로 가운데만 지킨다
+  const fits = (pt, x, y) => {
+    const next = inside(pt.gu, x, y);
+    if (next < 0) return false;
+    return next >= Math.min(inside(pt.gu, pt.x, pt.y), 7);
+  };
+  const need = radius * 2 + GU_MARKER_GAP;
+  for (let round = 0; round < 80; round += 1) {
+    let moved = false;
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        const a = points[i];
+        const b = points[j];
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist >= need) continue;
+        if (dist < 0.01) { dx = 1; dy = 0; dist = 1; }
+        const push = (need - dist) / 2 + 0.5;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        // 둘 다 반씩 밀고, 한쪽이 경계 밖으로 나가면 다른 쪽이 그만큼 더 간다
+        const tryMove = (pt, sx, sy) => {
+          if (!fits(pt, pt.x + sx, pt.y + sy)) return false;
+          pt.x += sx;
+          pt.y += sy;
+          return true;
+        };
+        const aOk = tryMove(a, -ux * push, -uy * push);
+        const bOk = tryMove(b, ux * (aOk ? push : push * 2), uy * (aOk ? push : push * 2));
+        if (!bOk && aOk) tryMove(a, -ux * push, -uy * push);
+        moved = moved || aOk || bOk;
+      }
+    }
+    if (!moved) break;
+  }
+  // 손으로 맞춘 보정 (가장 넓게 보는 수준의 화면 px). 계산한 자리가 경계선에 걸쳐 보이는 구만
+  points.forEach((pt) => {
+    const nudge = GU_MARKER_NUDGE[pt.gu];
+    if (nudge) { pt.x += nudge.x; pt.y += nudge.y; }
+  });
+  return new Map(points.map((pt) => [pt.gu, projection.coordsFromContainerPoint(toScreen(pt.x, pt.y))]));
+}
+
+// 구 표시를 보는 채로 확대·축소하면 화면 거리가 달라지므로 다시 벌린다
+function respreadGuMarkers() {
+  if (mapState.mode !== 'gu' || !mapState.markers.length || !mapState.markers[0].group) return;
+  const places = spreadGuMarkers(mapState.markers.map((overlay) => overlay.group));
+  mapState.markers.forEach((overlay, i) => overlay.setPosition(places[i]));
 }
 
 // ───────── 더 넓게 볼 때: 구 표시 (P-05 ⑪) ─────────
@@ -751,6 +867,7 @@ function onZoomChanged() {
   if (next === before) {
     // 말풍선을 보는 채로 확대·축소하면 보이는 영역이 달라진다
     if (next === 'apartment' && byHand) scheduleBoundsLoad();
+    if (next === 'gu') respreadGuMarkers(); // 구 표시끼리의 화면 거리가 달라진다
     return;
   }
 
@@ -890,9 +1007,10 @@ function removeFilter(key) {
 }
 
 // 조건 창을 연다. focus는 그 항목으로 내려가 열릴 칩('area', 'price', 'year', 'lack'). 지역 선택 창이 열려 있으면 닫는다.
+// 조건 창 맨 위에 지역(구·동)도 있다 (2026-10-18 새 스타일). 지역을 바꾸고 '적용'을 누르면 그 지역으로 옮긴다
 function openFilters(focus) {
   regionPicker.close();
-  const options = { showLack: store.get('map').show_lack === true };
+  const options = { showLack: store.get('map').show_lack === true, regions: mapState.regions, region: mapState.region };
   if (focus) options.focus = focus;
   filterSheet.open(document.getElementById('filter-sheet'), currentFilters(), applyFilters, options);
 }
@@ -910,6 +1028,12 @@ function applyFilters(filters, extra = {}) {
     aptPanel.render(); // ‹ › 로 넘길 아파트가 바뀐다
   }
   renderChips();
+  if (extra.region) {
+    // 지역을 바꿨으면 옮기면서 새 조건으로 한 번만 받는다
+    if (JSON.stringify(currentFilters()) !== before) resetSummary();
+    moveToRegion(extra.region);
+    return;
+  }
   if (JSON.stringify(currentFilters()) === before) return;
   resetSummary();
   loadData();
@@ -1245,18 +1369,8 @@ function bindEvents() {
     if (!infoText.hidden && !infoText.contains(event.target)) setInfo(false);
   });
 
-  // 구·동 선택 (P-05 ⑬). 창은 js/region.js가 그린다.
-  document.getElementById('region-button').addEventListener('click', () => {
-    const sheet = document.getElementById('region-sheet');
-    if (regionPicker.isOpen()) {
-      regionPicker.close();
-    } else {
-      filterSheet.close(); // 두 창을 함께 띄우지 않는다
-      regionPicker.open(sheet, mapState.regions, mapState.region, moveToRegion);
-    }
-  });
-
-  // '조건 ▾' → 조건 창 (P-05 ②). 열려 있으면 닫는다. 넣은 조건 칩의 동작은 renderChips()에 있다
+  // 검색창 오른쪽의 조건 아이콘 → 조건 창 (P-05 ②). 구·동 선택(P-05 ⑬)도 이 창 맨 위에 있다 (2026-10-18 새 스타일).
+  // 열려 있으면 닫는다. 넣은 조건 칩의 동작은 renderChips()에 있다
   document.getElementById('filter-open').addEventListener('click', () => {
     if (filterSheet.isOpen()) filterSheet.close();
     else openFilters();
@@ -1618,23 +1732,78 @@ function centerFor(center, focus) {
 }
 
 // 지도를 그 지역으로 옮긴다. 경계 자료가 있으면 그 지역 전체가 들어오게, 없으면 아파트 좌표의 평균으로 (예전과 같다).
+// 구를 보는 화면 (구 표시를 누름, 조건 창에서 구 전체를 고름). 2026-10-18
+// 구 경계 전체에 맞추면 산과 빈 땅까지 넣느라 동 표시가 듬성듬성하고 이웃 구의 동(남구 → 서구 풍암동)까지 들어온다.
+// 그래서 동 표시 수준(FIT_LEVELS.drill의 넓은 쪽, 6)에서 한 화면에 그 구의 동이 가장 많이 들어오는 자리를 찾아,
+// 그 동들의 가운데를 화면 가운데에 둔다. 수가 같으면 아파트가 더 많은 쪽. 동 좌표는 A-02의 동 아파트 좌표 평균이다.
+// 돌려주는 모양은 regionFit과 같다 { center, level, focus }. 동 좌표가 없으면 null
+const DENSE_MARGIN = 30; // 화면 가장자리에서 동 표시(원)가 잘리지 않게 이만큼 안쪽에만 둔다
+
+function denseFit(gu) {
+  const { map } = mapState;
+  const region = mapState.regions.find((item) => item.gu === gu);
+  const dongs = region ? region.dongs.filter(hasCoord) : [];
+  if (!map || dongs.length === 0) return null;
+  const level = FIT_LEVELS.drill[1];
+  const box = document.getElementById('kakao-map');
+  const pad = viewPadding();
+  const areaWidth = box.clientWidth - pad.left - pad.right;
+  const areaHeight = box.clientHeight - pad.top - pad.bottom;
+  const width = areaWidth - DENSE_MARGIN * 2;
+  const height = areaHeight - DENSE_MARGIN * 2;
+  if (width <= 0 || height <= 0) return null;
+
+  // 지금 수준의 화면 좌표를 그 수준(level)의 크기로 늘린다. 수준이 하나 내려가면 두 배다
+  const projection = map.getProjection();
+  const scale = 2 ** (map.getLevel() - level);
+  const points = dongs.map((d) => {
+    const p = projection.containerPointFromCoords(new kakao.maps.LatLng(d.latitude, d.longitude));
+    return { x: p.x * scale, y: p.y * scale, count: d.apartment_count || 0 };
+  });
+
+  // 화면 크기의 창을 동 하나의 x(왼쪽 끝)와 동 하나의 y(위쪽 끝)에 맞춰 놓아 보며 가장 많이 담는 자리를 고른다
+  let best = null;
+  for (const left of points) {
+    for (const top of points) {
+      const inside = points.filter((p) => p.x >= left.x && p.x <= left.x + width && p.y >= top.y && p.y <= top.y + height);
+      const apartments = inside.reduce((sum, p) => sum + p.count, 0);
+      if (!best || inside.length > best.inside.length || (inside.length === best.inside.length && apartments > best.apartments)) {
+        best = { inside, apartments };
+      }
+    }
+  }
+  const xs = best.inside.map((p) => p.x);
+  const ys = best.inside.map((p) => p.y);
+  const middle = new kakao.maps.Point(
+    (Math.min(...xs) + Math.max(...xs)) / 2 / scale,
+    (Math.min(...ys) + Math.max(...ys)) / 2 / scale,
+  );
+  return {
+    center: projection.coordsFromContainerPoint(middle),
+    level,
+    focus: { x: pad.left + areaWidth / 2, y: pad.top + areaHeight / 2 },
+  };
+}
+
 function panToRegion() {
   const { map } = mapState;
   if (!map) return;
-  const fit = regionFit(mapState.region);
+  const { gu, dong } = mapState.region;
+  // 구 전체면 그 구의 동이 한 화면에 가장 많이 들어오는 자리로 (denseFit). 고른 지역(목록, 경계 강조)은 구 전체 그대로다
+  const fit = (!dong && denseFit(gu)) || regionFit(mapState.region);
   quietZoom(500);
   if (fit) {
-    mapState.focus = { ...mapState.region, kind: mapState.region.dong ? 'dong' : 'gu' };
+    mapState.focus = { ...mapState.region, kind: dong ? 'dong' : 'gu' };
     map.setCenter(fit.center); // 가운데를 먼저 옮긴 뒤 확대 수준을 바꾼다 (바뀌는 동안에도 그 지역을 보고 있게)
     map.setLevel(fit.level);
     map.setCenter(centerFor(fit.center, fit.focus));
     return;
   }
-  // 경계로 맞추지 못했으면 동의 예외는 풀고 원래 규칙으로. 구는 구 표시 수준(7)이라 고른 구로 둔다 (지역 버튼 "북구 전체")
-  mapState.focus = mapState.region.dong ? null : { ...mapState.region, kind: 'gu' };
+  // 경계로 맞추지 못했으면 동의 예외는 풀고 원래 규칙으로. 구는 고른 구로 둔다 (지역 이름 "북구 전체")
+  mapState.focus = dong ? null : { ...mapState.region, kind: 'gu' };
   const center = regionCenter(mapState.region);
   if (!center) return;
-  map.setLevel(mapState.region.dong ? DONG_LEVEL : GU_LEVEL);
+  map.setLevel(dong ? DONG_LEVEL : GU_LEVEL);
   map.setCenter(toLatLng(center));
 }
 
@@ -1663,7 +1832,8 @@ function closeOverlays() {
 // 확대가 끝나면 zoom_changed가 표시를 바꿔 그린다. 아파트는 확대하는 동안 받아 둔다.
 async function zoomToRegion({ gu, dong }) {
   const drill = !dong; // 구 표시를 눌렀다
-  const fit = regionFit({ gu, dong }, drill);
+  // 구 표시를 누르면 그 구의 동이 한 화면에 가장 많이 들어오는 자리로 (denseFit). 동 좌표가 없으면 구 경계에 맞춘다
+  const fit = (drill && denseFit(gu)) || regionFit({ gu, dong }, drill);
   const center = fit ? null : regionCenter({ gu, dong });
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if ((!fit && !center) || still || (fit && fit.level >= mapState.map.getLevel())) {

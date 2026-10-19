@@ -50,6 +50,8 @@ const APT_NO_COORD = '위치 없음';
 const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 표시하지 못했습니다. 지도는 그대로 두었습니다.';
 // 로드뷰 (목업 C6, C6b)
 const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 가장 가까운 로드뷰를 쓴다
+const APT_ROADVIEW_TILT = -20; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
+const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보인다 (-3 ~ 3)
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
 const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
 const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아파트가 아래에 붙을 때만 둔다
@@ -176,6 +178,9 @@ const aptPanel = {
     }
     document.getElementById('apt-name').textContent = apartment.name;
     const badge = document.getElementById('apt-badge');
+    // 배지는 첫 줄 오른쪽, ✕ 앞에 둔다 (2026-10-18 새 스타일, 목업 6013:2048)
+    const nav = document.querySelector('.apt__nav');
+    if (badge.parentElement !== nav) nav.prepend(badge);
     badge.className = `badge badge--${area.category}`; // 고른 면적의 구분
     badge.textContent = APT_CATEGORY_NAMES[area.category];
     aptPanel.renderNoCoordTag();
@@ -243,11 +248,11 @@ const aptPanel = {
 
   // ───────── 로드뷰 (3차, 목업 C6, C6b) ─────────
 
-  // 로드뷰 자리가 보이는가. 전체 단계이고, 아파트 창이고, 아파트 정보 탭이 골라져 있을 때 (C6)
+  // 로드뷰 자리가 보이는가. 전체 단계이고 아파트 창일 때 (C6). 탭은 가리지 않는다:
+  // 아파트 정보 탭과 시나리오 탭 모두 전체가 되면 위에 로드뷰가 보인다 (2026-10-18, 예전에는 아파트 정보 탭만)
   roadviewVisible() {
     return (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment' &&
-      sheet.stage === 'full' &&
-      document.getElementById('apt-tab-info').getAttribute('aria-selected') === 'true';
+      sheet.stage === 'full';
   },
 
   // 로드뷰 자리. 처음 쓸 때 한 번 만들어 창의 손잡이 앞(창 맨 위)에 넣는다.
@@ -288,14 +293,18 @@ const aptPanel = {
   },
 
   // 보일 때만 그린다. 같은 아파트면 다시 찾지 않는다 (창이 움직임을 마치면 크기만 맞춘다).
+  // 아파트를 열면(30%부터) 미리 찾아 그려 둔다 (2026-10-18). 전체가 아닐 때는 같은 크기로 창 뒤에 숨겨 두고
+  // (.apt-roadview--parked), 전체가 되면 그 자리에서 창과 함께 올라온다. 그래서 전체가 된 뒤 기다리지 않는다
   renderRoadview() {
     const { apartment } = aptPanel;
     const box = aptPanel.roadviewBox();
     const visible = Boolean(apartment) && aptPanel.roadviewVisible();
-    box.hidden = !visible;
-    if (!visible) return;
+    const open = Boolean(apartment) && (sheet.phase === 'opening' || sheet.phase === 'open') && sheet.mode === 'apartment';
+    box.hidden = !open;
+    box.classList.toggle('apt-roadview--parked', open && !visible);
+    if (!open) return;
     if (aptPanel.roadviewFor === apartment.id) {
-      if (aptPanel.roadview && !sheet.moving) aptPanel.roadview.relayout();
+      if (visible && aptPanel.roadview && !sheet.moving) aptPanel.roadview.relayout();
       return;
     }
     aptPanel.roadviewFor = apartment.id;
@@ -316,13 +325,39 @@ const aptPanel = {
         }
         aptPanel.roadviewShow('view');
         const view = aptPanel.roadviewBox().querySelector('.apt-roadview__view');
-        if (!aptPanel.roadview) aptPanel.roadview = new kakao.maps.Roadview(view);
+        if (!aptPanel.roadview) {
+          aptPanel.roadview = new kakao.maps.Roadview(view);
+          // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 아파트 쪽을 바라보게 돌린다
+          kakao.maps.event.addListener(aptPanel.roadview, 'init', aptPanel.aimRoadview);
+          kakao.maps.event.addListener(aptPanel.roadview, 'panoid_changed', aptPanel.aimRoadview);
+        }
+        aptPanel.roadviewTarget = position;
         aptPanel.roadview.setPanoId(panoId, position);
         aptPanel.roadview.relayout();
       });
     } catch (error) {
       aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
     }
+  },
+
+  // 로드뷰가 아파트를 바라보게 한다 (2026-10-18). 카카오는 바라보는 방향을 정해 주지 않아 길 방향으로 열린다.
+  // 촬영 지점(로드뷰의 자리)에서 아파트 좌표로 가는 방위각(북쪽 0도, 시계 방향)을 구해 시점의 좌우 각도(pan)로 둔다.
+  // 위아래(tilt)는 살짝 위(-20도, 카카오는 음수가 위), 확대(zoom)는 가장 넓게(-3). 아파트 건물이 위층까지 들어온다
+  roadviewTarget: null,
+  aimRoadview() {
+    const rv = aptPanel.roadview;
+    const target = aptPanel.roadviewTarget;
+    if (!rv || !target) return;
+    const from = rv.getPosition();
+    if (!from) return;
+    const rad = Math.PI / 180;
+    const lat1 = from.getLat() * rad;
+    const lat2 = target.getLat() * rad;
+    const dLng = (target.getLng() - from.getLng()) * rad;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    const pan = (Math.atan2(y, x) / rad + 360) % 360;
+    rv.setViewpoint(new kakao.maps.Viewpoint(pan, APT_ROADVIEW_TILT, APT_ROADVIEW_ZOOM));
   },
 
   // ───────── 비슷한 아파트 (3차, 목업 C6, 김목산의 similar.js) ─────────

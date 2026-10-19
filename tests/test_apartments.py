@@ -536,17 +536,22 @@ def test_invalid_bounds(client, chipyeong, where, field, detail):
 # ------------------------------------------------------------------
 @pytest.fixture
 def similar_set(db, products):
-    """고른 아파트는 21번 치평동 84㎡ 3억. 같은 동 4곳, 같은 구 다른 동 2곳, 다른 구 1곳, 평균가 없는 곳 1곳."""
+    """고른 아파트는 21번 치평동 84㎡ 3억. 같은 동 5곳, 같은 구 다른 동 5곳, 다른 구 1곳, 평균가 없는 곳 1곳.
+    한 번에 6곳이라 후보 10곳은 6곳 + 4곳으로 나뉜다."""
     north = _priced(28, "운암동", "북구아파트", [(84, 300_000_000)])
     north.gu = "북구"
     db.add_all([
         _priced(21, "치평동", "고른아파트", [(59, 220_000_000), (84, 300_000_000)]),
-        _priced(22, "치평동", "가까운면적", [(84, 310_000_000), (114, 400_000_000)]),  # 차이 1,000만 (84㎡)
-        _priced(23, "치평동", "작은평형", [(59, 280_000_000)]),  # 차이 2,000만
-        _priced(24, "치평동", "같은가격", [(84, 300_000_000)]),  # 차이 0
-        _priced(25, "치평동", "비싼곳", [(114, 500_000_000)]),  # 차이 2억
-        _priced(26, "광천동", "옆동1", [(84, 301_000_000)]),  # 차이 100만
+        _priced(22, "치평동", "가까운면적", [(84, 310_000_000), (114, 400_000_000)], built_year=2020),  # 차이 1,000만 (84㎡)
+        _priced(23, "치평동", "작은평형", [(59, 280_000_000)], built_year=2010),  # 차이 2,000만
+        _priced(24, "치평동", "같은가격", [(84, 300_000_000)]),  # 차이 0, 준공 연도 모름
+        _priced(25, "치평동", "비싼곳", [(114, 500_000_000)], built_year=2015),  # 차이 2억
+        _priced(33, "치평동", "같은면적비쌈", [(84, 400_000_000)], built_year=2022),  # 면적은 같고 차이 1억
+        _priced(26, "광천동", "옆동1", [(84, 301_000_000)], built_year=2018),  # 차이 100만
         _priced(27, "쌍촌동", "옆동2", [(84, 299_000_000)]),  # 차이 100만
+        _priced(30, "광천동", "옆동3", [(84, 305_000_000)]),  # 차이 500만
+        _priced(31, "쌍촌동", "옆동4", [(84, 290_000_000)]),  # 차이 1,000만
+        _priced(32, "광천동", "옆동5", [(84, 330_000_000)]),  # 차이 3,000만
         north,
         models.Apartment(id=29, name="평균가없음", gu="서구", dong="치평동", jibun="29"),
     ])
@@ -561,17 +566,38 @@ def _similar(client, apartment_id=21, area_band=84, **body):
 def test_similar_same_dong_first_then_closest_price(client, similar_set):
     res = _similar(client).json()
     assert res["base_price"] == 300_000_000
-    assert res["total"] == 6  # 고른 곳, 북구, 평균가 없는 곳은 빠진다
-    assert [a["id"] for a in res["apartments"]] == [24, 22, 23]
-    assert (res["offset"], res["next_offset"]) == (0, 3)
+    assert res["total"] == 10  # 고른 곳, 북구, 평균가 없는 곳은 빠진다
+    # 같은 동(24, 22, 23, 33, 25)을 가격 차이 순으로 먼저, 그다음 같은 구의 다른 동
+    assert [a["id"] for a in res["apartments"]] == [24, 22, 23, 33, 25, 26]
+    assert (res["offset"], res["next_offset"]) == (0, 6)
 
 
 def test_similar_refresh_goes_to_next_then_wraps(client, similar_set):
-    second = _similar(client, offset=3).json()
-    # 같은 동의 나머지(25) 다음에 같은 구의 다른 동. 차이가 같으면(100만) 번호 순
-    assert [a["id"] for a in second["apartments"]] == [25, 26, 27]
-    assert second["next_offset"] == 0  # 끝까지 봤으면 처음 세 곳으로
-    assert [a["id"] for a in _similar(client, offset=6).json()["apartments"]] == [24, 22, 23]
+    second = _similar(client, offset=6).json()
+    # 다른 동의 나머지. 차이가 같으면(26, 27 모두 100만) 번호 순
+    assert [a["id"] for a in second["apartments"]] == [27, 30, 31, 32]
+    assert second["next_offset"] == 0  # 끝까지 봤으면 처음 여섯 곳으로
+    assert [a["id"] for a in _similar(client, offset=10).json()["apartments"]] == [24, 22, 23, 33, 25, 26]
+
+
+def test_similar_sort_area(client, similar_set):
+    # 같은 동 먼저, 그 안에서 고른 84㎡와 전용면적이 가까운 순 (84 → 59 → 114), 같으면 가격 차이 순 (24 → 22 → 33)
+    res = _similar(client, sort="area").json()
+    assert [a["id"] for a in res["apartments"]] == [24, 22, 33, 23, 25, 26]
+    assert [a["id"] for a in _similar(client, sort="area", offset=6).json()["apartments"]] == [27, 30, 31, 32]
+
+
+def test_similar_sort_area_picks_closest_area(client, similar_set):
+    # 22는 84㎡와 114㎡가 있다. 면적순이면 가격이 아니라 면적이 가까운 84㎡로 견준다
+    item = next(a for a in _similar(client, sort="area").json()["apartments"] if a["id"] == 22)
+    assert [a["area_band"] for a in item["areas"]] == [84]
+
+
+def test_similar_sort_newest(client, similar_set):
+    # 같은 동 먼저, 준공 연도가 최근인 순 (2022, 2020, 2015, 2010, 모름), 그다음 다른 동 (2018, 그리고 모르는 곳은 가격 차이 순)
+    res = _similar(client, sort="newest").json()
+    assert [a["id"] for a in res["apartments"]] == [33, 22, 25, 23, 24, 26]
+    assert [a["id"] for a in _similar(client, sort="newest", offset=6).json()["apartments"]] == [27, 30, 31, 32]
 
 
 def test_similar_uses_closest_area(client, similar_set):
@@ -603,6 +629,7 @@ def test_similar_unknown_apartment_or_area(client, similar_set, apartment_id, ar
 
 @pytest.mark.parametrize("body, field, detail", [
     ({"offset": -1}, "offset", "입력한 값을 다시 확인해 주세요."),
+    ({"sort": "distance"}, "sort", "입력한 값을 다시 확인해 주세요."),
     ({"offset": 1.5}, "offset", "소수는 입력할 수 없습니다. 만 원 단위의 정수로 입력해 주세요."),
     ({"area_band": "84"}, "area_band", "숫자만 입력할 수 있습니다."),
     ({"conditions": {**EXAMPLE, "loan_product_id": 999}}, "loan_product_id", "대출 상품과 상환 기간을 골라 주세요."),
@@ -616,3 +643,46 @@ def test_similar_invalid(client, similar_set, body, field, detail):
 def test_similar_alone_in_gu(client, similar_set):
     res = _similar(client, 28).json()  # 북구에는 이 아파트뿐이다
     assert res == {"base_price": 300_000_000, "total": 0, "offset": 0, "next_offset": 0, "apartments": []}
+
+
+# ------------------------------------------------------------------
+# A-27 실거래 기록과 같은 동 비교 (시나리오 탭 그래프)
+# ------------------------------------------------------------------
+@pytest.fixture
+def history_set(db):
+    """41번 치평동 84㎡: 평균가 기간 안 거래 3건(해제 1건), 기간 밖 1건, 다른 면적 1건. 같은 동 84㎡ 2곳, 다른 동 1곳."""
+    me = _priced(41, "치평동", "고른곳", [(84, 300_000_000)])
+    db.add_all([
+        me,
+        _priced(42, "치평동", "싼곳", [(84, 250_000_000)]),
+        _priced(43, "치평동", "비싼곳", [(84, 400_000_000), (59, 200_000_000)]),
+        _priced(44, "치평동", "작은곳만", [(59, 180_000_000)]),
+        _priced(45, "광천동", "옆동", [(84, 100_000_000)]),
+    ])
+    db.add_all([
+        models.Trade(apartment_id=41, contract_date=date(2025, 11, 3), exclusive_area="84.9400", price=290_000_000, floor=3),
+        models.Trade(apartment_id=41, contract_date=date(2026, 2, 10), exclusive_area="84.9400", price=310_000_000, floor=12),
+        models.Trade(apartment_id=41, contract_date=date(2026, 2, 10), exclusive_area="84.9400", price=310_000_000, floor=12,
+                     is_canceled=True),
+        models.Trade(apartment_id=41, contract_date=date(2024, 5, 1), exclusive_area="84.9400", price=200_000_000, floor=1),
+        models.Trade(apartment_id=41, contract_date=date(2026, 3, 1), exclusive_area="59.9000", price=210_000_000, floor=5),
+    ])
+    db.commit()
+
+
+def test_price_history(client, history_set):
+    res = client.get("/api/apartments/41/price-history", params={"area_band": 84})
+    assert res.status_code == 200
+    body = res.json()
+    assert (body["avg_price"], body["period_start"], body["period_end"]) == (300_000_000, "2025-10-01", "2026-09-30")
+    # 기간 안의 84㎡ 거래만, 계약일 순. 해제된 거래도 들어 있다
+    assert [(t["contract_date"], t["price"], t["is_canceled"]) for t in body["trades"]] == [
+        ("2025-11-03", 290_000_000, False), ("2026-02-10", 310_000_000, False), ("2026-02-10", 310_000_000, True),
+    ]
+    # 같은 동 같은 면적대만, 싼 순. 고른 곳 표시
+    assert [(n["id"], n["is_self"]) for n in body["neighbors"]] == [(42, False), (41, True), (43, False)]
+
+
+def test_price_history_unknown(client, history_set):
+    assert client.get("/api/apartments/41/price-history", params={"area_band": 59}).status_code == 404
+    assert client.get("/api/apartments/999/price-history", params={"area_band": 84}).status_code == 404

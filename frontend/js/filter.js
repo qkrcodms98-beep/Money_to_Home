@@ -13,7 +13,10 @@
 //                 둘째 값은 { showLack } — 자금 부족 표시 스위치를 켰는지
 //     showLack  : 자금 부족 표시의 지금 상태. 처음에는 꺼져 있다 (CLAUDE.md). 서버에 보내는 조건이 아니라
 //                 지도에 자금이 부족한 아파트를 그릴지만 정한다. 목록에는 스위치와 상관없이 나온다
-//     focus     : 'area', 'price', 'year' 중 하나면 그 항목으로 내려가 있다 (빼면 맨 위)
+//     focus     : 'region', 'area', 'price', 'year', 'lack' 중 하나면 그 항목으로 내려가 있다 (빼면 맨 위)
+//     regions   : GET /api/regions 의 regions. 주면 맨 위에 "지역"(구 칩과 동 칩)이 생긴다 (2026-10-18 새 스타일)
+//     region    : 지금 보는 지역 { gu, dong }. dong이 null이면 구 전체
+//                 '적용'을 누를 때 지역을 바꿨으면 onApply의 둘째 값에 region: { gu, dong, latitude, longitude }가 붙는다
 //   filterSheet.close();
 //   filterSheet.isOpen();
 //
@@ -29,6 +32,8 @@
 
 const FILTER_TEXT = {
   title: '조건',
+  region: '지역',
+  regionHelp: '최근 1년 거래가 있는 구와 동만 나옵니다.',
   area: '면적 (전용)',
   price: '평균가 (천만 원)',
   year: '준공 연도',
@@ -68,6 +73,7 @@ const filterSheet = (() => {
   let unitButtons = [];
   let lackSwitch = null; // 자금 부족 표시 스위치 (button role=switch)
   let onKey = null;
+  let regionState = null; // { list, picked: { gu, dong }, start: { gu, dong }, guRow, dongGrid }
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -243,9 +249,81 @@ const filterSheet = (() => {
     return box;
   }
 
-  function build(current, showLack) {
+  // 지역 (구와 동). 구 칩 한 줄(옆으로 밀기)과 그 구의 동 칩. 고른 표시만 바꾸고 '적용'을 누를 때 옮긴다
+  const REGION_ORDER = ['동구', '서구', '남구', '북구', '광산구']; // region.js와 같은 순서
+  function regionSection(list, current) {
+    const rank = (gu) => (REGION_ORDER.includes(gu) ? REGION_ORDER.indexOf(gu) : REGION_ORDER.length);
+    const sorted = [...list].sort((a, b) => rank(a.gu) - rank(b.gu));
+    const find = (gu) => sorted.find((item) => item.gu === gu) || null;
+    const startGu = current && find(current.gu) ? current.gu : sorted[0] ? sorted[0].gu : null;
+    const startDong = current && find(startGu) && find(startGu).dongs.some((d) => d.dong === current.dong) ? current.dong : null;
+    regionState = { list: sorted, find, picked: { gu: startGu, dong: startDong }, start: { gu: startGu, dong: startDong } };
+
+    const box = section('region', FILTER_TEXT.region);
+    const guRow = el('div', 'filter-sheet__gu');
+    guRow.setAttribute('role', 'group');
+    guRow.setAttribute('aria-label', '구');
+    const dongGrid = el('div', 'filter-sheet__dongs');
+    dongGrid.setAttribute('role', 'group');
+    dongGrid.setAttribute('aria-label', '동');
+
+    const chip = (text, value, onClick) => {
+      const button = el('button', 'filter-sheet__pick', text);
+      button.type = 'button';
+      button.dataset.value = value;
+      button.addEventListener('click', onClick);
+      return button;
+    };
+    const mark = () => {
+      for (const b of guRow.children) b.setAttribute('aria-pressed', String(b.dataset.value === regionState.picked.gu));
+      for (const b of dongGrid.children) b.setAttribute('aria-pressed', String(b.dataset.value === (regionState.picked.dong || '')));
+    };
+    const fillDongs = () => {
+      const region = find(regionState.picked.gu);
+      const buttons = [];
+      if (region) {
+        buttons.push(chip(`${region.gu} 전체`, '', () => { regionState.picked = { gu: region.gu, dong: null }; mark(); }));
+        region.dongs.forEach((item) => buttons.push(chip(item.dong, item.dong, () => {
+          regionState.picked = { gu: region.gu, dong: item.dong };
+          mark();
+        })));
+      }
+      dongGrid.replaceChildren(...buttons);
+      dongGrid.scrollTop = 0;
+    };
+    sorted.forEach((item) => guRow.append(chip(item.gu, item.gu, () => {
+      if (regionState.picked.gu === item.gu) return;
+      regionState.picked = { gu: item.gu, dong: null }; // 구를 바꾸면 동은 "전체"로
+      fillDongs();
+      mark();
+    })));
+    fillDongs();
+    mark();
+    // 고른 동이 보이게 동 칩 상자 안에서만 내린다
+    requestAnimationFrame(() => {
+      const on = dongGrid.querySelector('[aria-pressed="true"]');
+      if (on) dongGrid.scrollTop = on.offsetTop - dongGrid.offsetTop - 8;
+    });
+    box.append(guRow, dongGrid, el('p', 'filter-sheet__help', FILTER_TEXT.regionHelp));
+    return box;
+  }
+
+  // 지역을 바꿨으면 { gu, dong, latitude, longitude }, 그대로면 null
+  function pickedRegion() {
+    if (!regionState) return null;
+    const { picked, start, find } = regionState;
+    if (picked.gu === start.gu && (picked.dong || null) === (start.dong || null)) return null;
+    const region = find(picked.gu);
+    if (!region) return null;
+    const dong = region.dongs.find((item) => item.dong === picked.dong) || null;
+    const place = dong || region;
+    return { gu: region.gu, dong: dong ? dong.dong : null, latitude: place.latitude, longitude: place.longitude };
+  }
+
+  function build(current, showLack, regionOptions) {
     errors = {};
     beforePyeong = null;
+    regionState = null;
     const head = el('header', 'filter-sheet__head');
     head.append(el('h2', 'filter-sheet__title', FILTER_TEXT.title));
     const close = el('button', 'filter-sheet__close', '×');
@@ -316,6 +394,7 @@ const filterSheet = (() => {
 
     const body = el('div', 'filter-sheet__body');
     body.append(areaBox, priceBox, yearBox, lackSection(showLack));
+    if (regionOptions.regions && regionOptions.regions.length) body.prepend(regionSection(regionOptions.regions, regionOptions.region));
 
     const reset = el('button', 'button filter-sheet__reset', FILTER_TEXT.reset);
     reset.type = 'button';
@@ -382,8 +461,9 @@ const filterSheet = (() => {
     }
     const callback = onApply;
     const showLack = lackSwitch.getAttribute('aria-checked') === 'true';
+    const region = pickedRegion();
     api.close();
-    if (callback) callback(filters, { showLack });
+    if (callback) callback(filters, region ? { showLack, region } : { showLack });
   }
 
   let closing = null; // 내려가는 중이면 다 내려간 뒤 비울 타이머
@@ -408,7 +488,7 @@ const filterSheet = (() => {
       container.classList.add('filter-sheet');
       onApply = callback;
       unit = (store.get('map').area_unit === 'pyeong') ? 'pyeong' : 'm2';
-      build(current, options.showLack === true);
+      build(current, options.showLack === true, { regions: options.regions, region: options.region });
       container.hidden = false;
 
       // 누른 칩의 항목으로 내려가 있게 한다. 창 안의 목록만 움직인다.

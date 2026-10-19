@@ -88,6 +88,7 @@ const scenarioView = {
   render(root, { apartment, area, conditions }) {
     const sameApartment = scenarioView.apartmentId === apartment.id;
     scenarioView.root = root;
+    scenarioView.place = { gu: apartment.gu, dong: apartment.dong }; // 그래프 제목 (scenario-charts.js)
     scenarioView.area = area;
     scenarioView.conditions = conditions;
     if (!sameApartment) {
@@ -196,6 +197,12 @@ const scenarioView = {
     if (loan.choice === 'product' && loan.over_price_cap) parts.push(scenarioView.capNotice(loan));
     parts.push(scenarioView.rows(result));
     if (result.target_years === 0) parts.push(scenarioView.note(SCENARIO_TEXT.goalNow, 'scenario__goal-now'));
+    // 그래프 두 개 (실거래, 같은 동 안의 위치). js/scenario-charts.js를 불러온 화면에서만 (2026-10-18)
+    if (typeof scenarioCharts !== 'undefined') {
+      parts.push(scenarioCharts.section({
+        apartmentId: scenarioView.apartmentId, areaBand: scenarioView.area.area_band, result, place: scenarioView.place,
+      }));
+    }
     parts.push(scenarioView.changeBox());
     parts.push(scenarioView.saveButton());
     parts.push(scenarioView.guide(loan.choice === 'product'));
