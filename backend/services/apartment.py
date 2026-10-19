@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from backend.errors import ApiError
-from backend.models import Apartment, ApartmentPrice, DataCollection
+from backend.models import Apartment, ApartmentPrice, DataCollection, Trade
 from backend.services import calc, loan_product
 
 MSG_CHOOSE_LOAN = "대출 상품과 상환 기간을 골라 주세요."
@@ -346,4 +346,53 @@ def data_status(db: Session) -> dict:
     return {
         "trades_base_date": _latest_base_date(db, "trades"),
         "households_base_date": _latest_base_date(db, "households"),
+    }
+
+
+def price_history(db: Session, apartment_id: int, area_band: int) -> dict:
+    """A-27 실거래 기록과 같은 동 비교 (시나리오 탭의 그래프, 2026-10-18). 계산하지 않고 DB의 값을 그대로 준다.
+
+    - 고른 아파트의 그 면적대 평균가(apartment_prices)가 없으면 404.
+    - trades: 평균가에 들어간 기간(period_start ~ period_end) 안의 그 면적대 거래. 해제된 거래도 넣는다 (화면이 따로 표시).
+      면적대는 전용면적의 소수점 아래를 버린 값이다 (data/load_trades.py와 같다).
+    - neighbors: 같은 구·동에서 같은 면적대의 평균가가 있는 아파트. 평균가가 싼 순, 같으면 번호 순.
+    """
+    price = db.scalars(
+        select(ApartmentPrice).where(ApartmentPrice.apartment_id == apartment_id, ApartmentPrice.area_band == area_band)
+    ).first()
+    if price is None:
+        raise ApiError(404, MSG_NO_APARTMENT)
+    chosen = db.get(Apartment, apartment_id)
+
+    rows = db.scalars(
+        select(Trade)
+        .where(
+            Trade.apartment_id == apartment_id,
+            Trade.contract_date >= price.period_start,
+            Trade.contract_date <= price.period_end,
+        )
+        .order_by(Trade.contract_date, Trade.id)
+    ).all()
+    trades = [
+        {"contract_date": t.contract_date, "price": t.price, "floor": t.floor, "is_canceled": bool(t.is_canceled)}
+        for t in rows
+        if int(t.exclusive_area) == area_band
+    ]
+
+    neighbors = db.execute(
+        select(Apartment.id, Apartment.name, ApartmentPrice.avg_price)
+        .join(ApartmentPrice, ApartmentPrice.apartment_id == Apartment.id)
+        .where(Apartment.gu == chosen.gu, Apartment.dong == chosen.dong, ApartmentPrice.area_band == area_band)
+        .order_by(ApartmentPrice.avg_price, Apartment.id)
+    ).all()
+    return {
+        "apartment_id": apartment_id,
+        "area_band": area_band,
+        "avg_price": price.avg_price,
+        "period_start": price.period_start,
+        "period_end": price.period_end,
+        "trades": trades,
+        "neighbors": [
+            {"id": n.id, "name": n.name, "avg_price": n.avg_price, "is_self": n.id == apartment_id} for n in neighbors
+        ],
     }

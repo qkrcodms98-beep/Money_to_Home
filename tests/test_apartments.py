@@ -643,3 +643,46 @@ def test_similar_invalid(client, similar_set, body, field, detail):
 def test_similar_alone_in_gu(client, similar_set):
     res = _similar(client, 28).json()  # 북구에는 이 아파트뿐이다
     assert res == {"base_price": 300_000_000, "total": 0, "offset": 0, "next_offset": 0, "apartments": []}
+
+
+# ------------------------------------------------------------------
+# A-27 실거래 기록과 같은 동 비교 (시나리오 탭 그래프)
+# ------------------------------------------------------------------
+@pytest.fixture
+def history_set(db):
+    """41번 치평동 84㎡: 평균가 기간 안 거래 3건(해제 1건), 기간 밖 1건, 다른 면적 1건. 같은 동 84㎡ 2곳, 다른 동 1곳."""
+    me = _priced(41, "치평동", "고른곳", [(84, 300_000_000)])
+    db.add_all([
+        me,
+        _priced(42, "치평동", "싼곳", [(84, 250_000_000)]),
+        _priced(43, "치평동", "비싼곳", [(84, 400_000_000), (59, 200_000_000)]),
+        _priced(44, "치평동", "작은곳만", [(59, 180_000_000)]),
+        _priced(45, "광천동", "옆동", [(84, 100_000_000)]),
+    ])
+    db.add_all([
+        models.Trade(apartment_id=41, contract_date=date(2025, 11, 3), exclusive_area="84.9400", price=290_000_000, floor=3),
+        models.Trade(apartment_id=41, contract_date=date(2026, 2, 10), exclusive_area="84.9400", price=310_000_000, floor=12),
+        models.Trade(apartment_id=41, contract_date=date(2026, 2, 10), exclusive_area="84.9400", price=310_000_000, floor=12,
+                     is_canceled=True),
+        models.Trade(apartment_id=41, contract_date=date(2024, 5, 1), exclusive_area="84.9400", price=200_000_000, floor=1),
+        models.Trade(apartment_id=41, contract_date=date(2026, 3, 1), exclusive_area="59.9000", price=210_000_000, floor=5),
+    ])
+    db.commit()
+
+
+def test_price_history(client, history_set):
+    res = client.get("/api/apartments/41/price-history", params={"area_band": 84})
+    assert res.status_code == 200
+    body = res.json()
+    assert (body["avg_price"], body["period_start"], body["period_end"]) == (300_000_000, "2025-10-01", "2026-09-30")
+    # 기간 안의 84㎡ 거래만, 계약일 순. 해제된 거래도 들어 있다
+    assert [(t["contract_date"], t["price"], t["is_canceled"]) for t in body["trades"]] == [
+        ("2025-11-03", 290_000_000, False), ("2026-02-10", 310_000_000, False), ("2026-02-10", 310_000_000, True),
+    ]
+    # 같은 동 같은 면적대만, 싼 순. 고른 곳 표시
+    assert [(n["id"], n["is_self"]) for n in body["neighbors"]] == [(42, False), (41, True), (43, False)]
+
+
+def test_price_history_unknown(client, history_set):
+    assert client.get("/api/apartments/41/price-history", params={"area_band": 59}).status_code == 404
+    assert client.get("/api/apartments/999/price-history", params={"area_band": 84}).status_code == 404

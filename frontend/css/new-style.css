@@ -1249,3 +1249,111 @@
 .filter-sheet {
   max-height: calc(100% - var(--condition-bar-height) - 7px - 40px - 8px);
 }
+
+/* ───────── 시나리오 탭의 그래프 (js/scenario-charts.js) ─────────
+   "조건 바꿔 보기" 위. 위아래 구분선은 창 끝까지, 그래프마다 옅은 회색 판 */
+.scenario-charts {
+  margin: 16px calc(-1 * var(--page-padding) - 4px) 0 calc(-1 * var(--page-padding) - 8px);
+  padding: 18px calc(var(--page-padding) + 4px) 0 calc(var(--page-padding) + 8px);
+  border-top: 1px solid var(--new-sheet-line);
+}
+
+.scenario-charts[hidden] {
+  display: none;
+}
+
+.scenario-charts__title {
+  margin: 0 0 4px;
+  color: var(--new-sheet-section);
+  font-size: var(--text-help);
+  font-weight: var(--font-bold);
+}
+
+.scenario-charts__help,
+.scenario-charts__wait {
+  margin: 0 0 12px;
+  color: var(--color-text-hint);
+  font-size: 11px;
+}
+
+.scenario-chart {
+  margin-bottom: 14px;
+  padding: 12px 12px 10px;
+  border-radius: 12px;
+  background: var(--new-control-bg);
+}
+
+.scenario-chart__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 2px;
+  font-size: var(--text-label);
+  font-weight: var(--font-bold);
+}
+
+.scenario-chart__no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--color-text);
+  color: var(--color-on-primary);
+  font-size: 11px;
+}
+
+.scenario-chart__say {
+  margin: 0 0 6px;
+  color: var(--new-sheet-value);
+  font-size: var(--text-badge);
+}
+
+.scenario-chart__say b {
+  color: var(--color-primary);
+}
+
+.scenario-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--font-family);
+}
+
+.scenario-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  color: var(--color-text-sub);
+  font-size: 11px;
+}
+
+.scenario-chart__legend i {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  margin-right: 4px;
+  border-top: 2px solid;
+  vertical-align: middle;
+}
+
+.scenario-chart__legend i.scenario-chart__dot {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 50%;
+}
+
+.scenario-chart__src {
+  margin: 6px 0 0;
+  color: var(--color-text-hint);
+  font-size: 10px;
+}
+
+/* 그래프가 있으면 "조건 바꿔 보기" 위 선은 그래프 묶음 위 선과 겹치지 않게 그대로 둔다 */
+.scenario-charts + .scenario__change {
+  margin-top: 2px;
+}

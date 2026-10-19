@@ -273,5 +273,34 @@ class SimilarOut(BaseModel):
     base_price: int  # 기준 가격. 고른 아파트와 면적의 평균가. 원
     total: int  # 후보의 수 (같은 구에서 고른 아파트를 뺀 곳)
     offset: int  # 이번에 보여 주는 첫 후보의 순번. 보낸 offset이 total 이상이면 0으로 돌아간다
-    next_offset: int  # 새로고침에 보낼 값. 끝까지 봤으면 0 (처음 세 곳으로)
-    apartments: list[ApartmentItem]  # 최대 3곳. areas는 기준 가격에 가장 가까운 면적 하나
+    next_offset: int  # 새로고침에 보낼 값. 끝까지 봤으면 0 (처음으로)
+    apartments: list[ApartmentItem]  # 최대 6곳. areas는 고른 정렬로 가장 가까운 면적 하나
+
+
+# ------------------------------------------------------------------
+# A-27 실거래 기록과 같은 동 비교 (시나리오 탭 그래프, 2026-10-18)
+# ------------------------------------------------------------------
+class PriceTrade(BaseModel):
+    contract_date: date
+    price: int  # 거래 금액. 원
+    floor: int | None
+    is_canceled: bool  # 해제된 거래. 평균가에는 들어가지 않는다
+
+
+class PriceNeighbor(BaseModel):
+    id: int
+    name: str
+    avg_price: int  # 같은 면적대의 최근 1년 실거래 평균가. 원
+    is_self: bool  # 고른 아파트인가
+
+
+class PriceHistoryOut(BaseModel):
+    """A-27 응답"""
+
+    apartment_id: int
+    area_band: int
+    avg_price: int  # 고른 면적의 평균가 (A-05, A-07과 같은 값)
+    period_start: date  # 평균가에 들어간 첫 거래일
+    period_end: date  # 평균가에 들어간 마지막 거래일
+    trades: list[PriceTrade]  # 그 사이의 거래. 계약일 순. 해제된 거래도 넣는다
+    neighbors: list[PriceNeighbor]  # 같은 구·동, 같은 면적대의 아파트. 평균가가 싼 순. 고른 아파트도 들어 있다

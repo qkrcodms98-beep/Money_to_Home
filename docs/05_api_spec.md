@@ -669,6 +669,7 @@
 | A-22 | `GET /api/saved-results` | | 내가 저장한 결과의 목록. 최근 것부터 | FR-RESULT-08, FR-USER-15 |
 | A-23 | `GET /api/saved-results/{id}` | | 저장한 결과 하나. 남의 것이면 404 | FR-RESULT-08, FR-USER-15 |
 | A-24 | `POST /api/apartments/{id}/similar` | `conditions`, `area_band`, `offset`(처음 0), `sort`(similar · area · newest, 없으면 similar) | `base_price`, `total`, `offset`, `next_offset`, `apartments`(최대 6곳, A-05의 아파트 모양에 `areas`는 하나). 기준은 아래 | FR-APT-17 |
+| A-27 | `GET /api/apartments/{id}/price-history` | `area_band`(쿼리) | `apartment_id`, `area_band`, `avg_price`, `period_start`, `period_end`, `trades`(그 기간의 그 면적대 거래. `contract_date`, `price`, `floor`, `is_canceled`. 계약일 순, 해제된 거래 포함), `neighbors`(같은 구·동, 같은 면적대 아파트의 `id`, `name`, `avg_price`, `is_self`. 싼 순). 평균가가 없으면 404. 계산하지 않고 DB 값 그대로 (시나리오 탭 그래프, 2026-10-18) | FR-APT-17 |
 | A-25 | `GET /api/regions/{gu}/price-trend` | | 구의 집값 변동. 자료가 정해지지 않았다 (N-06, N-07). | FR-PLAN-06, 10 |
 
 - A-21은 화면이 계산 결과를 보내지 않는다. 조건과 아파트만 받고 **서버가 다시 계산해서 저장한다.** 화면에서 고친 숫자가 저장되는 일을 막는다 (NFR-13).
