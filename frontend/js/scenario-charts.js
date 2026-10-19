@@ -93,7 +93,8 @@ const scenarioCharts = (() => {
   function tradesChart(data, result) {
     const done = data.trades.filter((t) => !t.is_canceled);
     const say = el('p', 'scenario-chart__say');
-    say.append(document.createTextNode(`이 면적은 최근 1년에 ${format.comma(done.length)}번 거래됐고, `), el('b', null, `평균 ${format.won(data.avg_price)}`), document.createTextNode('입니다.'));
+    // 한 줄에 들어가게 짧게 (2026-10-19). 금액은 끊기지 않게 굵은 글자 하나로
+    say.append(document.createTextNode('최근 1년 거래 '), el('b', null, `${format.comma(done.length)}번`), document.createTextNode(' · 평균 '), el('b', null, format.won(data.avg_price)));
     const { wrap, box } = block(SCENARIO_CHART_TEXT.trades, say);
 
     const W = 320; const H = 180; const L = 46; const R = 312; const T = 14; const B = 150;
@@ -176,7 +177,7 @@ const scenarioCharts = (() => {
     }
     const say = el('p', 'scenario-chart__say');
     const where = rank === 1 ? '가장 싼 곳' : rank === all.length ? '가장 비싼 곳' : `${rank}번째로 싼 곳`;
-    say.append(document.createTextNode(`같은 동 같은 면적 ${format.comma(all.length)}곳 가운데 `), el('b', null, where), document.createTextNode('입니다.'));
+    say.append(document.createTextNode(`같은 면적 ${format.comma(all.length)}곳 가운데 `), el('b', null, where)); // 동은 제목에 있다
     const { wrap, box } = block(SCENARIO_CHART_TEXT.neighbors(place.dong, data.area_band), say);
 
     const rowH = 20; const L = 96; const R = 270; const T = 6;

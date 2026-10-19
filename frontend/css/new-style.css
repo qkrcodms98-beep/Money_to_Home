@@ -1372,3 +1372,12 @@
 .scenario-chart-block {
   margin-bottom: 24px;
 }
+
+/* 그래프 위 한 줄 설명: 금액·순위(굵은 글자)는 중간에서 끊지 않고, 줄을 바꿔야 하면 띄어쓰기에서만 */
+.scenario-chart__say {
+  word-break: keep-all;
+}
+
+.scenario-chart__say b {
+  white-space: nowrap;
+}
