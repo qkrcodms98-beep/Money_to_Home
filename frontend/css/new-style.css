@@ -8,6 +8,8 @@
 
 .map-body {
   --new-control-bg: #f7f7f7; /* 지도 버튼 바탕 */
+  --new-control-glass: rgba(255, 255, 255, 0.72); /* 지도 위 떠 있는 버튼 바탕. 반투명 흰색 (2026-10-19) */
+  --new-control-glass-line: rgba(0, 0, 0, 0.08); /* 확대 · 축소 사이 선 */
   --new-bar-bg: rgba(242, 242, 242, 0.9); /* 내 조건 줄. 지도가 살짝 비친다 */
   --new-bar-text: #515151;
   --new-list-bg: rgba(0, 122, 255, 0.9); /* 목록 버튼 */
@@ -37,13 +39,21 @@
   text-decoration: none;
 }
 
-/* 지도 버튼 (㎡/평, 현재 위치, 확대·축소): 흰색 → 아주 옅은 회색 */
-.map-button {
-  background: var(--new-control-bg);
+/* 지도 버튼 (㎡/평, 현재 위치, 확대·축소): 반투명 흰색에 아주 살짝 흐림, 그림자 없이 (2026-10-19) */
+.map-controls .map-button {
+  background: var(--new-control-glass);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 .zoom-buttons {
-  background: var(--color-line);
+  background: transparent;
+  box-shadow: none;
+}
+
+.zoom-buttons .map-button + .map-button {
+  border-top-color: var(--new-control-glass-line);
 }
 
 /* 목록 버튼: 68 × 36, 살짝 비치는 파랑 */
@@ -1290,4 +1300,62 @@
 .apt__nav .share-action--share .share-icon {
   width: 18px;
   height: 18px;
+}
+
+/* 내 위치 (map-view.js의 showMyLocation): 흰 테두리 파란 점 + 그림자, 고리 두 개가 1초 차이로 퍼져 나간다 (시안 2번, 2026-10-19).
+   틀(.my-location)은 투명하고, ::after가 점, ::before와 틀의 그림자가 퍼지는 고리다 (점 위로 고리가 덮이지 않게).
+   위치는 저장하지 않고 서버로 보내지 않는다 (NFR-23). 움직임 줄이기를 켜면 고리는 멈추고 점만 남는다 */
+.my-location {
+  width: 18px;
+  height: 18px;
+  background: none;
+  animation: my-location-ring 2s ease-out 1s infinite;
+}
+
+.my-location::before,
+.my-location::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.my-location::before {
+  background: var(--color-primary);
+  opacity: 0.35;
+  animation: my-location-pulse 2s ease-out infinite;
+}
+
+.my-location::after {
+  border: 3px solid var(--color-bg);
+  background: var(--color-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes my-location-pulse {
+  to {
+    opacity: 0;
+    transform: scale(4);
+  }
+}
+
+/* 둘째 고리: 틀의 그림자가 27px까지 퍼지며 옅어진다 (틀은 가운데 맞춤에 transform을 쓰므로 크기를 바꾸지 않는다) */
+@keyframes my-location-ring {
+  from {
+    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.35);
+  }
+  to {
+    box-shadow: 0 0 0 27px rgba(0, 122, 255, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-location,
+  .my-location::before {
+    animation: none;
+  }
+
+  .my-location::before {
+    display: none;
+  }
 }
