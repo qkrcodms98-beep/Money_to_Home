@@ -7,7 +7,7 @@
 // 80% 이상에는 탭(아파트 정보, 시나리오)이 보인다.
 //   아파트 정보 (P-06 ⑦): 아파트 한 곳 API(A-06, GET /api/apartments/{id})로 채운다.
 //     창이 80% 이상이고 아파트 정보 탭이 보일 때 처음 한 번 부른다. 받은 것은 아파트마다 기억해 두고 다시 부르지 않는다.
-//     여덟 줄: 지번 주소, 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래(집계 기간), 세대수, 가격 범위.
+//     여덟 줄: 지번 주소("농성동 654-34". 복사하면 "전남광주통합특별시 서구 농성동 654-34"), 도로명 주소, 준공 연도, 면적, 실거래 평균가, 최근 1년 거래(집계 기간), 세대수, 가격 범위.
 //     순서는 목업 A9(4010:1111), C6(4022:1188)을 따른다. 1차 여섯 줄 뒤에 2차 두 줄을 붙인다.
 //     세대수는 "1,234세대 (2026년 8월 기준)", 가격 범위는 "2억 7,000만 ~ 3억 3,000만 원" (FR-APT-15, 16).
 //     값을 모르는 줄(도로명 주소, 준공 연도, 세대수가 비어 있음)은 그리지 않는다.
@@ -646,7 +646,7 @@ const aptPanel = {
     const picked = aptPanel.apartment.areas[aptPanel.areaIndex];
     const area = detail.areas.find((item) => item.area_band === picked.area_band) || picked;
     const rows = [
-      ['지번 주소', `${detail.gu} ${detail.dong} ${detail.jibun}`],
+      ['지번 주소', `${detail.dong} ${detail.jibun}`],
       ['도로명 주소', detail.road_address],
       ['준공 연도', detail.built_year === null ? null : `${detail.built_year}년`],
       ['면적', format.area(area.supply_area, area.exclusive_area, aptPanel.unit())],
@@ -668,7 +668,7 @@ const aptPanel = {
       desc.textContent = value;
       // 주소 옆 복사 아이콘 (FR-APT-18, share.js). 누르면 바로 클립보드에 넣는다
       if ((label === '지번 주소' || label === '도로명 주소') && typeof shareView !== 'undefined') {
-        desc.append(shareView.copyButton(() => value, `${label} 복사`));
+        desc.append(shareView.copyButton(() => format.fullAddress(detail.gu, value), `${label} 복사`)); // 복사는 시도와 구까지
       }
       row.append(term, desc);
       list.append(row);

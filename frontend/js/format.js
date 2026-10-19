@@ -3,6 +3,7 @@
 // 여기 있는 것은 표기뿐이다. 대출금액 같은 계산은 서버가 한다 (NFR-13).
 
 const PYEONG = 3.3058; // 1평 = 3.3058㎡
+const SIDO_NAME = '전남광주통합특별시'; // 광주 5개 구의 시도 (CLAUDE.md "지역 이름과 코드")
 
 const format = {
   // 원 → "3억 2,500만 원", "8,500만 원". 만원 단위로 반올림한다 (FR-COMMON-11).
@@ -60,4 +61,8 @@ const format = {
     const supply = pyeong ? `${format.pyeong(supplyArea)}평` : `${Math.round(supplyArea)}㎡`;
     return `${supply} (전용 ${exclusive})`;
   },
+
+  // 복사하는 주소 (FR-APT-18). 화면에는 "농성동 654-34", "천변우로 329-10"만 보여 주고,
+  // 복사할 때는 시도와 구를 붙여 "전남광주통합특별시 서구 농성동 654-34"로 넣는다 (2026-10-19)
+  fullAddress: (gu, rest) => `${SIDO_NAME} ${gu} ${rest}`,
 };

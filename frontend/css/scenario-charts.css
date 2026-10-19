@@ -60,6 +60,11 @@
   color: var(--color-primary);
 }
 
+/* 같은 동 같은 면적 가운데 가장 비싼 곳 (scenario-charts.js). 막대도 같은 빨강 계열 */
+.scenario-chart__say b.scenario-chart__priciest {
+  color: var(--color-lack-text);
+}
+
 .scenario-chart svg {
   display: block;
   width: 100%;
