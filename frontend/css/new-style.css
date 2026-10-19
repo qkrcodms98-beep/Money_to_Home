@@ -1320,18 +1320,21 @@
   font-family: var(--font-family);
 }
 
+/* 범례는 한 줄 (거래 · 평균가 · 쓸 수 있는 자금 · 지금 보유자산). 좁으면 글자 사이를 줄인다 */
 .scenario-chart__legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
+  flex-wrap: nowrap;
+  gap: 8px;
   margin-top: 6px;
   color: var(--color-text-sub);
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
 }
 
 .scenario-chart__legend i {
   display: inline-block;
-  width: 14px;
+  width: 12px;
   height: 0;
   margin-right: 4px;
   border-top: 2px solid;

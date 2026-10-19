@@ -44,7 +44,11 @@ const scenarioCharts = (() => {
     return node;
   };
   const color = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
-  const short = (won) => format.won(won).replace(/ ?원$/, ''); // "2억 634만"
+  // 그래프 안의 금액은 짧게: 1억 이상은 소수 한 자리 "3.5억", "2.1억", "4억", 1억 밑은 "8,500만" (2026-10-19)
+  const short = (won) => {
+    if (won >= 100_000_000) return `${(Math.round(won / 10_000_000) / 10).toFixed(1).replace(/\.0$/, '')}억`;
+    return `${format.comma(Math.round(won / 10_000))}만`;
+  };
 
   function load(apartmentId, areaBand) {
     const key = `${apartmentId}:${areaBand}`;
@@ -123,13 +127,14 @@ const scenarioCharts = (() => {
       svg.append(svgEl('line', { x1: L, x2: R, y1: Y(v), y2: Y(v), stroke, 'stroke-width': 1.5, 'stroke-dasharray': dash }));
       svg.append(svgEl('text', { x: R, y: Y(v) - 4, 'text-anchor': 'end', 'font-size': 10, 'font-weight': 700, fill: stroke }, label));
     };
-    inRange.forEach((m) => hline(m.value, m.color, '', `${m.label} ${short(m.value)}`));
-    hline(data.avg_price, color('--color-primary'), '4 3', `평균 ${short(data.avg_price)}`);
+    // 선 위에는 숫자만 (무슨 선인지는 아래 범례)
+    inRange.forEach((m) => hline(m.value, m.color, '', short(m.value)));
+    hline(data.avg_price, color('--color-primary'), '4 3', short(data.avg_price));
     // 범위 밖의 선: 끝에 이름과 화살표
     marks.filter((m) => !inRange.includes(m)).forEach((m) => {
       const up = m.value > hi;
       svg.append(svgEl('text', { x: R, y: up ? T - 2 : B - 4, 'text-anchor': 'end', 'font-size': 10, 'font-weight': 700, fill: m.color },
-        `${up ? '↑' : '↓'} ${m.label} ${short(m.value)}`));
+        `${up ? '↑' : '↓'} ${short(m.value)}`));
     });
     // 점. 같은 날 같은 값이 겹치면 해제된 거래를 조금 옆으로
     data.trades.forEach((t) => {
@@ -151,7 +156,6 @@ const scenarioCharts = (() => {
       legend.append(span);
     };
     item('scenario-chart__dot', { background: color('--color-primary') }, '거래');
-    if (data.trades.some((t) => t.is_canceled)) item('scenario-chart__dot', { background: color('--color-bg'), border: `1.5px solid ${color('--color-text-hint')}` }, '해제된 거래');
     item('', { borderColor: color('--color-primary'), borderTopStyle: 'dashed' }, '평균가');
     marks.forEach((m) => item('', { borderColor: m.color }, m.label));
     box.append(legend);
