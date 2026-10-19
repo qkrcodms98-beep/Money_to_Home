@@ -173,7 +173,7 @@ const sharePage = {
     }
     const range = `${format.won(area.min_price).replace(/ 원$/, '')} ~ ${format.won(area.max_price)}`;
     const rows = [
-      ['지번 주소', `${d.gu} ${d.dong} ${d.jibun}`, true],
+      ['지번 주소', `${d.dong} ${d.jibun}`, true], // 화면은 동부터. 복사하면 시도와 구까지 (format.fullAddress)
       ['도로명 주소', d.road_address, true],
       ['준공 연도', d.built_year === null ? null : `${d.built_year}년`],
       ['면적', format.area(area.supply_area, area.exclusive_area, sharePage.unit())],
@@ -187,7 +187,7 @@ const sharePage = {
       const row = sharePage.el('div', 'share-page__row');
       const desc = sharePage.el('dd', 'share-page__value');
       desc.append(sharePage.el('span', '', value));
-      if (copy) desc.append(shareView.copyButton(() => value, `${label} 복사`));
+      if (copy) desc.append(shareView.copyButton(() => format.fullAddress(d.gu, value), `${label} 복사`));
       row.append(sharePage.el('dt', 'share-page__label', label), desc);
       list.append(row);
     });
