@@ -1,0 +1,327 @@
+/* 공유받은 아파트 화면 (share.html). 모양은 지도 화면의 아파트 창(80%)을 따른다. 색과 크기는 common.css의 이름 */
+
+body[data-page='share'] {
+  background: var(--color-bg);
+}
+
+.share-page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 0 var(--page-padding) 32px;
+}
+
+.share-page__head {
+  margin-bottom: 8px;
+}
+
+.share-page__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  margin: -8px 0 4px -14px;
+  color: var(--color-text);
+  font-size: 28px;
+  text-decoration: none;
+}
+
+.share-page__title-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.share-page__name {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-amount);
+  font-weight: var(--font-bold);
+  line-height: 30px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-page__actions {
+  margin-left: auto;
+}
+
+.share-page__place {
+  margin: 2px 0 14px;
+  color: var(--color-text-sub);
+  font-size: var(--text-label);
+}
+
+.share-page__areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-page__area {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-bg-sub);
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-label);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.share-page__area[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-bold);
+}
+
+/* 탭. 밑줄이 고른 탭으로 미끄러진다 */
+.share-page__tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 12px 0 4px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.share-page__tab {
+  height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: var(--text-item);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.share-page__tab[aria-selected='true'] {
+  color: var(--color-primary);
+  font-weight: var(--font-bold);
+}
+
+.share-page__tab-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 50%;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--color-primary);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.share-page__tabs[data-tab='scenario'] .share-page__tab-bar {
+  transform: translateX(100%);
+}
+
+.share-page__panel {
+  animation: share-page-in 0.25s ease;
+}
+
+@keyframes share-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* 아파트 정보 줄 */
+.share-page__info {
+  margin: 8px 0 0;
+}
+
+.share-page__row {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+.share-page__row:nth-child(2) {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 8px;
+}
+
+.share-page__label {
+  flex: none;
+  width: 104px;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+}
+
+.share-page__value {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-label);
+}
+
+.share-page__value .share-action--copy {
+  margin: -10px 0 -10px -4px;
+}
+
+.share-page__loading,
+.share-page__fail {
+  padding: 24px 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-body);
+  text-align: center;
+}
+
+.share-page__retry {
+  width: auto;
+  height: 44px;
+  margin: 12px auto 0;
+}
+
+/* 시나리오 탭의 값 줄 (scenario.js가 아파트 창의 .apt-info 줄을 쓴다). 지도 화면(sheet.css, new-style.css)과 같은 모양 */
+#share-scenario .apt-info {
+  margin: 0;
+}
+
+#share-scenario .apt-info__row {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+  font-size: var(--text-body);
+  line-height: var(--line-height);
+}
+
+#share-scenario .apt-info__label {
+  flex-shrink: 0;
+  width: 108px;
+  padding-right: 10px;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  word-break: keep-all;
+}
+
+#share-scenario .apt-info__value {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-label);
+  font-weight: var(--font-medium);
+}
+
+/* ───────── 시나리오: 입력이 없으면 흐리게 덮는다 ─────────
+   한 번에 뚝 끊기지 않게: 맨 위는 살짝만 흐리고 아래로 갈수록 희미해지며(mask), 그 위를 흰 안개(그라데이션)가 덮는다 */
+.share-page__locked {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.share-page__locked #share-scenario {
+  filter: blur(5px) saturate(0.9);
+  opacity: 0.9;
+  pointer-events: none;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, rgba(0, 0, 0, 0.35) 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 45%, rgba(0, 0, 0, 0.35) 80%, transparent 100%);
+  transition: filter 0.4s ease;
+}
+
+.share-page__lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 88px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.55) 35%, rgba(255, 255, 255, 0.92) 70%, var(--color-bg) 100%);
+  animation: share-page-fog 0.45s ease;
+}
+
+@keyframes share-page-fog {
+  from {
+    opacity: 0;
+  }
+}
+
+.share-page__lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 300px;
+  padding: 22px 20px 20px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--color-line);
+  text-align: center;
+  backdrop-filter: blur(6px);
+  animation: share-page-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes share-page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.share-page__lock-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+  padding: 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  stroke-width: 2;
+  box-sizing: border-box;
+}
+
+.share-page__lock-title {
+  font-size: var(--text-item);
+  font-weight: var(--font-bold);
+  line-height: 24px;
+}
+
+.share-page__lock-text {
+  margin: 6px 0 16px;
+  color: var(--color-text-sub);
+  font-size: var(--text-help);
+  line-height: 19px;
+}
+
+.share-page__lock-button {
+  height: 48px;
+}
+
+.share-page__bottom {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 16px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--color-bg) 30%);
+}
+
+.share-page__missing {
+  max-width: var(--page-width);
+  margin: 80px auto 0;
+  padding: 0 var(--page-padding);
+  text-align: center;
+}
+
+.share-page__missing-text {
+  margin-bottom: 20px;
+  color: var(--color-text-sub);
+  font-size: var(--text-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-page__panel,
+  .share-page__lock,
+  .share-page__lock-card,
+  .share-page__tab-bar {
+    animation: none;
+    transition: none;
+  }
+}
