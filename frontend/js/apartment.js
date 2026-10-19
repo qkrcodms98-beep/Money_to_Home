@@ -136,6 +136,15 @@ const aptPanel = {
     document.getElementById('apt-next').addEventListener('click', () => aptPanel.move(1));
     document.getElementById('apt-close').addEventListener('click', () => handlers.onClose());
     document.getElementById('apt-back').addEventListener('click', () => handlers.onBackToList());
+    // 공유 아이콘 (FR-APT-18, 김목산의 share.js). 닫기 ✕ 앞에 두어 30% · 80% · 전체 어디서나 보인다
+    if (typeof shareView !== 'undefined') {
+      document.getElementById('apt-close').before(shareView.shareButton(() => {
+        const { apartment } = aptPanel;
+        const area = apartment.areas[aptPanel.areaIndex];
+        return { id: apartment.id, name: apartment.name, area_band: area.area_band,
+          supply_area: area.supply_area, exclusive_area: area.exclusive_area };
+      }));
+    }
 
     document.querySelectorAll('.apt__unit-option').forEach((button) => {
       button.addEventListener('click', () => {
@@ -657,6 +666,10 @@ const aptPanel = {
       const desc = document.createElement('dd');
       desc.className = 'apt-info__value';
       desc.textContent = value;
+      // 주소 옆 복사 아이콘 (FR-APT-18, share.js). 누르면 바로 클립보드에 넣는다
+      if ((label === '지번 주소' || label === '도로명 주소') && typeof shareView !== 'undefined') {
+        desc.append(shareView.copyButton(() => value, `${label} 복사`));
+      }
       row.append(term, desc);
       list.append(row);
     });
