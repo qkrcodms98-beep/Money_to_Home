@@ -163,6 +163,8 @@ erDiagram
         TINYINT exit_no "지하철 출구"
         INT place_count "반경 안의 수"
         INT radius "반경 m"
+        DECIMAL latitude "위도"
+        DECIMAL longitude "경도"
     }
     data_collections {
         INT id PK "번호"
@@ -410,6 +412,7 @@ erDiagram
 | `exit_no` | TINYINT UNSIGNED | ○ | 지하철역의 가장 가까운 출구 번호. 못 찾으면 비우고 `distance`는 역까지 | |
 | `place_count` | INT UNSIGNED | | 반경 안의 수. 병원은 동물병원을 뺀 수 | |
 | `radius` | INT UNSIGNED | | 찾은 반경. m. 대학교만 5000, 나머지 1000 | |
+| `latitude`, `longitude` | DECIMAL(10,7) | ○ | 그 곳의 좌표. 지하철역은 가장 가까운 출구. 지도에서 고른 아파트와 점선으로 잇는다 (2026-10-19 더함) | FR-MAP-23 |
 
 ### 3.7 `data_collections` 수집 기준일
 
@@ -864,9 +867,15 @@ CREATE TABLE IF NOT EXISTS apartment_facilities (
   exit_no       TINYINT UNSIGNED  NULL     COMMENT '지하철역의 가장 가까운 출구 번호. 출구를 못 찾으면 비우고 distance는 역까지',
   place_count   INT UNSIGNED      NOT NULL DEFAULT 0 COMMENT '반경 안의 수',
   radius        INT UNSIGNED      NOT NULL COMMENT '찾은 반경. m. 대학교만 5000, 나머지 1000',
+  latitude      DECIMAL(10,7)     NULL     COMMENT '그 곳의 위도. 지하철역은 가장 가까운 출구. 반경 안에 없으면 비운다',
+  longitude     DECIMAL(10,7)     NULL     COMMENT '경도',
   PRIMARY KEY (apartment_id, kind),
   CONSTRAINT fk_facilities_apartment FOREIGN KEY (apartment_id) REFERENCES apartments (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='주변 시설';
+
+-- 10-19 오후 이전에 표를 만든 DB에 좌표 칸을 더한다 (이미 있으면 건너뛴다)
+ALTER TABLE apartment_facilities ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10,7) NULL COMMENT '그 곳의 위도. 지하철역은 가장 가까운 출구. 반경 안에 없으면 비운다' AFTER radius;
+ALTER TABLE apartment_facilities ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL COMMENT '경도' AFTER latitude;
 
 -- ------------------------------------------------------------------
 -- 수집 기준일 (2차). 자료를 넣을 때마다 한 줄
