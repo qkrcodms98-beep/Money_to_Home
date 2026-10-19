@@ -621,7 +621,7 @@ button .list-card__name {
     display: flex;
     align-items: center;
     height: var(--header-height);
-    padding: 0 32px;
+    padding: 0 32px 0 132px; /* 화면 끝에서 조금 띄운다 (2026-10-19 팀장: 100px 더 오른쪽) */
   }
 
   /* 로고와 이름은 줄 가운데보다 3px 아래에 둔다 (눈으로 보기에 가운데) */
