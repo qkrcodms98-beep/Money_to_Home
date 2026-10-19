@@ -1263,22 +1263,72 @@
 }
 
 .scenario-charts__title {
-  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
   color: var(--new-sheet-section);
   font-size: var(--text-help);
   font-weight: var(--font-bold);
 }
 
-.scenario-charts__help,
+/* (?) : 연한 회색 동그라미에 조금 진한 물음표. 누르는 영역은 둘레로 넓힌다 */
+.scenario-charts__info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-line);
+  color: var(--color-text-sub);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: var(--font-bold);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.scenario-charts__info::after {
+  content: '';
+  position: absolute;
+  inset: -13px;
+}
+
+.scenario-charts__info[aria-expanded="true"] {
+  background: var(--color-line-strong);
+  color: var(--color-text);
+}
+
+.scenario-charts__help {
+  margin: -4px 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-bg-sub);
+  color: var(--color-text-sub);
+  font-size: 11px;
+}
+
+.scenario-charts__help[hidden] {
+  display: none;
+}
+
 .scenario-charts__wait {
   margin: 0 0 12px;
   color: var(--color-text-hint);
   font-size: 11px;
 }
 
+.scenario-chart-block {
+  margin-bottom: 18px;
+}
+
+/* 판: 그래프가 크게 보이게 안쪽 여백을 줄였다. 제목과 설명은 판 위(.scenario-chart-block) */
 .scenario-chart {
-  margin-bottom: 14px;
-  padding: 12px 12px 10px;
+  padding: 8px 6px 8px;
   border-radius: 12px;
   background: var(--new-control-bg);
 }
@@ -1287,7 +1337,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 0 2px;
+  margin: 0 0 3px;
   font-size: var(--text-label);
   font-weight: var(--font-bold);
 }
@@ -1305,7 +1355,7 @@
 }
 
 .scenario-chart__say {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   color: var(--new-sheet-value);
   font-size: var(--text-badge);
 }

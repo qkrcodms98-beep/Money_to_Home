@@ -72,15 +72,21 @@ const scenarioCharts = (() => {
   }
 
   // ① 최근 1년 실거래
-  function tradesChart(data, result) {
-    const box = el('div', 'scenario-chart');
-    const done = data.trades.filter((t) => !t.is_canceled);
+  // 그래프 하나의 틀: 제목과 한 줄 설명은 판 밖(위), 판 안에는 그래프와 범례, 출처만 (그래프를 크게)
+  function block(no, title, say) {
+    const wrap = el('div', 'scenario-chart-block');
     const head = el('h4', 'scenario-chart__title');
-    head.append(el('span', 'scenario-chart__no', '1'), document.createTextNode(SCENARIO_CHART_TEXT.trades));
-    box.append(head);
+    head.append(el('span', 'scenario-chart__no', no), document.createTextNode(title));
+    const box = el('div', 'scenario-chart');
+    wrap.append(head, say, box);
+    return { wrap, box };
+  }
+
+  function tradesChart(data, result) {
+    const done = data.trades.filter((t) => !t.is_canceled);
     const say = el('p', 'scenario-chart__say');
     say.append(document.createTextNode(`이 면적은 최근 1년에 ${format.comma(done.length)}번 거래됐고, `), el('b', null, `평균 ${format.won(data.avg_price)}`), document.createTextNode('입니다.'));
-    box.append(say);
+    const { wrap, box } = block('1', SCENARIO_CHART_TEXT.trades, say);
 
     const W = 320; const H = 180; const L = 46; const R = 312; const T = 14; const B = 150;
     const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `최근 1년 거래 ${done.length}건, 평균 ${format.won(data.avg_price)}` });
@@ -146,7 +152,7 @@ const scenarioCharts = (() => {
     marks.forEach((m) => item('', { borderColor: m.color }, m.label));
     box.append(legend);
     box.append(el('p', 'scenario-chart__src', `${SCENARIO_CHART_TEXT.source}, ${data.period_start} ~ ${data.period_end}`));
-    return box;
+    return wrap;
   }
 
   // ② 같은 동 같은 면적 안에서의 위치. 한 곳뿐이면 그리지 않는다. 많으면 이 아파트 둘레 12곳만
@@ -160,14 +166,10 @@ const scenarioCharts = (() => {
       const start = Math.min(Math.max(me - 5, 0), all.length - 12);
       rows = all.slice(start, start + 12);
     }
-    const box = el('div', 'scenario-chart');
-    const head = el('h4', 'scenario-chart__title');
-    head.append(el('span', 'scenario-chart__no', '2'), document.createTextNode(SCENARIO_CHART_TEXT.neighbors(place.dong, data.area_band)));
-    box.append(head);
     const say = el('p', 'scenario-chart__say');
     const where = rank === 1 ? '가장 싼 곳' : rank === all.length ? '가장 비싼 곳' : `${rank}번째로 싼 곳`;
     say.append(document.createTextNode(`같은 동 같은 면적 ${format.comma(all.length)}곳 가운데 `), el('b', null, where), document.createTextNode('입니다.'));
-    box.append(say);
+    const { wrap, box } = block('2', SCENARIO_CHART_TEXT.neighbors(place.dong, data.area_band), say);
 
     const rowH = 20; const L = 96; const R = 270; const T = 6;
     const funds = lines(result)[0];
@@ -191,7 +193,7 @@ const scenarioCharts = (() => {
     box.append(svg);
     const src = all.length > rows.length ? `${SCENARIO_CHART_TEXT.neighborSource}. ${all.length}곳 가운데 이 아파트 둘레 ${rows.length}곳` : SCENARIO_CHART_TEXT.neighborSource;
     box.append(el('p', 'scenario-chart__src', showFunds ? `${src}. 초록 선은 ${funds.label}` : `${src}. ${funds.label}은 ${short(funds.value)}`));
-    return box;
+    return wrap;
   }
 
   function fill(section, data, result, place) {
@@ -204,8 +206,22 @@ const scenarioCharts = (() => {
   return {
     section({ apartmentId, areaBand, result, place }) {
       const section = el('section', 'scenario-charts');
-      section.append(el('h3', 'scenario-charts__title', SCENARIO_CHART_TEXT.title));
-      section.append(el('p', 'scenario-charts__help', SCENARIO_CHART_TEXT.help));
+      // 제목 옆 (?) 를 누르면 안내 한 줄이 열리고 닫힌다
+      const title = el('h3', 'scenario-charts__title', SCENARIO_CHART_TEXT.title);
+      const help = el('p', 'scenario-charts__help', SCENARIO_CHART_TEXT.help);
+      help.id = `scenario-charts-help-${apartmentId}`;
+      help.hidden = true;
+      const info = el('button', 'scenario-charts__info', '?');
+      info.type = 'button';
+      info.setAttribute('aria-label', '그래프 안내');
+      info.setAttribute('aria-expanded', 'false');
+      info.setAttribute('aria-controls', help.id);
+      info.addEventListener('click', () => {
+        help.hidden = !help.hidden;
+        info.setAttribute('aria-expanded', String(!help.hidden));
+      });
+      title.append(info);
+      section.append(title, help);
       const body = el('div', 'scenario-charts__body');
       body.append(el('p', 'scenario-charts__wait', SCENARIO_CHART_TEXT.loading));
       section.append(body);
