@@ -30,7 +30,8 @@
 //
 // 지켜야 할 것 (CLAUDE.md, NFR-08, NFR-23)
 //   - 화면에서 주소를 좌표로 바꾸지 않는다. 아파트 좌표는 data/geocode.py가 DB에 넣은 값만 쓴다.
-//     SDK의 services 라이브러리는 주변 시설의 장소 검색(카카오 Places)에만 쓴다. 찾은 시설은 저장하지 않고 서버로 보내지 않는다.
+//     SDK의 services 라이브러리는 지도 위 주변 시설의 장소 검색(카카오 Places)에만 쓴다. 찾은 시설은 저장하지 않고 서버로 보내지 않는다.
+//     (CLAUDE.md 9번의 예외가 필요하다. 팀장 확인 전, loadKakaoSdk 설명)
 //   - 현재 위치는 브라우저 안에서 지도를 옮기는 데만 쓴다. 저장소(store)에 넣지 않고, 서버로 보내지 않는다.
 //   - 계산하지 않는다. 구분(now, within, lack)과 금액은 서버가 준 값을 보여 주기만 한다.
 //   - 서버나 DB에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
@@ -159,6 +160,7 @@ const mapState = {
   facilityLinkDrawn: null, // 점선을 마지막으로 그린 때의 { key, button }. 같으면 다시 그리지 않는다 (굵은 칸이 처음으로 돌아가지 않게)
   facilityPin: null, // 아파트 창의 주변 시설 줄을 눌러 지도에 띄운 시설 { kind, place }. 넓게 보아도 이것만은 남긴다
   facilityFit: false, // 창이 30%로 다 내려오면 고른 아파트와 facilityPin이 둘 다 보이게 지도를 맞춘다
+  facilityFindSeq: 0, // 주변 시설 줄을 눌러 장소를 찾는 요청의 번호. 늦게 온 앞의 응답을 버린다
   facilityHidden: new Set(), // 체크를 푼 시설 종류 (APT_NEAR_KINDS의 code)
   facilityLinkTimer: null, // 굵은 칸을 다음 칸으로 넘기는 타이머 (처음 뻗은 뒤 쉬는 타이머도)
   facilityLinkFrame: 0, // 처음 한 번 점선이 뻗어 가는 애니메이션 (requestAnimationFrame 번호)
@@ -174,7 +176,10 @@ async function loadKakaoKey() {
   return config.kakao_js_key;
 }
 
-// SDK를 불러온다. libraries=services는 아파트 창의 주변 시설(장소 검색, apartment.js)에 쓴다. 주소 → 좌표 변환에는 쓰지 않는다.
+// SDK를 불러온다. 아파트 정보 탭의 주변 시설은 data/load_facilities.py가 미리 받아 둔 것을 A-06으로 받는다 (NFR-08).
+// libraries=services(장소 검색)는 지도 위 주변 시설 아이콘과, 정보 탭의 시설을 지도에서 찾을 때만 쓴다 (renderFacilities, showFacilityOnMap).
+// ※ CLAUDE.md 9번("화면도 카카오 장소 검색을 쓰지 않는다")의 예외가 필요하다. 팀장 확인 전이다 (2026-10-19, 초안 PR).
+//   주소 → 좌표 변환에는 쓰지 않는다. 찾은 시설은 저장하지 않고 서버로 보내지 않는다.
 function loadKakaoSdk(key) {
   if (window.kakao && window.kakao.maps && window.kakao.maps.Map) return Promise.resolve();
 
@@ -602,19 +607,53 @@ function setFacilityShown(code, shown) {
 }
 
 // ── 아파트 창의 주변 시설 줄 → 지도 ──
-// apartment.js가 주변 시설 줄을 누르면 부른다. code는 APT_NEAR_KINDS의 code, place는 카카오 Places의 장소 하나다.
-// 창을 30%로 내리고, 다 내려오면(onSheetChange) 고른 아파트와 그 시설이 둘 다 보이게 지도를 맞춘 뒤 점선을 잇는다.
-function showFacilityOnMap(code, place) {
-  const kind = typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((item) => item.code === code) : null;
-  if (!mapState.map || !kind || !place || !selectedApartment()) return;
+// apartment.js가 주변 시설 줄을 누르면 부른다. kind는 A-06 facilities의 kind(학교 종류별이면 elementary 등), item은 그 시설 하나다.
+// A-06에는 시설의 좌표가 없어서, 카카오 장소 검색으로 아파트 근처에서 같은 이름의 곳을 찾아 자리를 얻는다.
+// 지하철역은 줄에 적힌 출구("…역 5번출구")를 찾는다. 거리는 A-06의 직선거리를 그대로 쓴다 (줄과 같은 숫자가 나오게).
+// 창을 30%로 내리고, 다 내려오고 자리도 찾으면 고른 아파트와 그 시설이 둘 다 보이게 지도를 맞춘 뒤 점선을 잇는다.
+const FACILITY_SCHOOL_KINDS = ['elementary', 'middle', 'high', 'university'];
+function showFacilityOnMap(kindName, item) {
+  const base = FACILITY_SCHOOL_KINDS.includes(kindName) ? 'school' : kindName;
+  const kind = typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((entry) => entry.kind === base) : null;
+  const apartment = selectedApartment();
+  const services = window.kakao && kakao.maps.services;
+  if (!mapState.map || !kind || !item || !item.place_name || !apartment || !services) return;
   closeFacilityName();
-  mapState.facilityPin = { kind, place };
-  if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
-    fitFacilityPin();
-    return;
-  }
+  const seq = ++mapState.facilityFindSeq; // 찾는 사이에 다른 줄을 누르면 앞의 것을 버린다
+  findFacilityPlace(item, apartment).then((place) => {
+    if (!place || seq !== mapState.facilityFindSeq || !selectedApartment() || selectedApartment().id !== apartment.id) return;
+    mapState.facilityPin = { kind, place };
+    if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
+      mapState.facilityFit = false;
+      fitFacilityPin();
+    }
+  });
   mapState.facilityFit = true;
+  if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) return; // 이미 30%면 찾는 대로 맞춘다
   sheet.show('30', 'apartment');
+}
+
+// A-06의 시설 하나를 카카오 장소 검색으로 찾아 지도에 쓸 장소로 바꾼다. 못 찾으면 null
+// 아파트에서 가까운 순으로 찾고, 이름이 같은 곳(지하철은 그 출구)을 고른다. distance는 A-06 값으로 바꿔 둔다
+function findFacilityPlace(item, apartment) {
+  const { Places, Status, SortBy } = kakao.maps.services;
+  const station = String(item.place_name).split(' ')[0];
+  const exit = item.kind === 'subway' && item.exit_no !== null && item.exit_no !== undefined ? Number(item.exit_no) : null;
+  const query = exit !== null ? `${station} ${exit}번출구` : item.place_name;
+  const radius = Math.min(20000, Math.max(500, Math.round(Number(item.distance) * 1.5) + 300));
+  const matches = (place) => (exit !== null
+    ? place.place_name.startsWith(station) && new RegExp(`\\s${exit}번\\s*출구$`).test(place.place_name)
+    : place.place_name === item.place_name);
+  return new Promise((resolve) => {
+    try {
+      new Places().keywordSearch(query, (data, status) => {
+        const found = status === Status.OK ? (data || []).find(matches) || null : null;
+        resolve(found ? { ...found, distance: Number(item.distance) } : null);
+      }, { location: toLatLng(apartment), radius, sort: SortBy.DISTANCE });
+    } catch (error) {
+      resolve(null);
+    }
+  });
 }
 
 // 창이 다 내려온 뒤 한 번 (onSheetChange). 맞출 것이 있으면 맞추고 true
@@ -906,10 +945,11 @@ function renderRegionName() {
 }
 
 // 말풍선 B의 모양. Figma 부품 "말풍선 (아파트 표시)" 모양=B 단색의 벡터 경로(2034:40)를 그대로 옮겼다.
-// 72 × 57. 몸통은 72 × 49(모서리 10, 왼쪽 아래만 2), 꼬리 끝은 (8.5, 57)이고 그곳이 아파트의 자리다.
+// 72 × 57. 몸통은 72 × 49(모서리 10), 꼬리 끝은 (8.5, 57)이고 그곳이 아파트의 자리다.
+// 꼬리는 몸통 왼쪽 변이 꺾이지 않고 곡선으로 그대로 이어져 내려간다 (2026-10-19. 전에는 왼쪽 아래 모서리에서 한 번 꺾인 뒤 꼬리가 시작해 홈이 생겼다)
 const MARKER_PATH =
   'M 10 0 L 62 0 C 67.523 0 72 4.477 72 10 L 72 39 C 72 44.523 67.523 49 62 49 ' +
-  'L 15 49 L 8.5 57 L 2 49 C 0.895 49 0 48.105 0 47 L 0 10 C 0 4.477 4.477 0 10 0 Z';
+  'L 19 49 C 14 49 10.5 51.5 8.5 57 C 6.5 51 0 49.5 0 42 L 0 10 C 0 4.477 4.477 0 10 0 Z';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function createMarkerShape() {

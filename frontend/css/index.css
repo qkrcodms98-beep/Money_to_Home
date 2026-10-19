@@ -158,3 +158,55 @@
     padding-bottom: 20px;
   }
 }
+
+/* 스플래시. 탭을 처음 열 때만 1초 동안 화면 전체를 덮는다 (js/splash.js) */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000; /* 시작 화면의 모든 것보다 위 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  background: var(--color-primary);
+  transition: opacity 0.3s ease; /* splash.js의 FADE_MS와 같다 */
+}
+
+.splash--leaving {
+  opacity: 0;
+  pointer-events: none; /* 사라지는 동안 뒤의 버튼을 누를 수 있게 한다 */
+}
+
+.splash__logo {
+  width: 148px;
+  height: 148px;
+}
+
+.splash__name {
+  margin: 0;
+  color: var(--color-on-primary);
+  font-size: var(--text-splash);
+  font-weight: var(--font-bold);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.splash__to {
+  color: var(--color-brand-gold);
+  font-size: 0.74em;
+}
+
+/* 움직임 줄이기를 켠 사람에게는 서서히 사라지지 않고 바로 없어진다 */
+@media (prefers-reduced-motion: reduce) {
+  .splash {
+    transition: none;
+  }
+}
+
+/* 웹(가로 1200px 이상)에서는 스플래시를 띄우지 않는다 (2026-10-19 팀장 결정) */
+@media (min-width: 1200px) {
+  .splash {
+    display: none;
+  }
+}

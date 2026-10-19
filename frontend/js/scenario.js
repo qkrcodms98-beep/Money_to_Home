@@ -12,7 +12,7 @@
 // 그리는 것 (와이어프레임 P-06 ⑧, ⑳, 대출 없이, A1 ~ A4)
 //   결과 상자: "5년 뒤 이 아파트를 목표로 하면", 부족자금 또는 여유자금(가장 크게), 식 한 줄,
 //             부족하면 필요 월 저축액
-//   값 줄: 현재 보유자산, 월 저축 가능액, 목표 기간, 누적 저축액, 대출 상품 · 상환 기간,
+//   값 줄: 현재 보유자산, 월 저축 가능액, 목표 기간, 누적 저축액, 대출 상품(값에 상환 기간),
 //          예상 대출금액, 예상 월 상환액, 목표 부동산 가격, 허용 상승률
 //          대출 없이 계산이면 대출 세 줄 대신 "대출 / 대출 없이 계산" 한 줄 (FR-RESULT-05)
 //   목표 기간이 "지금"이면 필요 월 저축액과 허용 상승률 대신 회색 안내 (A1)
@@ -260,7 +260,7 @@ const scenarioView = {
     ];
     if (loan.choice === 'product') {
       lines.push(
-        ['대출 상품 · 상환 기간', `${loan.product_name} · ${loan.repayment_years}년`],
+        ['대출 상품', `${loan.product_name} · ${loan.repayment_years}년`],
         ['예상 대출금액', scenarioView.money(loan.amount)],
         ['예상 월 상환액', scenarioView.money(loan.monthly_payment)],
       );

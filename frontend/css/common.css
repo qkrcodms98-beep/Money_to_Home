@@ -26,6 +26,9 @@
   --color-primary-soft: #eaf3ff;
   --color-on-primary: #ffffff;
 
+  /* 로고의 금색 (동전). 스플래시의 "to"에도 쓴다 */
+  --color-brand-gold: #ffc23d;
+
   /* 꺼진 버튼 */
   --color-disabled: #e5e5ea;
   --color-on-disabled: #aeaeb2;
@@ -68,6 +71,7 @@
   --font-bold: 700;
 
   /* 글자 크기 */
+  --text-splash: 38px; /* 스플래시의 서비스 이름 */
   --text-display: 28px; /* 시작 화면의 큰 제목. 줄 높이 38px */
   --text-value: 26px; /* 입력란의 값 */
   --text-title: 24px; /* 입력 화면의 제목. 줄 높이 34px */
@@ -89,6 +93,12 @@
   --input-height: 50px;
   --page-width: 390px;
   --page-padding: 20px;
+
+  /* 웹 (가로 1200px 이상). 입력 화면은 가운데 흰 기둥 하나, 양옆은 회색 바탕이다 (2026-10-19 팀장 결정) */
+  --color-web-bg: #f7f7f7;
+  --header-height: 64px;
+  --web-page-width: 560px; /* 일반적인 웹 회원가입·입력 화면의 폭. 안쪽 내용의 폭은 480px */
+  --web-page-padding: 40px;
 
   /* 모서리 */
   --radius-button: 14px;
@@ -154,17 +164,41 @@ select,
 .list-card__name,
 .glossary__bubble,
 .info-tip__text,
-.list__tip {
+.list__tip,
+/* 10-19에 더한 화면: 주변 시설의 곳 이름과 거리, 대출 "자세히"의 상품명 · 조건 · 자격 조건,
+   시나리오 그래프 위 문장과 출처, 공유받은 화면의 이름 · 지역 · 정보 줄의 값 */
+.apt-near__value,
+.sheet__title,
+.sheet__row dd,
+.sheet__list,
+.scenario-chart__say,
+.scenario-chart__src,
+.share-page__name,
+.share-page__place,
+.share-page__value,
+.share-page__missing-text {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
 }
 
-/* 단, 누르는 줄 안의 이름은 누르기가 우선이다 (목록·비슷한 아파트의 카드는 버튼이라 선택하지 않는다) */
-button .list-card__name {
+/* 단, 누르는 줄 안의 이름은 누르기가 우선이다 (목록·비슷한 아파트의 카드는 버튼이라 선택하지 않는다).
+   선택할 수 있는 글자 옆의 복사 · 공유 아이콘(share.js)도 글자를 끌어 고를 때 같이 잡히지 않게 한다.
+   공유 창 같은 <dialog>는 열리면 맨 위층에 올라가 body의 설정을 물려받지 않으므로 여기서 다시 막는다.
+   공유 창의 링크 칸(.share__link)은 [링크 복사]로만 복사하고, 복사가 안 되는 브라우저에서만 고를 수 있다 (share.css) */
+button .list-card__name,
+.share-action,
+dialog {
   -webkit-user-select: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
+}
+
+/* 띄어쓰기에서만 줄을 바꾸는 낱말 (format.keepWords). 아파트 이름처럼 하이픈에서 꺾이면 안 되는 글자 */
+.keep-word {
+  display: inline-block;
+  max-width: 100%;
 }
 
 /* ───────── 위 여백 ─────────
@@ -560,4 +594,92 @@ button .list-card__name {
 
 .amount--lack {
   color: var(--color-lack-text);
+}
+
+/* ───────── 웹 배치 (가로 1200px 이상) ─────────
+   모바일에는 헤더가 없다 (확정 목업 v3). 웹에서도 헤더 줄은 두지 않고, 로고만 왼쪽 위 회색 바탕에 띄운다 (2026-10-19 팀장 결정).
+   로고 자리(<header class="header">)가 있는 화면(입력 화면 여덟 개)만 웹 배치를 쓴다. 지도 화면과 저장한 결과 화면은 아직 바꾸지 않는다.
+   입력 화면은 모바일 화면을 넓힌 가운데 흰 기둥 하나로 보여 주고, 양옆은 회색 바탕으로 채운다.
+   1199px 이하의 모양은 바꾸지 않는다. */
+.header {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  /* 바탕: 양옆은 회색, 가운데는 테두리 선이 있는 흰 기둥. 내용이 길거나 짧아도 위아래 끝까지 이어진다.
+     기둥 안의 내용은 위에서 64px(--header-height) 아래부터 시작한다. 로고와 같은 높이의 빈 줄이다 */
+  body:has(> .header) {
+    --page-width: var(--web-page-width);
+    --page-padding: var(--web-page-padding);
+    --top-space: var(--header-height); /* 높이 계산에서 위 여백 대신 이 빈 줄의 높이를 뺀다 */
+    --column-left: calc(50% - var(--page-width) / 2);
+    --column-right: calc(50% + var(--page-width) / 2);
+    padding-top: var(--header-height);
+    background: linear-gradient(
+      to right,
+      var(--color-web-bg) calc(var(--column-left) - 1px),
+      var(--color-line) 0 var(--column-left),
+      var(--color-bg) 0 var(--column-right),
+      var(--color-line) 0 calc(var(--column-right) + 1px),
+      var(--color-web-bg) 0
+    );
+  }
+
+  /* 위 여백(52px) 자리는 위의 빈 줄이 대신한다 */
+  body:has(> .header) .top-space {
+    display: none;
+  }
+
+  /* 진행 바도 기둥 폭 안에 둔다 */
+  body:has(> .header) .progress {
+    max-width: var(--page-width);
+    margin: 0 auto;
+  }
+
+  /* 왼쪽 위에 떠 있는 로고. 바탕과 선이 없고, 스크롤해도 그 자리에 있다 */
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9; /* 내용보다 위, 아래에서 올라오는 창의 어두운 바탕(10)보다 아래 */
+    display: flex;
+    align-items: center;
+    height: var(--header-height);
+    padding: 0 32px 0 132px; /* 화면 끝에서 조금 띄운다 (2026-10-19 팀장: 100px 더 오른쪽) */
+  }
+
+  /* 로고와 이름은 줄 가운데보다 3px 아래에 둔다 (눈으로 보기에 가운데) */
+  .header__home {
+    position: relative;
+    top: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch-size);
+    color: var(--color-text);
+    font-size: var(--text-amount);
+    font-weight: var(--font-bold);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+
+  /* 로고는 글자 높이와 비슷하게 */
+  .header__logo {
+    display: block;
+    width: 28px;
+    height: 28px;
+  }
+
+  /* "머니", "to", "홈"의 바닥이 한 줄에 맞는다 (글자의 바닥선에 맞춤) */
+  .header__name {
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .header__to {
+    margin: 0 2px;
+    color: var(--color-brand-gold); /* 로고 동전과 같은 금색 */
+    font-size: var(--text-button);
+    vertical-align: baseline;
+  }
 }

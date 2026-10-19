@@ -101,13 +101,17 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-4. 실거래 자료와 좌표를 DB에 넣습니다. 외부 API를 부르지 않고 저장소에 든 파일에서 넣습니다.
+4. 실거래 자료, 좌표, 세대수, 주변 시설을 DB에 넣습니다. 외부 API를 부르지 않고 저장소에 든 파일에서 넣습니다. 이 순서대로 합니다 (뒤의 것은 앞에서 넣은 아파트에 붙습니다).
 
 ```
 python data/load_trades.py data/collected
 python data/load_supply_area.py
 python data/geocode.py --from-file data/geocoded.csv
+python data/load_households.py --from-file data/households.csv
+python data/load_facilities.py --from-file data/facilities.csv
 ```
+
+이미 DB를 만들어 둔 사람은 `db/schema.sql`을 다시 실행해 새 표(`apartment_facilities`, 2026-10-19)를 만든 뒤 마지막 줄만 실행하면 됩니다.
 
 5. 서버를 켭니다.
 
@@ -116,7 +120,7 @@ uvicorn backend.main:app --reload --port 8000
 ```
 
 6. 브라우저에서 `http://localhost:8000`을 엽니다. 주소에 `frontend`를 넣지 않습니다. API 목록은 `http://localhost:8000/docs`, 상태 확인은 `http://localhost:8000/api/health`입니다.
-6. 자동 테스트는 `pytest`로 돌립니다.
+7. 자동 테스트는 `pytest`로 돌립니다.
 
 ## 협업 규칙
 

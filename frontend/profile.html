@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>재무정보 · 머니 to 홈</title>
-  <link rel="stylesheet" href="css/common.css?v=20261019-1">
+  <link rel="stylesheet" href="css/common.css?v=20261019-7">
   <link rel="stylesheet" href="css/profile.css">
 </head>
 <body>
   <!-- P-02 재무정보 입력. Figma "확정 목업 v3"의 P-02, 와이어프레임 설명서 5장.
        값 세 개를 한 번에 하나씩 묻는다: 주민등록번호 앞 7자리(만 나이) → 연 소득 → 현재 보유자산 → 확인 -->
+  <!-- 웹(가로 1200px 이상)에서만 왼쪽 위에 보이는 로고. 안은 js/layout.js가 그린다. 모바일에는 없다. -->
+  <header class="header" id="header"></header>
   <div class="top-space"></div>
 
   <nav class="progress" aria-label="입력 단계">
@@ -100,9 +102,9 @@
   <!-- 공통 JavaScript. 모든 화면이 이 순서로 먼저 불러 쓴다. 그 아래에 화면의 파일을 둔다. -->
   <script src="js/api.js"></script>
   <script src="js/store.js"></script>
-  <script src="js/format.js?v=20261015-1"></script>
+  <script src="js/format.js?v=20261019-2"></script>
   <script src="js/guard.js"></script>
-  <script src="js/layout.js"></script>
+  <script src="js/layout.js?v=20261019-1"></script>
   <script src="js/account.js?v=20261014-1"></script>
   <script src="js/profile.js?v=20261014-3"></script>
 </body>

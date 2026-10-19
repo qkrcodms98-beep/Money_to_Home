@@ -6,6 +6,7 @@
     from backend.models import Apartment, ApartmentPrice
 """
 from backend.models.apartment import Apartment
+from backend.models.apartment_facility import ApartmentFacility
 from backend.models.apartment_price import ApartmentPrice
 from backend.models.data_collection import DataCollection
 from backend.models.loan_product import LoanProduct
@@ -16,6 +17,7 @@ from backend.models.user import User
 
 __all__ = [
     "Apartment",
+    "ApartmentFacility",
     "ApartmentPrice",
     "DataCollection",
     "LoanProduct",

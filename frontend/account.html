@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>계정 · 머니 to 홈</title>
-  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/common.css?v=20261019-7">
   <link rel="stylesheet" href="css/auth.css">
   <link rel="stylesheet" href="css/account.css">
 </head>
@@ -13,6 +13,8 @@
        탈퇴는 확인 모달에서 한 번 더 눌러야 한다.
        한 파일에 두 화면을 두고 주소의 # 으로 고른다: account.html#password, account.html#withdraw (없으면 비밀번호 변경).
        로그인해야 쓸 수 있다. 로그인하지 않았으면 로그인 화면으로 보낸다. 모양은 로그인·회원가입 화면(auth.css)과 같다. -->
+  <!-- 웹(가로 1200px 이상)에서만 왼쪽 위에 보이는 로고. 안은 js/layout.js가 그린다. 모바일에는 없다. -->
+  <header class="header" id="header"></header>
   <div class="top-space"></div>
 
   <nav class="progress auth-nav" aria-label="뒤로">
@@ -129,9 +131,9 @@
        auth.js는 비밀번호 규칙과 표시 함수를 같이 쓰려고 부른다 (body의 data-page가 login, signup이 아니면 화면을 그리지 않는다). -->
   <script src="js/api.js"></script>
   <script src="js/store.js"></script>
-  <script src="js/format.js"></script>
+  <script src="js/format.js?v=20261019-2"></script>
   <script src="js/guard.js"></script>
-  <script src="js/layout.js"></script>
+  <script src="js/layout.js?v=20261019-1"></script>
   <script src="js/account.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/account-page.js"></script>

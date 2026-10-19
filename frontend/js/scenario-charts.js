@@ -176,8 +176,12 @@ const scenarioCharts = (() => {
       rows = all.slice(start, start + 12);
     }
     const say = el('p', 'scenario-chart__say');
-    const where = rank === 1 ? '가장 싼 곳' : rank === all.length ? '가장 비싼 곳' : `${rank}번째로 싼 곳`;
-    say.append(document.createTextNode(`같은 면적 ${format.comma(all.length)}곳 가운데 `), el('b', null, where)); // 동은 제목에 있다
+    const priciest = rank === all.length; // 가장 비싼 곳이면 글자와 이 아파트 막대를 빨간색으로 (2026-10-19)
+    const where = rank === 1 ? '가장 싼 곳' : priciest ? '가장 비싼 곳' : `${rank}번째로 싼 곳`;
+    say.append(document.createTextNode(`같은 면적 ${format.comma(all.length)}곳 가운데 `),
+      el('b', priciest ? 'scenario-chart__priciest' : null, where)); // 동은 제목에 있다
+    const selfBar = priciest ? color('--color-lack') : color('--color-primary');
+    const selfText = priciest ? color('--color-lack-text') : color('--color-primary');
     const { wrap, box } = block(SCENARIO_CHART_TEXT.neighbors(place.dong, data.area_band), say);
 
     const rowH = 20; const L = 96; const R = 270; const T = 6;
@@ -195,8 +199,8 @@ const scenarioCharts = (() => {
       const self = n.is_self;
       const name = n.name.length > 9 ? `${n.name.slice(0, 8)}…` : n.name;
       svg.append(svgEl('text', { x: L - 6, y: y + 12, 'text-anchor': 'end', 'font-size': 10.5, 'font-weight': self ? 700 : 400, fill: self ? color('--color-text') : color('--color-text-sub') }, name));
-      svg.append(svgEl('rect', { x: L, y: y + 3, width: Math.max(X(n.avg_price) - L, 2), height: 12, rx: 3, fill: self ? color('--color-primary') : color('--color-line-strong') }));
-      svg.append(svgEl('text', { x: X(n.avg_price) + 4, y: y + 12, 'font-size': 9.5, 'font-weight': self ? 700 : 400, fill: self ? color('--color-primary') : color('--color-text-sub'), stroke: panel, 'stroke-width': 3, 'paint-order': 'stroke' }, short(n.avg_price)));
+      svg.append(svgEl('rect', { x: L, y: y + 3, width: Math.max(X(n.avg_price) - L, 2), height: 12, rx: 3, fill: self ? selfBar : color('--color-line-strong') }));
+      svg.append(svgEl('text', { x: X(n.avg_price) + 4, y: y + 12, 'font-size': 9.5, 'font-weight': self ? 700 : 400, fill: self ? selfText : color('--color-text-sub'), stroke: panel, 'stroke-width': 3, 'paint-order': 'stroke' }, short(n.avg_price)));
     });
     if (showFunds) svg.append(svgEl('text', { x: X(funds.value), y: yEnd + 13, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: color('--color-within-text') }, `${funds.label} ${short(funds.value)}`));
     box.append(svg);
