@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>저축 계획 · 머니 to 홈</title>
-  <link rel="stylesheet" href="css/common.css?v=20261019-2">
+  <link rel="stylesheet" href="css/common.css?v=20261019-4">
   <link rel="stylesheet" href="css/plan.css">
 </head>
 <body>
   <!-- P-04 저축 계획. Figma "확정 목업 v3"의 P-04, 와이어프레임 설명서 7장.
        값 두 개를 한 번에 하나씩 묻는다: 월 저축 가능액 → 목표 기간. 기간을 고르면 결과 상자가 나온다. -->
+  <!-- 웹(가로 1200px 이상)에서만 왼쪽 위에 보이는 로고. 안은 js/layout.js가 그린다. 모바일에는 없다. -->
+  <header class="header" id="header"></header>
   <div class="top-space"></div>
 
   <nav class="progress" aria-label="입력 단계">
@@ -87,7 +89,7 @@
   <script src="js/store.js"></script>
   <script src="js/format.js?v=20261015-1"></script>
   <script src="js/guard.js"></script>
-  <script src="js/layout.js"></script>
+  <script src="js/layout.js?v=20261019-1"></script>
   <script src="js/account.js?v=20261014-1"></script>
   <script src="js/plan.js?v=20261014-3"></script>
 </body>

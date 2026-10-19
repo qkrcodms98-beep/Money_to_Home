@@ -203,3 +203,10 @@
     transition: none;
   }
 }
+
+/* 웹(가로 1200px 이상)에서는 스플래시를 띄우지 않는다 (2026-10-19 팀장 결정) */
+@media (min-width: 1200px) {
+  .splash {
+    display: none;
+  }
+}
