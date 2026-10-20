@@ -299,9 +299,37 @@ const mapWeb = {
       mapWeb.renderFold();
     });
     mapWeb.renderFold();
+    mapWeb.watchFoldTop(button, aptButton);
   },
 
   renderFold() {}, // initFold가 채운다
+
+  // 아파트 패널이 열려 있으면 두 손잡이의 세로 가운데를 "아파트 정보 · 시나리오" 탭 밑줄에 맞춘다 (2026-10-20 팀장).
+  // 로드뷰 · "← 목록" 줄에 따라 밑줄 높이가 달라서 잴 때마다 --map-web-fold-top에 넣는다. 패널이 없거나 접혀도 같은 높이에 둔다
+  watchFoldTop(button, aptButton) {
+    const panel = document.getElementById('apartment-panel');
+    const tabs = panel && panel.querySelector('.apt__tabs');
+    if (!tabs || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const place = () => {
+      const parent = button.offsetParent;
+      const shown = mapWeb.isOn() && root.dataset.mapWebPanel === 'apartment' && tabs.offsetHeight > 0 && parent;
+      if (!shown) return; // 패널이 없거나 접혀 있으면 마지막으로 잰 높이 그대로 (처음에는 CSS 기본 441)
+      const box = parent.getBoundingClientRect();
+      const scale = box.height / parent.offsetHeight || 1; // 화면 90%(common.css zoom)를 CSS px로 되돌린다
+      const line = (tabs.getBoundingClientRect().bottom - box.top) / scale;
+      root.style.setProperty('--map-web-fold-top', `${Math.round(line)}px`); // 손잡이는 translateY(-50%)로 top이 세로 가운데다 (CSS)
+    };
+    const observer = new ResizeObserver(place);
+    observer.observe(panel);
+    const head = panel.querySelector('.apt__head');
+    if (head) observer.observe(head); // "← 목록" 줄 · 면적 줄이 바뀌면 높이가 바뀐다
+    // 로드뷰가 들어오거나 숨겨질 때 (apartment.js가 패널 맨 위에 넣는다)
+    new MutationObserver(place).observe(panel, { childList: true, attributes: true, attributeFilter: ['hidden'], subtree: true });
+    new MutationObserver(place).observe(root, { attributes: true, attributeFilter: ['data-map-web-panel'] });
+    window.addEventListener('resize', place);
+    place();
+  },
 
   // ───────── 패널 폭이 바뀌면 지도에 알린다 ─────────
   // 카카오맵은 상자의 크기가 바뀐 것을 모른다. relayout()을 불러야 새 크기로 그린다.

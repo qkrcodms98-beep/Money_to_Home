@@ -385,7 +385,7 @@
     /* 상품마다 내용 길이가 달라도 같은 높이 (긴 쪽 보금자리론 약 770px). 화면이 더 낮으면 화면 - 48px에서 안에서 스크롤 */
     display: flex;
     flex-direction: column;
-    height: min(770px, calc(100vh - 48px));
+    height: min(770px, calc(100vh / var(--page-zoom, 1) - 48px));
     max-height: none;
     margin: 0;
     padding: 20px var(--page-padding) 24px;

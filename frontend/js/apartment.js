@@ -15,7 +15,7 @@
 //     아파트 정보 탭을 전체로 올렸을 때만, 창 맨 위(손잡이 위)에 둔다. 그때 처음 불러온다.
 //     창 폭 전체를 채우고 가로:세로는 황금비 1.618 : 1이다 (시안 ②, sheet.css).
 //     그 아파트 둘레 100m 안의 가장 가까운 로드뷰를 카카오맵으로 찾는다 (서버 API 없음. API 명세서 3.5).
-//     로드뷰가 없거나, 좌표가 없거나, 카카오맵을 쓸 수 없으면 같은 자리에 기본 이미지(집 그림과 문장)를 둔다.
+//     로드뷰가 없거나, 좌표가 없거나, 카카오맵을 쓸 수 없으면 같은 자리에 "이 위치에는 로드뷰가 없습니다" 문장을 둔다.
 //     자리(#apt-roadview)는 이 파일이 만들어 창(#sheet)의 손잡이 앞에 넣는다.
 //   비슷한 아파트 (3차, FR-APT-17, T-APT-11. 목업 C6 4022:1301): 정보 줄 아래에 김목산의 similar.js가 그린다.
 //     이 파일은 자리(#apt-similar)를 만들고 similarView.load를 부르기만 한다. 아파트·면적·조건이 그대로면 다시 부르지 않는다.
@@ -67,13 +67,12 @@ const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 
 //     앞 사진 위로 서서히 나타나게 한다 (sheet.css .apt-roadview__view--on). 사진이 바뀌는 모습이나 빈 화면이 보이지 않는다
 const APT_ROADVIEW_PREFETCH_MAX = 80; // 한 번에 미리 찾는 아파트 수의 상한
 const APT_ROADVIEW_PREFETCH_AT_ONCE = 4; // 동시에 찾는 수
-const APT_ROADVIEW_SETTLE_MS = 250; // 새 사진을 띄우고 돌린 뒤 나타나게 하기까지 기다리는 시간 (사진 조각이 채워지는 동안)
+const APT_ROADVIEW_SETTLE_MS = 200; // 새 사진의 방향 변경 신호가 이만큼 더 오지 않으면(움직임이 멈추면) 나타나게 한다
 const APT_ROADVIEW_REVEAL_MAX_MS = 1500; // 신호가 안 와도 이만큼 지나면 나타나게 한다
 const APT_ROADVIEW_FADE_MS = 400; // 새 사진이 앞 사진 위로 나타나는 시간 (sheet.css의 transition과 같다)
 const APT_ROADVIEW_TILT = -20; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
 const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보인다 (-3 ~ 3)
-const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
-const APT_HOUSE_ICON = 'img/icon-house.svg'; // 목업 C6b의 "집 모양" (4022:1430)을 내보낸 것
+const APT_NO_ROADVIEW = '이 위치에는 로드뷰가 없습니다'; // 2026-10-20 팀장: "기본 이미지"와 집 그림은 빼고 문장만
 const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아파트가 아래에 붙을 때만 둔다
 
 // 주변 시설 (FR-MAP-23, 와이어프레임 C6). kind는 A-06 facilities의 kind
@@ -393,7 +392,7 @@ const aptPanel = {
 
   // 로드뷰 자리. 처음 쓸 때 한 번 만들어 창의 손잡이 앞(창 맨 위)에 넣는다.
   //   .apt-roadview__view   카카오 로드뷰가 그려지는 곳
-  //   .apt-roadview__empty  기본 이미지 (집 그림과 문장)
+  //   .apt-roadview__empty  로드뷰가 없을 때의 문장 "이 위치에는 로드뷰가 없습니다"
   roadviewBox() {
     let box = document.getElementById('apt-roadview');
     if (box) return box;
@@ -411,21 +410,17 @@ const aptPanel = {
     const empty = document.createElement('div');
     empty.className = 'apt-roadview__empty';
     empty.hidden = true;
-    const icon = document.createElement('img');
-    icon.className = 'apt-roadview__icon';
-    icon.src = APT_HOUSE_ICON;
-    icon.alt = '';
     const text = document.createElement('p');
     text.className = 'apt-roadview__text';
     text.textContent = APT_NO_ROADVIEW;
-    empty.append(icon, text);
+    empty.append(text);
     box.append(...views, empty);
     const handle = document.getElementById('sheet-handle');
     handle.parentElement.insertBefore(box, handle);
     return box;
   },
 
-  // 'view' 로드뷰, 'empty' 기본 이미지, null 아무것도 (찾는 중)
+  // 'view' 로드뷰, 'empty' 로드뷰 없음 문장, null 아무것도 (찾는 중)
   roadviewShow(which) {
     const box = aptPanel.roadviewBox();
     box.querySelectorAll('.apt-roadview__view').forEach((view) => {
@@ -468,12 +463,12 @@ const aptPanel = {
         aptPanel.showPano(panoId, position, id);
       });
     } catch (error) {
-      aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
+      aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 "로드뷰가 없습니다" 문장
     }
   },
 
   // 새 사진을 뒤의 화면에 띄우고, 아파트 쪽으로 돌린 뒤 앞 사진 위로 서서히 나타나게 한다 (크로스페이드).
-  // 지금 보이는 사진이 없으면(처음, 기본 이미지 뒤) 앞 화면에 그대로 띄워 나타나게 한다
+  // 지금 보이는 사진이 없으면(처음, 없음 문장 뒤) 앞 화면에 그대로 띄워 나타나게 한다
   showPano(panoId, position, id) {
     const box = aptPanel.roadviewBox();
     const views = box.querySelectorAll('.apt-roadview__view');
@@ -503,6 +498,10 @@ const aptPanel = {
       };
       kakao.maps.event.addListener(rv, 'init', ready);
       kakao.maps.event.addListener(rv, 'panoid_changed', ready);
+      // 지점을 바꾸면 카카오 로드뷰가 스스로 옮겨 가는 움직임(방향이 바뀜)을 넣는다. 움직이는 동안은 신호가 계속 온다 (rv.onMove)
+      kakao.maps.event.addListener(rv, 'viewpoint_changed', () => {
+        if (rv.onMove) rv.onMove();
+      });
     }
     let shown = false;
     const reveal = () => {
@@ -515,9 +514,22 @@ const aptPanel = {
       // 다 나타난 뒤 앞 사진은 투명하게 둔다 (다음에 뒤의 화면으로 쓴다)
       aptPanel.roadviewTimers.push(setTimeout(() => other.classList.remove('apt-roadview__view--on'), APT_ROADVIEW_FADE_MS));
     };
+    // 움직임이 멈출 때까지 기다렸다가 보여 준다 (2026-10-20). 예전에는 신호 뒤 0.25초에 보여 줘서,
+    // 카카오의 옮겨 가는 움직임이 끝나기 전에 나타나 사진이 옆으로 밀렸다가 자리 잡는 것이 보였다.
+    // 방향 변경 신호가 APT_ROADVIEW_SETTLE_MS 동안 더 오지 않으면 멈춘 것으로 본다
+    let settle = null;
+    const waitStill = () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        rv.onMove = null;
+        reveal();
+      }, APT_ROADVIEW_SETTLE_MS);
+      aptPanel.roadviewTimers.push(settle);
+    };
     rv.onReady = () => {
       aptPanel.aimRoadview(rv, position);
-      aptPanel.roadviewTimers.push(setTimeout(reveal, APT_ROADVIEW_SETTLE_MS));
+      rv.onMove = waitStill;
+      waitStill();
     };
     const samePano = typeof rv.getPanoId === 'function' && rv.getPanoId() === panoId;
     rv.setPanoId(panoId, position);

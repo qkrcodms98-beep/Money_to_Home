@@ -40,7 +40,7 @@
 
     display: block;
     position: relative;
-    height: 100vh;
+    height: calc(100vh / var(--page-zoom, 1)); /* 90%로 그려도 화면 높이를 다 채운다 (common.css) */
     min-height: 0;
     padding: 0;
     overflow: hidden;
@@ -163,6 +163,7 @@
 
   .condition-bar__link {
     height: var(--touch-size);
+    padding: 0 14px; /* 누르는 자리를 넓히고 오른쪽 끝에서 조금 안으로 (2026-10-20 팀장) */
     color: #ffffff; /* 파랑 머리 줄 위의 "로그인" */
     font-size: var(--text-item); /* 13px → 16px (2026-10-20 팀장 결정) */
   }
@@ -848,7 +849,7 @@
      목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 16 × 76, 흰 바탕에 옅은 그림자. 마우스를 올리면 조금 진해진다 */
   .map-web-fold {
     position: absolute;
-    top: calc(var(--map-web-top) + (100vh - var(--map-web-top)) / 2); /* 조건 줄 아래 목록 · 지도 높이의 가운데 */
+    top: var(--map-web-fold-top, 441px); /* 아파트 패널의 탭 밑줄 높이 (map-web.js watchFoldTop이 잰다). 패널이 없거나 접혀도 같은 높이, 처음에는 로드뷰가 있을 때의 밑줄 441 (2026-10-20 팀장) */
     left: var(--map-web-list);
     z-index: 4;
     display: flex;
@@ -916,7 +917,7 @@
     bottom: 0;
     left: 0;
     z-index: 6;
-    width: var(--map-web-list-open);
+    width: max(var(--map-web-list-open), var(--map-web-apt)); /* 목록을 접고 아파트 패널만 있으면 그 폭(420)에 맞춰 뒤의 패널이 삐져나오지 않게 (2026-10-20) */
     height: auto;
     max-height: none;
     border-radius: 0;
@@ -940,5 +941,14 @@
     .filter-sheet--closing {
       animation: none;
     }
+  }
+}
+
+/* 로드뷰는 웹 전체 90%(common.css의 zoom 0.9)를 되돌려 100%로 그린다 (2026-10-20).
+   줄인 채로 두면 카카오 로드뷰가 크기를 두 가지(CSS px와 화면 px)로 읽어, 다른 아파트를 누를 때 사진이 옆으로 밀렸다가 바뀌었다.
+   inset: 0이라 상자 크기와 자리는 그대로다 */
+@media (min-width: 1024px) {
+  .apt-roadview__view {
+    zoom: 1.1111;
   }
 }

@@ -377,7 +377,7 @@ dialog {
 .form-page {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--top-space) - var(--progress-height));
+  min-height: calc(100vh / var(--page-zoom, 1) - var(--top-space) - var(--progress-height));
 }
 
 .form-page .page {
@@ -683,4 +683,54 @@ dialog {
     font-size: var(--text-button);
     vertical-align: baseline;
   }
+}
+
+/* 웹(1024px 이상)은 화면 전체를 90%로 그린다 (2026-10-20 팀장: 브라우저 90%로 볼 때가 가장 깔끔했다).
+   글자 · 여백 · 지도까지 한꺼번에 줄어든다. 100vh를 쓰는 곳은 calc(100vh / var(--page-zoom))로 화면 높이를 다 채운다. 모바일은 100% 그대로 */
+:root {
+  --page-zoom: 1;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-zoom: 0.9;
+    zoom: 0.9;
+  }
+}
+
+/* 스크롤바 (2026-10-20 팀장): 브라우저 스크롤바는 자리를 차지하므로 숨긴다.
+   대신 js/scrollbar.js가 스크롤하는 상자의 오른쪽 가장자리 위에 얇은 반투명 손잡이를 겹쳐 띄우고, 5초 동안 가만히 있으면 사라지게 한다 */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-thumb {
+  position: fixed;
+  z-index: 2147483647;
+  width: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, width 0.15s ease;
+}
+
+.scrollbar-thumb--on {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.scrollbar-thumb:hover,
+.scrollbar-thumb--drag {
+  width: 7px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.scrollbar-thumb--gone {
+  transition: none; /* 부모가 접혀 상자가 사라지면 손잡이도 바로 사라진다 */
 }
