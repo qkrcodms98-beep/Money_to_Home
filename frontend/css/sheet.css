@@ -725,6 +725,10 @@
 /* 지하철역 줄: 출구 상자부터는 늘 다음 줄 ("역 이름 노선" / "[5]번 출구까지 383m"). 화면 폭과 상관없이 같은 모양 */
 .apt-near__keep {
   display: block;
+}
+
+/* 걷는 거리, "· 도보 약 8분", "[5]번 출구까지 약 500m"는 한 덩어리로 둔다. 줄은 덩어리 사이에서만 바뀐다 */
+.apt-near__walk {
   white-space: nowrap;
 }
 
@@ -758,6 +762,32 @@
   font-size: var(--text-label);
   font-weight: var(--font-medium);
   word-break: keep-all;
+}
+
+/* 찾은 줄은 단추다 (apartment.js의 nearFill). 누르면 창을 30%로 내리고 지도에서 그 시설을 잇는다.
+   글자는 줄의 글자 그대로 보이고, 누르는 자리는 44px를 채운다 (위아래로 줄의 여백까지 넓힌다) */
+.apt-near__link {
+  display: block;
+  width: 100%;
+  min-height: var(--touch-size);
+  margin: -5px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  word-break: keep-all;
+  cursor: pointer;
+}
+
+/* 줄 끝의 작은 위치 표시. 지도에서 볼 수 있다는 뜻 */
+.apt-near__pin {
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  vertical-align: -2px;
+  fill: var(--color-primary);
 }
 
 /* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준 · 직선거리" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */

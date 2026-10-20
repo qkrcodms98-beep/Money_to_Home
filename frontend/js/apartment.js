@@ -24,8 +24,12 @@
 //     (없으면 지금 지도에 있는 아파트만 ‹ ›와 같이 넘긴다).
 //     similar.js를 불러오지 않았으면 아무것도 하지 않는다.
 //   주변 시설 (3차, FR-MAP-23, T-MAP-23. 와이어프레임 C6): 기본 정보와 비슷한 아파트 사이에 둔다.
-//     지하철역, 학교, 대형마트, 편의점, 병원 다섯 줄(앞에 작은 그림). 학교 줄의 ⌄로 초·중·고·대학교를 펼친다. 줄마다 반경 1km 안에서 가장 가까운 곳의 이름과 직선거리.
-//     지하철역은 가장 가까운 출구까지 ("김대중컨벤션센터역 광주1호선 5번 출구까지 330m"), 나머지는 "전남고등학교 130m".
+//     지하철역, 학교, 대형마트, 편의점, 병원 다섯 줄(앞에 작은 그림). 학교 줄의 ⌄로 초·중·고·대학교를 펼친다.
+//     줄마다 반경 1km(직선) 안에서 가장 가까운 곳의 이름과, 걸어가는 거리 · 시간의 어림값 (aptWalk, 2026-10-19 세환 결정).
+//     지하철역은 가장 가까운 출구까지 ("김대중컨벤션센터역 광주1호선 5번 출구까지 약 430m · 도보 약 7분"),
+//     나머지는 "전남고등학교 약 170m · 도보 약 3분". 걷는 거리는 A-06의 직선거리에 1.3을 곱한 어림값이다 (길찾기 API는 쓰지 않는다).
+//     찾은 줄을 누르면 지도에서 보여 준다: map-view.js의 showFacilityOnMap(kind, 시설)을 불러 창을 30%로 내리고
+//     고른 아파트에서 그 시설까지 점선을 잇는다.
 //     1km 안에 없으면 "근처에 없음". 대학교만 5km 안. 병원은 동물병원을 뺀다. 수는 적지 않는다 (2026-10-19 세환 결정).
 //     값은 A-06의 facilities다. data/load_facilities.py가 카카오 장소 검색으로 미리 받아 DB에 넣은 것이라 화면은 카카오를 부르지 않는다
 //     (NFR-08, 2026-10-19 팀장 결정). 맨 아래에 받은 날을 적는다. 받은 값이 없거나 좌표가 없으면 묶음을 두지 않는다.
@@ -65,12 +69,13 @@ const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아�
 // 주변 시설 (FR-MAP-23, 와이어프레임 C6). kind는 A-06 facilities의 kind
 const APT_NEAR_TITLE = '주변 시설';
 // icon: 줄 앞의 작은 그림 (24 × 24 SVG path. 직접 그린 단순한 모양)
+// code: 카카오 장소 분류. 지도에 띄운 시설 아이콘의 색 이름(map.css .facility--sw8 등)에 쓴다
 const APT_NEAR_KINDS = [
-  { kind: 'subway', label: '지하철역', icon: 'M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-3 3l2 3h-2.4l-2-3H9.4l-2 3H5l2-3a3 3 0 0 1-3-3V6a4 4 0 0 1 4-4zM6 6v4h12V6H6zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z' },
-  { kind: 'school', label: '학교', icon: 'M12 3l10 5-10 5L2 8l10-5zM6 11.2l6 3 6-3V16c0 1.9-2.7 4-6 4s-6-2.1-6-4v-4.8zM20 9.5h1.5V15H20V9.5z' },
-  { kind: 'mart', label: '대형마트', icon: 'M2 3h3.2l.7 3H21l-2 8.5a2 2 0 0 1-2 1.5H9a2 2 0 0 1-2-1.5L4.2 5H2V3zm7 15a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 9 18zm8 0a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5z' },
-  { kind: 'convenience', label: '편의점', icon: 'M4 3h16l1.5 5a3 3 0 0 1-2.5 3.2V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8.8A3 3 0 0 1 2.5 8L4 3zm3 10v6h4v-4h2v4h4v-6H7zm-1.2-8L4.6 8.4a1 1 0 0 0 1 1.1h12.8a1 1 0 0 0 1-1.1L18.2 5H5.8z' },
-  { kind: 'hospital', label: '병원', icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm4.5 4v3.5H7v3h3.5V17h3v-3.5H17v-3h-3.5V7h-3z' },
+  { kind: 'subway', code: 'SW8', label: '지하철역', icon: 'M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-3 3l2 3h-2.4l-2-3H9.4l-2 3H5l2-3a3 3 0 0 1-3-3V6a4 4 0 0 1 4-4zM6 6v4h12V6H6zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z' },
+  { kind: 'school', code: 'SC4', label: '학교', icon: 'M12 3l10 5-10 5L2 8l10-5zM6 11.2l6 3 6-3V16c0 1.9-2.7 4-6 4s-6-2.1-6-4v-4.8zM20 9.5h1.5V15H20V9.5z' },
+  { kind: 'mart', code: 'MT1', label: '대형마트', icon: 'M2 3h3.2l.7 3H21l-2 8.5a2 2 0 0 1-2 1.5H9a2 2 0 0 1-2-1.5L4.2 5H2V3zm7 15a1.75 1.75 0 1 0 0 3.5A1.75 1.75 0 0 0 9 18zm8 0a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5z' },
+  { kind: 'convenience', code: 'CS2', label: '편의점', icon: 'M4 3h16l1.5 5a3 3 0 0 1-2.5 3.2V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8.8A3 3 0 0 1 2.5 8L4 3zm3 10v6h4v-4h2v4h4v-6H7zm-1.2-8L4.6 8.4a1 1 0 0 0 1 1.1h12.8a1 1 0 0 0 1-1.1L18.2 5H5.8z' },
+  { kind: 'hospital', code: 'HP8', label: '병원', icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm4.5 4v3.5H7v3h3.5V17h3v-3.5H17v-3h-3.5V7h-3z' },
 ];
 // 학교 줄의 ⌄를 누르면 펼치는 종류별 학교
 const APT_NEAR_SCHOOLS = [
@@ -82,7 +87,11 @@ const APT_NEAR_SCHOOLS = [
 const APT_NEAR_MORE = '학교 종류별로 보기';
 const APT_NEAR_LESS = '학교 종류별 접기';
 const APT_NEAR_NONE = '근처에 없음'; // 반경 안에 없을 때
-const APT_NEAR_SOURCE = '카카오 장소 정보'; // 맨 아래 출처. 뒤에 받은 날과 "직선거리"를 붙인다
+const APT_NEAR_SOURCE = '카카오 장소 정보'; // 맨 아래 출처. 뒤에 받은 날과 거리 안내를 붙인다
+const APT_NEAR_WALK_NOTE = '거리 · 시간은 직선거리로 어림'; // 맨 아래 출처 끝. 걷는 거리가 실제 길이 아님을 알린다
+const APT_NEAR_ON_MAP = '지도에서 보기'; // 찾은 줄의 단추 이름 끝에 붙인다 (화면 읽기)
+// 찾은 줄 끝의 작은 위치 표시. 누르면 지도에서 보여 준다는 뜻
+const APT_NEAR_PIN = 'M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z';
 
 // 주변 시설 줄 앞의 작은 그림. 글자와 같은 색을 쓰고 화면 읽기에서는 건너뛴다
 function aptNearIcon(path) {
@@ -98,7 +107,28 @@ function aptNearIcon(path) {
   return svg;
 }
 
-// 직선거리(m)를 "383m", 1km부터는 "4.5km"로
+// 걸어가는 거리와 시간의 어림값 (2026-10-19 세환 결정). 길찾기 API 없이 직선거리로 어림한다.
+//   길은 직선보다 돌아가므로 직선거리에 1.3을 곱하고 10m 단위로 맞춘다. 걷는 빠르기는 시속 4km(1분에 약 67m)로 본다.
+//   실제와 다를 수 있다. 지도의 시설 이름표(map-view.js)도 같은 값을 쓴다.
+const APT_WALK_DETOUR = 1.3;
+const APT_WALK_M_PER_MIN = 67;
+
+// 직선거리(m) → { distance: "약 670m", time: "도보 약 10분" }. 1시간이 넘으면 "도보 약 1시간 28분"
+function aptWalk(meters) {
+  const walk = Math.max(10, Math.round((Number(meters) * APT_WALK_DETOUR) / 10) * 10);
+  const minutes = Math.max(1, Math.ceil(walk / APT_WALK_M_PER_MIN));
+  const rest = minutes % 60;
+  const time = minutes < 60 ? `${minutes}분` : `${Math.floor(minutes / 60)}시간${rest ? ` ${rest}분` : ''}`;
+  return { distance: `약 ${aptNearDistance(walk)}`, time: `도보 약 ${time}` };
+}
+
+// 직선거리(m) → "약 670m · 도보 약 10분"
+function aptWalkText(meters) {
+  const { distance, time } = aptWalk(meters);
+  return `${distance} · ${time}`;
+}
+
+// 거리(m)를 "383m", 1km부터는 "4.5km"로
 function aptNearDistance(meters) {
   const value = Number(meters);
   return value < 1000 ? `${format.comma(value)}m` : `${(Math.round(value / 100) / 10).toLocaleString('ko-KR')}km`;
@@ -530,37 +560,71 @@ const aptPanel = {
     const byKind = new Map(items.map((item) => [item.kind, item]));
     box.querySelectorAll('.apt-near__value').forEach((cell) => {
       const item = byKind.get(cell.dataset.kind);
-      aptPanel.nearFill(cell, item ? aptPanel.nearValue(item) : APT_NEAR_NONE);
+      aptPanel.nearFill(cell, item ? aptPanel.nearValue(item) : APT_NEAR_NONE, cell.dataset.kind);
     });
     const [year, month, day] = (detail.facilities_base_date || '').split('-');
     box.querySelector('.apt-near__source').textContent = year
-      ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준 · 직선거리`
+      ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준 · ${APT_NEAR_WALK_NOTE}`
       : '';
   },
 
-  // 한 줄의 값. "전남고등학교 130m". 지하철역은 { before, exit, after } (출구 번호를 노란 상자로)
-  // 출구를 못 찾은 역은 "상무역 광주1호선까지 718m"
+  // 한 줄의 값. 화면에는 nearFill이 "전남고등학교 약 170m · 도보 약 3분"으로 적는다.
+  //   { name: "전남고등학교", meters: 130(직선), item }. 지하철역은 { before, exit, meters, item } (출구 번호를 노란 상자로)
+  //   출구를 못 찾은 역은 { name: "상무역 광주1호선까지", meters, item }
+  // item(A-06의 시설 하나)은 줄을 누르면 지도에서 그 시설을 찾아 보여 주려고 같이 둔다
   nearValue(item) {
     if (!item.place_name) return APT_NEAR_NONE;
-    const distance = aptNearDistance(item.distance);
-    if (item.kind !== 'subway') return `${item.place_name} ${distance}`;
-    if (item.exit_no === null || item.exit_no === undefined) return `${item.place_name}까지 ${distance}`;
-    return { before: `${item.place_name} `, exit: String(item.exit_no), after: `번 출구까지 ${distance}` };
+    const meters = Number(item.distance);
+    if (item.kind !== 'subway') return { name: item.place_name, meters, item };
+    if (item.exit_no === null || item.exit_no === undefined) return { name: `${item.place_name}까지`, meters, item };
+    return { before: `${item.place_name} `, exit: String(item.exit_no), meters, item };
   },
 
-  // 한 칸을 채운다. 글자이면 그대로, 출구이면 번호를 지하철 출구 표지처럼 작은 노란 상자로 (sheet.css .apt-near__exit)
-  nearFill(cell, value) {
+  // 한 칸을 채운다. 글자(근처에 없음)이면 그대로 적는다.
+  // 찾은 곳이면 누를 수 있게 단추로 만든다. 누르면 지도에서 그 시설을 보여 준다 (map-view.js의 showFacilityOnMap)
+  // 출구이면 번호를 지하철 출구 표지처럼 작은 노란 상자로 (sheet.css .apt-near__exit)
+  // kind: 그 줄의 A-06 kind (학교 종류별 줄은 elementary 등)
+  nearFill(cell, value, kind) {
     if (typeof value === 'string') {
       cell.textContent = value;
       return;
     }
-    const badge = document.createElement('span');
-    badge.className = 'apt-near__exit';
-    badge.textContent = value.exit;
-    const keep = document.createElement('span'); // "[5]번 출구까지 383m"는 늘 다음 줄에 한 덩어리로 (sheet.css)
-    keep.className = 'apt-near__keep';
-    keep.append(badge, value.after);
-    cell.replaceChildren(document.createTextNode(value.before), keep);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'apt-near__link';
+    const pin = aptNearIcon(APT_NEAR_PIN);
+    pin.setAttribute('class', 'apt-near__pin');
+    // 걷는 거리와 시간. 거리와 시간 사이에서만 줄이 바뀐다 (sheet.css .apt-near__walk)
+    const { distance, time } = aptWalk(value.meters);
+    const walk = document.createElement('span');
+    walk.className = 'apt-near__walk';
+    walk.textContent = distance;
+    const minutes = document.createElement('span');
+    minutes.className = 'apt-near__walk';
+    minutes.append(`· ${time}`, pin); // 위치 표시는 시간 바로 뒤에 붙여 혼자 다음 줄로 내려가지 않게
+    let label;
+    if (value.exit) {
+      const badge = document.createElement('span');
+      badge.className = 'apt-near__exit';
+      badge.textContent = value.exit;
+      // "[5]번 출구까지 약 430m · 도보 약 7분"은 늘 다음 줄에서 시작한다 (sheet.css). 넘치면 "· 도보 약 7분"만 그다음 줄로
+      const keep = document.createElement('span');
+      keep.className = 'apt-near__keep';
+      const head = document.createElement('span');
+      head.className = 'apt-near__walk';
+      head.append(badge, '번 출구까지 ', distance);
+      keep.append(head, ' ', minutes);
+      button.append(document.createTextNode(value.before), keep);
+      label = `${value.before}${value.exit}번 출구까지 ${distance} · ${time}`;
+    } else {
+      button.append(document.createTextNode(`${value.name} `), walk, ' ', minutes);
+      label = `${value.name} ${distance} · ${time}`;
+    }
+    button.setAttribute('aria-label', `${label} ${APT_NEAR_ON_MAP}`);
+    button.addEventListener('click', () => {
+      if (typeof showFacilityOnMap === 'function') showFacilityOnMap(kind, value.item);
+    });
+    cell.replaceChildren(button);
   },
 
   // 비슷한 아파트의 카드를 누름. apartment는 A-24 응답의 아파트, areaBand는 카드에 보이던 면적대
