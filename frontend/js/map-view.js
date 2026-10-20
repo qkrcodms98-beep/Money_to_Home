@@ -6,11 +6,10 @@
 //     말풍선의 꼬리 끝이 아파트의 자리다. 좌표가 없는 아파트는 지도에 그리지 않는다 (FR-MAP-07, 목록에만 나온다).
 //   - 현재 위치 버튼, 확대·축소 버튼, 축척을 지도에 붙인다 (FR-MAP-24, 25, 26).
 //   - 광주 5개 구 경계와 경계 밖 덮개, 고른 지역의 강조는 js/boundary.js가 그린다 (FR-MAP-28). 여기서는 붙이고 고른 지역만 알린다.
-//   - 축척이 100m 이하로 가까이 보면 화면 안의 주변 시설(지하철역, 학교, 대형마트, 편의점, 병원)을 아이콘으로 올린다 (renderFacilities).
-//     아이콘을 누르면 이름이 나온다. 종류와 아이콘 모양은 아파트 창의 주변 시설(apartment.js의 APT_NEAR_KINDS)과 같다.
-//     아파트 창이 30%일 때 아이콘을 누르면 고른 아파트에서 그 시설까지 점선을 잇고, 시설 이름 옆에 직선거리를 띄운다 (drawFacilityLink).
-//     아파트 창 80%의 주변 시설 줄을 누르면 창을 30%로 내리고 그 시설을 지도에 이어 보여 준다 (showFacilityOnMap, apartment.js가 부른다).
-//     지도 아래의 시설 체크 칸(#facility-filter)으로 종류마다 아이콘을 가리고 보인다. 처음에는 모두 보인다. 저장하지 않는다.
+//   - 아파트 창 80%의 주변 시설 줄을 누르면 창을 30%로 내리고 그 시설을 지도에 아이콘으로 띄운 뒤,
+//     고른 아파트에서 그 시설까지 점선을 잇고 시설 이름 옆에 도보 어림 거리를 띄운다 (showFacilityOnMap, drawFacilityLink. apartment.js가 부른다).
+//     시설의 자리는 A-06 facilities의 latitude · longitude다 (data/load_facilities.py가 미리 받아 둔 값. 지하철은 가장 가까운 출구).
+//     화면 안의 시설을 모두 띄우는 것과 종류별 체크 칸은 장소 검색을 화면에서 불러야 해서 발표 뒤로 미뤘다 (2026-10-19 팀장 결정, #125 C안).
 //
 // 자료
 //   - 아파트는 A-05(POST /api/apartments/search)에서, 구와 동의 목록과 위치는 A-02(GET /api/regions)에서 받는다.
@@ -29,9 +28,8 @@
 //   - 창에 보이는 값은 지도가 받은 A-05 응답을 그대로 쓴다. 창을 열 때 서버를 다시 부르지 않는다.
 //
 // 지켜야 할 것 (CLAUDE.md, NFR-08, NFR-23)
-//   - 화면에서 주소를 좌표로 바꾸지 않는다. 아파트 좌표는 data/geocode.py가 DB에 넣은 값만 쓴다.
-//     SDK의 services 라이브러리는 지도 위 주변 시설의 장소 검색(카카오 Places)에만 쓴다. 찾은 시설은 저장하지 않고 서버로 보내지 않는다.
-//     (CLAUDE.md 9번의 예외가 필요하다. 팀장 확인 전, loadKakaoSdk 설명)
+//   - 화면에서 주소를 좌표로 바꾸지 않는다. SDK에 services 라이브러리(장소 검색)를 불러오지 않는다.
+//     아파트 좌표는 data/geocode.py, 주변 시설 좌표는 data/load_facilities.py가 DB에 넣은 값만 쓴다.
 //   - 현재 위치는 브라우저 안에서 지도를 옮기는 데만 쓴다. 저장소(store)에 넣지 않고, 서버로 보내지 않는다.
 //   - 계산하지 않는다. 구분(now, within, lack)과 금액은 서버가 준 값을 보여 주기만 한다.
 //   - 서버나 DB에서 온 글자는 textContent로 넣는다. innerHTML을 쓰지 않는다.
@@ -99,22 +97,12 @@ const TOAST_MS = 3000;
 const SCALE_BAR_PX = 64;
 const SCALE_STEPS = [10, 20, 30, 50, 100, 200, 300, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000];
 
-// 지도 위 주변 시설. 축척이 100m 이하일 때(확대 수준 4 이하) 화면 안의 시설을 아이콘으로 올린다.
-// 받을 때는 보이는 영역보다 사방으로 1/4씩 넓게 받는다. 그 안에서 움직이면 다시 받지 않는다.
-// 카카오 Places는 한 번에 15곳, 한 영역에서 45곳(3쪽)까지만 준다.
-// 45곳이 다 차면 더 있을 수 있으므로 영역을 넷으로 나눠 다시 찾는다 (두 번까지). 편의점처럼 많은 시설이 화면 한쪽에만 몰리지 않게.
+// 지도에 띄운 주변 시설과 고른 아파트를 둘 다 보이게 맞출 때 가장 넓게 보는 확대 수준 (축척 100m)
 const FACILITY_LEVEL = 4;
-const FACILITY_PAD = 0.25;
-const FACILITY_PAGES = 3;
-const FACILITY_FULL = 45;
-const FACILITY_SPLIT = 2;
-const FACILITY_SKIP = '동물'; // 병원(HP8)에 섞여 오는 동물병원은 뺀다 (아파트 창과 같다)
 // 고른 아파트와 누른 시설을 둘 다 보이게 할 때 지도 가장자리에서 띄울 거리(px).
 // 위는 검색창, 오른쪽은 지도 버튼, 아래는 축척과 목록 버튼 자리다. 말풍선과 시설 이름의 크기는 따로 잰다.
 const FACILITY_LINK_MARGIN = { top: 72, right: 64, bottom: 64, left: 12 };
 // 점선 한 칸의 길이와 칸 사이(px). 굵은 칸 하나가 아파트에서 시설 쪽으로 한 칸씩 옮겨 간다
-// 시설 체크 칸의 짧은 이름 (좁은 자리에 다섯 개를 놓는다)
-const FACILITY_FILTER_LABELS = { SW8: '지하철', SC4: '학교', MT1: '마트', CS2: '편의점', HP8: '병원' };
 const FACILITY_LINK_DASH = 12;
 const FACILITY_LINK_GAP = 9;
 const FACILITY_LINK_GROW_MS = 800; // 처음 한 번: 점선이 아파트에서 시설까지 뻗어 가는 시간
@@ -151,17 +139,13 @@ const mapState = {
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
-  facilities: [], // 지도 위 주변 시설 아이콘 (kakao.maps.CustomOverlay)
-  facilityBounds: null, // 주변 시설을 받은 영역 (kakao.maps.LatLngBounds). 보이는 영역이 이 안이면 다시 받지 않는다
-  facilitySeq: 0, // 주변 시설을 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
+  facilities: [], // 지도 위 주변 시설 아이콘 (kakao.maps.CustomOverlay). 아파트 창에서 띄운 시설 하나만 단다
   facilityOpen: null, // 이름을 펼친 시설 아이콘
-  facilityOpenId: null, // 이름을 펼친 시설의 카카오 장소 id. 시설을 다시 받아 그려도 펼친 채로 둔다
+  facilityOpenId: null, // 이름을 펼친 시설의 id ("kind:이름")
   facilityLink: null, // 고른 아파트 → 펼친 시설의 점선 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
   facilityLinkDrawn: null, // 점선을 마지막으로 그린 때의 { key, button }. 같으면 다시 그리지 않는다 (굵은 칸이 처음으로 돌아가지 않게)
   facilityPin: null, // 아파트 창의 주변 시설 줄을 눌러 지도에 띄운 시설 { kind, place }. 넓게 보아도 이것만은 남긴다
   facilityFit: false, // 창이 30%로 다 내려오면 고른 아파트와 facilityPin이 둘 다 보이게 지도를 맞춘다
-  facilityFindSeq: 0, // 주변 시설 줄을 눌러 장소를 찾는 요청의 번호. 늦게 온 앞의 응답을 버린다
-  facilityHidden: new Set(), // 체크를 푼 시설 종류 (APT_NEAR_KINDS의 code)
   facilityLinkTimer: null, // 굵은 칸을 다음 칸으로 넘기는 타이머 (처음 뻗은 뒤 쉬는 타이머도)
   facilityLinkFrame: 0, // 처음 한 번 점선이 뻗어 가는 애니메이션 (requestAnimationFrame 번호)
   facilityLinkGrown: null, // 뻗어 가기를 이미 보여 준 '아파트 id:장소 id'. 같은 둘을 다시 그릴 때(확대·축소)는 바로 되풀이로 간다
@@ -176,17 +160,15 @@ async function loadKakaoKey() {
   return config.kakao_js_key;
 }
 
-// SDK를 불러온다. 아파트 정보 탭의 주변 시설은 data/load_facilities.py가 미리 받아 둔 것을 A-06으로 받는다 (NFR-08).
-// libraries=services(장소 검색)는 지도 위 주변 시설 아이콘과, 정보 탭의 시설을 지도에서 찾을 때만 쓴다 (renderFacilities, showFacilityOnMap).
-// ※ CLAUDE.md 9번("화면도 카카오 장소 검색을 쓰지 않는다")의 예외가 필요하다. 팀장 확인 전이다 (2026-10-19, 초안 PR).
-//   주소 → 좌표 변환에는 쓰지 않는다. 찾은 시설은 저장하지 않고 서버로 보내지 않는다.
+// SDK를 불러온다. 지도 그림만 쓴다. libraries=services(장소 검색, 주소 → 좌표)는 넣지 않는다.
+// 주변 시설도 data/load_facilities.py가 미리 받아 둔 것(좌표 포함)을 A-06으로 받는다 (NFR-08).
 function loadKakaoSdk(key) {
   if (window.kakao && window.kakao.maps && window.kakao.maps.Map) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('카카오맵을 불러오는 시간이 지났습니다.')), SDK_TIMEOUT_MS);
     const script = document.createElement('script');
-    script.src = `${KAKAO_SDK_URL}?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`;
+    script.src = `${KAKAO_SDK_URL}?appkey=${encodeURIComponent(key)}&autoload=false`;
     script.onload = () => {
       if (!window.kakao || !window.kakao.maps) {
         clearTimeout(timer);
@@ -337,102 +319,15 @@ function renderScale() {
 }
 
 // ───────── 주변 시설 ─────────
-// 축척 100m 이하에서 화면 안의 지하철역, 학교, 대형마트, 편의점, 병원을 색 아이콘으로 올린다.
-// 아이콘은 아파트 말풍선보다 아래(zIndex 1)에 둔다. 누르면 이름이 나오고, 지도를 누르면 접힌다.
-// 위치는 카카오 Places가 준 것을 그대로 쓴다. 저장하지 않고 서버로 보내지 않는다.
+// 아파트 창의 주변 시설 줄을 눌러 띄운 시설 하나(facilityPin)만 지도에 아이콘으로 둔다. 아파트 말풍선보다 아래(zIndex 1).
+// 누르면 이름이 나오고, 지도를 누르면 접힌다. 자리는 A-06의 좌표다 (장소 검색을 부르지 않는다).
 function renderFacilities() {
-  const { map } = mapState;
-  if (!map) return;
-  const places = window.kakao && kakao.maps.services && kakao.maps.services.Places;
-  const ready = Boolean(places) && typeof APT_NEAR_KINDS !== 'undefined' && mapState.mode === 'apartment';
-  renderFacilityFilter(ready && map.getLevel() <= FACILITY_LEVEL);
-  if (!ready) {
+  if (!mapState.map) return;
+  if (mapState.mode !== 'apartment') {
     clearFacilities();
     return;
   }
-  if (map.getLevel() > FACILITY_LEVEL) {
-    clearFacilities({ keepPin: true }); // 넓게 보면 아이콘을 다 뗀다. 아파트 창에서 띄운 시설만은 남긴다
-    ensureFacilityPin();
-    return;
-  }
-  const view = map.getBounds();
-  const have = mapState.facilityBounds;
-  if (have && have.contain(view.getSouthWest()) && have.contain(view.getNorthEast())) return;
-
-  const bounds = padBounds(view, FACILITY_PAD);
-  const seq = ++mapState.facilitySeq;
-  const search = new places();
-  Promise.all(APT_NEAR_KINDS.map((kind) => findFacilities(search, kind, bounds))).then((found) => {
-    if (seq !== mapState.facilitySeq || map.getLevel() > FACILITY_LEVEL) return;
-    const openId = mapState.facilityOpenId;
-    clearFacilities({ keepOpen: true });
-    mapState.facilityBounds = bounds;
-    const seen = new Set();
-    found.flat().forEach(({ kind, place }) => {
-      if (seen.has(place.id)) return;
-      seen.add(place.id);
-      const overlay = createFacility(kind, place);
-      mapState.facilities.push(overlay);
-      if (place.id === openId) openFacilityName(overlay); // 다시 받아도 펼친 시설은 그대로
-    });
-    ensureFacilityPin(); // 아파트 창에서 띄운 시설이 받은 것에 없으면(지하철 출구 등) 따로 단다
-    if (!mapState.facilityOpen) closeFacilityName(); // 펼친 시설이 새 영역에 없으면 접는다
-  });
-}
-
-// 보이는 영역을 사방으로 ratio만큼 넓힌다
-function padBounds(bounds, ratio) {
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  const lat = (ne.getLat() - sw.getLat()) * ratio;
-  const lng = (ne.getLng() - sw.getLng()) * ratio;
-  return new kakao.maps.LatLngBounds(
-    new kakao.maps.LatLng(sw.getLat() - lat, sw.getLng() - lng),
-    new kakao.maps.LatLng(ne.getLat() + lat, ne.getLng() + lng),
-  );
-}
-
-// 한 분류의 시설을 영역 안에서 모두(3쪽까지) 받는다. 실패하거나 없으면 빈 목록이다
-// 45곳이 다 차는 영역은 넷으로 나눠 각각 다시 찾는다 (depth: 나눈 횟수)
-function findFacilities(search, kind, bounds, depth = 0) {
-  return new Promise((resolve) => {
-    const list = [];
-    let page = 0;
-    search.categorySearch(kind.code, (data, status, pagination) => {
-      page += 1;
-      const full = page === 1 && pagination && pagination.totalCount >= FACILITY_FULL;
-      if (status === kakao.maps.services.Status.OK && full && depth < FACILITY_SPLIT) {
-        Promise.all(splitBounds(bounds).map((part) => findFacilities(search, kind, part, depth + 1)))
-          .then((parts) => resolve(parts.flat()));
-        return;
-      }
-      if (status === kakao.maps.services.Status.OK) {
-        data.forEach((place) => {
-          if (kind.code === 'HP8' && (place.category_name || '').includes(FACILITY_SKIP)) return;
-          list.push({ kind, place });
-        });
-        if (pagination && pagination.hasNextPage && page < FACILITY_PAGES) {
-          pagination.nextPage();
-          return;
-        }
-      }
-      resolve(list);
-    }, { bounds });
-  });
-}
-
-// 영역을 가로세로 반씩 넷으로 나눈다
-function splitBounds(bounds) {
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  const lat = (sw.getLat() + ne.getLat()) / 2;
-  const lng = (sw.getLng() + ne.getLng()) / 2;
-  const box = (south, west, north, east) =>
-    new kakao.maps.LatLngBounds(new kakao.maps.LatLng(south, west), new kakao.maps.LatLng(north, east));
-  return [
-    box(sw.getLat(), sw.getLng(), lat, lng), box(sw.getLat(), lng, lat, ne.getLng()),
-    box(lat, sw.getLng(), ne.getLat(), lng), box(lat, lng, ne.getLat(), ne.getLng()),
-  ];
+  ensureFacilityPin();
 }
 
 // 시설 아이콘 하나. 44px 누름 자리 가운데에 색 동그라미가 있고, 누르면 위에 이름이 나온다
@@ -480,7 +375,7 @@ function createFacility(kind, place) {
   });
   overlay.placeId = place.id;
   overlay.kindCode = kind.code;
-  overlay.setMap(mapState.facilityHidden.has(kind.code) ? null : mapState.map); // 체크를 푼 종류는 달지 않는다
+  overlay.setMap(mapState.map);
   return overlay;
 }
 
@@ -495,7 +390,7 @@ function ensureFacilityPin() {
     overlay = createFacility(pin.kind, pin.place);
     mapState.facilities.push(overlay);
   }
-  overlay.setMap(mapState.map); // 체크를 푼 종류여도 직접 고른 시설은 보인다
+  overlay.setMap(mapState.map);
   openFacilityName(overlay);
 }
 
@@ -534,7 +429,6 @@ function closeFacilityName() {
     button.setAttribute('aria-label', button.getAttribute('aria-label').split(' · ')[0]); // 붙였던 거리를 뗀다
     button.querySelector('.facility__name').style.marginLeft = '';
     overlay.setZIndex(1);
-    if (mapState.facilityHidden.has(overlay.kindCode)) overlay.setMap(null); // 체크를 푼 종류였으면 다시 숨긴다
   }
   mapState.facilityOpen = null;
   mapState.facilityOpenId = null;
@@ -542,10 +436,8 @@ function closeFacilityName() {
   drawFacilityLink();
 }
 
-// keepOpen: 다시 받아 그리는 중. 펼친 시설의 id와 점선은 남겨 두고 새 아이콘에서 다시 펼친다
-// keepPin: 넓게 보는 중. 아파트 창에서 띄운 시설의 아이콘만은 떼지 않고 펼친 채로 둔다
+// 지도의 시설 아이콘을 모두 뗀다. keepPin이면 아파트 창에서 띄운 시설의 아이콘만은 펼친 채로 둔다
 function clearFacilities({ keepOpen = false, keepPin = false } = {}) {
-  mapState.facilitySeq += 1; // 받는 중인 것은 버린다
   const open = mapState.facilityOpen;
   const pin = keepPin ? mapState.facilityPin : null;
   const keep = pin && open && open.placeId === pin.place.id ? open : null;
@@ -553,110 +445,45 @@ function clearFacilities({ keepOpen = false, keepPin = false } = {}) {
     if (overlay !== keep) overlay.setMap(null);
   });
   mapState.facilities = keep ? [keep] : [];
-  mapState.facilityBounds = null;
   if (keep) return;
   mapState.facilityOpen = null;
   if (!keepOpen && !pin) closeFacilityName();
 }
 
-// ── 시설 체크 칸 ──
-// 지도 아래 왼쪽에 종류마다 체크 칸을 둔다 (자리는 임시, 2026-10-19). 처음에는 모두 체크. 아이콘이 나오는 축척(100m 이하)에서만 보인다.
-// 체크를 풀면 그 종류의 아이콘을 지도에서 뗀다. 펼친 시설이 그 종류면 접는다.
-function renderFacilityFilter(show) {
-  const box = document.getElementById('facility-filter');
-  if (!box || typeof APT_NEAR_KINDS === 'undefined') return;
-  box.hidden = !show;
-  if (box.childElementCount) return;
-  APT_NEAR_KINDS.forEach((kind) => {
-    const item = document.createElement('label');
-    item.className = `facility-filter__item facility--${kind.code.toLowerCase()}`;
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.className = 'facility-filter__input';
-    input.checked = !mapState.facilityHidden.has(kind.code);
-    input.setAttribute('aria-label', `${kind.label} 지도에 보이기`);
-    input.addEventListener('change', () => setFacilityShown(kind.code, input.checked));
-    const chip = document.createElement('span');
-    chip.className = 'facility-filter__chip';
-    chip.setAttribute('aria-hidden', 'true');
-    const dot = document.createElement('span');
-    dot.className = 'facility-filter__dot';
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('class', 'facility__icon');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', kind.icon);
-    svg.appendChild(path);
-    dot.appendChild(svg);
-    const text = document.createElement('span');
-    text.textContent = FACILITY_FILTER_LABELS[kind.code] || kind.label;
-    chip.append(dot, text);
-    item.append(input, chip);
-    box.appendChild(item);
-  });
-}
-
-function setFacilityShown(code, shown) {
-  if (shown) mapState.facilityHidden.delete(code);
-  else mapState.facilityHidden.add(code);
-  const open = mapState.facilityOpen;
-  if (!shown && open && open.kindCode === code) closeFacilityName();
-  mapState.facilities.forEach((overlay) => {
-    if (overlay.kindCode === code) overlay.setMap(shown ? mapState.map : null);
-  });
-}
-
 // ── 아파트 창의 주변 시설 줄 → 지도 ──
 // apartment.js가 주변 시설 줄을 누르면 부른다. kind는 A-06 facilities의 kind(학교 종류별이면 elementary 등), item은 그 시설 하나다.
-// A-06에는 시설의 좌표가 없어서, 카카오 장소 검색으로 아파트 근처에서 같은 이름의 곳을 찾아 자리를 얻는다.
-// 지하철역은 줄에 적힌 출구("…역 5번출구")를 찾는다. 거리는 A-06의 직선거리를 그대로 쓴다 (줄과 같은 숫자가 나오게).
-// 창을 30%로 내리고, 다 내려오고 자리도 찾으면 고른 아파트와 그 시설이 둘 다 보이게 지도를 맞춘 뒤 점선을 잇는다.
+// 자리는 A-06 facilities의 latitude · longitude다 (지하철은 줄에 적힌 출구). 거리는 A-06의 직선거리를 그대로 쓴다 (줄과 같은 숫자가 나오게).
+// 창을 30%로 내리고, 다 내려오면 고른 아파트와 그 시설이 둘 다 보이게 지도를 맞춘 뒤 점선을 잇는다.
 const FACILITY_SCHOOL_KINDS = ['elementary', 'middle', 'high', 'university'];
 function showFacilityOnMap(kindName, item) {
   const base = FACILITY_SCHOOL_KINDS.includes(kindName) ? 'school' : kindName;
   const kind = typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((entry) => entry.kind === base) : null;
   const apartment = selectedApartment();
-  const services = window.kakao && kakao.maps.services;
-  if (!mapState.map || !kind || !item || !item.place_name || !apartment || !services) return;
-  closeFacilityName();
-  const seq = ++mapState.facilityFindSeq; // 찾는 사이에 다른 줄을 누르면 앞의 것을 버린다
-  findFacilityPlace(item, apartment, kind.code).then((place) => {
-    if (!place || seq !== mapState.facilityFindSeq || !selectedApartment() || selectedApartment().id !== apartment.id) return;
-    mapState.facilityPin = { kind, place };
-    if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
-      mapState.facilityFit = false;
-      fitFacilityPin();
-    }
-  });
+  const place = facilityPlace(item);
+  if (!mapState.map || !kind || !place || !apartment) return;
+  clearFacilities(); // 앞에서 띄운 시설 아이콘은 뗀다. 지도에는 늘 하나만
+  mapState.facilityPin = { kind, place };
+  if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
+    mapState.facilityFit = false;
+    fitFacilityPin(); // 이미 30%면 바로 맞춘다
+    return;
+  }
   mapState.facilityFit = true;
-  if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) return; // 이미 30%면 찾는 대로 맞춘다
   sheet.show('30', 'apartment');
 }
 
-// A-06의 시설 하나를 카카오 장소 검색으로 찾아 지도에 쓸 장소로 바꾼다. 못 찾으면 null
-// 아파트에서 가까운 순으로 찾고, 이름이 같은 곳(지하철은 그 출구)을 고른다. distance는 A-06 값으로 바꿔 둔다
-// 지하철 출구가 아니면 그 분류(code, 학교 SC4 등) 안에서만 찾는다. 안 그러면 "광주여대점" 같은 가게가 앞에 와서 못 찾는다
-function findFacilityPlace(item, apartment, code) {
-  const { Places, Status, SortBy } = kakao.maps.services;
-  const station = String(item.place_name).split(' ')[0];
-  const exit = item.kind === 'subway' && item.exit_no !== null && item.exit_no !== undefined ? Number(item.exit_no) : null;
-  const query = exit !== null ? `${station} ${exit}번출구` : item.place_name;
-  const radius = Math.min(20000, Math.max(500, Math.round(Number(item.distance) * 1.5) + 300));
-  const matches = (place) => (exit !== null
-    ? place.place_name.startsWith(station) && new RegExp(`\\s${exit}번\\s*출구$`).test(place.place_name)
-    : place.place_name === item.place_name);
-  return new Promise((resolve) => {
-    try {
-      new Places().keywordSearch(query, (data, status) => {
-        const found = status === Status.OK ? (data || []).find(matches) || null : null;
-        resolve(found ? { ...found, distance: Number(item.distance) } : null);
-      }, {
-        location: toLatLng(apartment), radius, sort: SortBy.DISTANCE, ...(exit === null && code ? { category_group_code: code } : {}),
-      });
-    } catch (error) {
-      resolve(null);
-    }
-  });
+// A-06의 시설 하나를 지도에 쓸 장소 { id, place_name, x(경도), y(위도), distance }로 바꾼다. 좌표가 없으면 null
+// 지하철은 줄에 적힌 출구의 자리이므로 이름에 출구를 붙인다 ("김대중컨벤션센터역 광주1호선 5번 출구")
+function facilityPlace(item) {
+  if (!item || !item.place_name || item.latitude === null || item.latitude === undefined) return null;
+  const exit = item.kind === 'subway' && item.exit_no !== null && item.exit_no !== undefined ? ` ${item.exit_no}번 출구` : '';
+  return {
+    id: `${item.kind}:${item.place_name}${exit}`,
+    place_name: `${item.place_name}${exit}`,
+    x: Number(item.longitude),
+    y: Number(item.latitude),
+    distance: Number(item.distance),
+  };
 }
 
 // 창이 다 내려온 뒤 한 번 (onSheetChange). 맞출 것이 있으면 맞추고 true
@@ -770,8 +597,9 @@ function drawFacilityLink() {
   button.setAttribute('aria-label', `${button.getAttribute('aria-label').split(' · ')[0]} · 고른 아파트에서 ${text}`);
 
   const box = document.createElement('div');
-  box.className = 'facility-link';
-  box.style.setProperty('--facility-color', color);
+  // 색은 아이콘과 같은 이름(.facility--sw8 등)으로 정한다. 방금 단 아이콘은 아직 화면에 붙기 전이라 색을 읽을 수 없을 때가 있다
+  box.className = `facility-link facility--${String(facilityOpen.kindCode || '').toLowerCase()}`;
+  if (color) box.style.setProperty('--facility-color', color);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'facility-link__svg');
   svg.setAttribute('aria-hidden', 'true');

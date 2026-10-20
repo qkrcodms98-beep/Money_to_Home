@@ -69,7 +69,7 @@ const APT_INFO_TITLE = '기본 정보'; // 목업 C6 (4022:1279). 비슷한 아�
 // 주변 시설 (FR-MAP-23, 와이어프레임 C6). kind는 A-06 facilities의 kind
 const APT_NEAR_TITLE = '주변 시설';
 // icon: 줄 앞의 작은 그림 (24 × 24 SVG path. 직접 그린 단순한 모양)
-// code: 카카오 장소 분류. 지도 위 시설 아이콘(map-view.js)이 쓴다
+// code: 카카오 장소 분류. 지도에 띄운 시설 아이콘의 색 이름(map.css .facility--sw8 등)에 쓴다
 const APT_NEAR_KINDS = [
   { kind: 'subway', code: 'SW8', label: '지하철역', icon: 'M8 2h8a4 4 0 0 1 4 4v9a3 3 0 0 1-3 3l2 3h-2.4l-2-3H9.4l-2 3H5l2-3a3 3 0 0 1-3-3V6a4 4 0 0 1 4-4zM6 6v4h12V6H6zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm8 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z' },
   { kind: 'school', code: 'SC4', label: '학교', icon: 'M12 3l10 5-10 5L2 8l10-5zM6 11.2l6 3 6-3V16c0 1.9-2.7 4-6 4s-6-2.1-6-4v-4.8zM20 9.5h1.5V15H20V9.5z' },
