@@ -14,7 +14,14 @@
   --shadow-control: 0 2px 8px rgba(0, 0, 0, 0.16); /* 지도 버튼, 범례 */
   --shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.3); /* 목록 보기 */
   --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.22); /* 말풍선 B */
-  --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라 */
+  --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라. 구를 알면 아래 구 색을 쓴다 */
+  /* 구마다 색 (2026-10-20 팀장 결정). 구 · 동 표시가 쓴다.
+     고른 구 · 동의 경계와 동 이름표는 예전 연보라(--boundary-picked) 그대로 둔다 (구 색까지 쓰면 산만해서, 2026-10-20 팀장 결정) */
+  --gu-gwangsan: #5b8fc9; /* 광산구 */
+  --gu-buk: #e98243; /* 북구 */
+  --gu-seo: #369ba5; /* 서구 */
+  --gu-dong: #e56670; /* 동구 */
+  --gu-nam: #ad8968; /* 남구 */
 
   /* 광주 5개 구 경계 (P-05 ⑪, FR-MAP-28). js/boundary.js가 읽어 카카오맵의 선과 면에 쓴다. 굵기와 불투명도는 boundary.js에 있다.
      경계는 지도를 이해시키는 보조 선이라 말풍선보다 눈에 띄지 않게 회색으로 두고, 고른 지역만 동 표시와 같은 연보라로 칠한다. */
@@ -248,6 +255,19 @@
 .dong-marker--gu .dong-marker__count {
   font-size: var(--text-value);
   line-height: 28px;
+}
+
+/* 구마다 색 (2026-10-20 팀장 결정). 구 표시와 동 표시 모두 그 구의 색이다.
+   바탕 · 테두리는 위의 --color-dong을 쓰므로 색만 바꾼다. 글씨는 흰색 그대로 (map-view.js가 data-gu를 단다) */
+.dong-marker[data-gu="광산구"] { --color-dong: var(--gu-gwangsan); }
+.dong-marker[data-gu="북구"] { --color-dong: var(--gu-buk); }
+.dong-marker[data-gu="서구"] { --color-dong: var(--gu-seo); }
+.dong-marker[data-gu="동구"] { --color-dong: var(--gu-dong); }
+.dong-marker[data-gu="남구"] { --color-dong: var(--gu-nam); }
+
+/* 구 표시는 동 표시(78%)보다 진하게 (2026-10-20 팀장 결정). 목표할 곳이 없는 구(.dong-marker--empty)는 그대로 옅게 */
+.dong-marker--gu:not(.dong-marker--empty) {
+  background: color-mix(in srgb, var(--color-dong) 92%, transparent);
 }
 
 /* 목표할 수 있는 곳이 없는 동은 점선 테두리에 더 옅은 바탕 */
