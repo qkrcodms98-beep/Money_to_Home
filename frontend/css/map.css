@@ -865,10 +865,10 @@
 .facility--sw8 { --facility-color: #078982; }
 .facility--sc4 { --facility-color: #558ccb; }
 .facility--mt1 { --facility-color: #ea9e35; }
-.facility--cs2 { --facility-color: #dcab21; }
+.facility--cs2 { --facility-color: #ffc832; }
 .facility--hp8 { --facility-color: #ce5364; }
 /* 버스정류장 (2026-10-20 세환): 카카오 지도 바탕의 버스정류장 아이콘과 같은 파랑, 둥근 네모. 지도 화면에서 뽑은 값이다 */
-.facility--bus { --facility-color: #2b3a8c; } /* 남색 (2026-10-20 시안 2). 카카오의 파란 정류장 아이콘, 지하철(청록)과 구별되게. 초록은 지하철과 겹쳐 보였고 검정은 너무 무거웠다 */
+.facility--bus { --facility-color: #0936a8; } /* 남색 (2026-10-20 시안 2). 카카오의 파란 정류장 아이콘, 지하철(청록)과 구별되게. 초록은 지하철과 겹쳐 보였고 검정은 너무 무거웠다 */
 
 .facility__dot {
   display: flex;
@@ -1064,6 +1064,11 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
+}
+
+/* 접음 (map-view.js의 renderLegend). 모바일은 범례 · 체크 칸을 숨기고 동그란 단추만 남긴다. 웹은 map-web.css가 옆으로 밀어 넣는다 */
+.facility-tab--closed .map-key {
+  display: none;
 }
 
 .facility-tab[hidden],

@@ -655,6 +655,77 @@
     text-decoration: underline;
   }
 
+  /* 범례 + 시설 체크 (map.css의 .facility-tab): 지도 왼쪽 위 모서리에 붙인 상자. 접고 펼 때 왼쪽으로 미끄러진다 (2026-10-20 팀장 결정).
+     여닫는 것은 목록 · 아파트 패널과 같은 얇은 손잡이(상자 오른쪽 끝)다. 접어도 손잡이는 지도 왼쪽 끝에 남는다.
+     예전의 동그란 위치 단추와 반투명 흰 상자 · 흐림은 웹에서 쓰지 않는다 */
+  .facility-tab,
+  .facility-tab:has(.facility-tab__button[aria-expanded='true']) {
+    top: 14px;
+    bottom: auto;
+    left: 0;
+    padding: 6px 4px 6px 8px;
+    border: 1px solid var(--new-sheet-line, var(--color-line));
+    border-left: 0;
+    border-radius: 0 10px 10px 0;
+    background: var(--color-bg);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition: transform 0.25s ease;
+  }
+
+  .facility-tab--closed .map-key {
+    display: flex; /* 웹은 숨기지 않고 밀어 넣는다 */
+  }
+
+  .facility-tab--closed,
+  .facility-tab--closed:has(.facility-tab__button) {
+    transform: translateX(-100%);
+  }
+
+  .facility-tab__button,
+  .facility-tab:has(.facility-tab__button[aria-expanded='true']) .facility-tab__button {
+    position: absolute;
+    top: 10px;
+    left: 100%;
+    order: 0;
+    justify-content: center;
+    width: 16px;
+    height: 56px;
+    margin: 0 0 0 0;
+    border: 1px solid var(--new-sheet-line, var(--color-line));
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+    background: var(--color-bg);
+    color: var(--color-text-sub);
+    font-size: 16px;
+    font-weight: var(--font-bold);
+    line-height: 1;
+  }
+
+  .facility-tab__button::before {
+    content: '‹';
+  }
+
+  .facility-tab__button[aria-expanded='false']::before {
+    content: '›';
+  }
+
+  .facility-tab__button:hover {
+    color: var(--color-text);
+  }
+
+  .facility-tab__round {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .facility-tab,
+    .facility-tab:has(.facility-tab__button[aria-expanded='true']) {
+      transition: none;
+    }
+  }
+
   /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 손잡이) */
   .list__close {
     display: none !important;

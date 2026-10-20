@@ -2499,8 +2499,11 @@ function renderLackSwitch() {
 
 function renderLegend() {
   const open = store.get('map').legend_open !== false; // 처음부터 펼쳐 둔다
-  document.getElementById('legend-toggle').setAttribute('aria-expanded', String(open));
-  document.getElementById('legend-list').hidden = !open;
+  const button = document.getElementById('legend-toggle');
+  button.setAttribute('aria-expanded', String(open));
+  button.setAttribute('aria-label', open ? '범례와 주변 시설 접기' : '범례와 주변 시설 펴기');
+  // 접어도 문서에서 빼지 않고 표시만 단다. 모바일은 숨기고(map.css), 웹은 왼쪽으로 미끄러져 들어간다(map-web.css, 2026-10-20)
+  document.getElementById('facility-tab').classList.toggle('facility-tab--closed', !open);
 }
 
 // ───────── 동작 ─────────
