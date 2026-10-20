@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="css/common.css?v=20261019-7">
   <!-- ?v= 는 버전 표시다. 이 화면이 부르는 CSS나 JS를 고치면 그 파일의 숫자를 올린다. 브라우저가 예전 파일을 캐시에서 꺼내 쓰지 않게 한다. -->
   <link rel="stylesheet" href="css/list.css?v=20261020-4">
-  <link rel="stylesheet" href="css/map.css?v=20261020-13">
-  <link rel="stylesheet" href="css/sheet.css?v=20261020-10">
+  <link rel="stylesheet" href="css/map.css?v=20261020-24">
+  <link rel="stylesheet" href="css/sheet.css?v=20261020-11">
   <link rel="stylesheet" href="css/similar.css?v=20261015-3">
   <link rel="stylesheet" href="css/glossary.css?v=20261015-2">
   <link rel="stylesheet" href="css/scenario.css?v=20261015-2">
@@ -140,19 +140,7 @@
       </div>
     </div>
 
-    <!-- 왼쪽 위(검색 줄 아래): 범례 (처음부터 펼침), 안내 아이콘. 2026-10-18 새 스타일에서 왼쪽 아래에서 옮겼다 -->
-    <div class="legend" id="legend">
-      <button type="button" class="legend__head" id="legend-toggle" aria-expanded="true" aria-controls="legend-list">
-        <span class="legend__title">범례</span>
-        <span class="legend__arrow" aria-hidden="true">▾</span>
-      </button>
-      <ul class="legend__list" id="legend-list">
-        <li class="legend__item"><span class="legend__swatch legend__swatch--now"></span>지금<span class="visually-hidden"> 가능</span></li>
-        <li class="legend__item"><span class="legend__swatch legend__swatch--within"></span>기간 내<span class="visually-hidden"> 가능</span></li>
-        <li class="legend__item"><span class="legend__swatch legend__swatch--lack"></span><span class="visually-hidden">자금 </span>부족</li>
-      </ul>
-    </div>
-
+    <!-- 왼쪽 위(검색 줄 아래): 안내 아이콘. 범례는 왼쪽 아래 상자로 옮겼다 (2026-10-20) -->
     <div class="info-tip">
       <button type="button" class="info-tip__button" id="info-button" aria-label="표시되는 아파트 안내" aria-expanded="false" aria-controls="info-text">!</button>
       <!-- 실거래 기록 안내 (FR-COMMON-02). 문구의 끝에 수집 기준일을 붙이는 것은 2차 (와이어프레임 B5) -->
@@ -161,11 +149,27 @@
       </p>
     </div>
 
-    <!-- 왼쪽 아래(카카오 로고 위): 동그란 '시설' 단추와 주변 시설 체크 칸. 단추를 누르면 위로 칸이 열린다 (map-view.js의 renderFacilityFilter가 칸을 채운다)
-         아이콘이 나오는 축척(100m 이하)에서 보인다. 모바일은 아파트 창이 닫혀 있을 때만, 웹 배치는 창이 열려 있어도 (2026-10-20) -->
-    <div class="facility-tab" id="facility-tab" hidden>
-      <div class="facility-filter" id="facility-filter" role="group" aria-label="지도에 보일 주변 시설" hidden></div>
-      <button type="button" class="facility-tab__button" id="facility-tab-button" aria-expanded="false" aria-controls="facility-filter" aria-label="지도에 보일 주변 시설 고르기">
+    <!-- 왼쪽 아래(카카오 로고 위): 동그란 위치 단추(늘 보임)와 범례 · 주변 시설 체크 칸. 펼치면 한 상자가 단추까지 감싼다 (2026-10-20 세환. 단추 자리는 그대로).
+         단추를 누르면 상자를 접고 편다. 처음에는 펼침, 접은 상태는 기억한다 (map-view.js의 renderLegend)
+         위: 말풍선 구분(지금 · 기간 내 · 부족)과 선택한 아파트
+         아래(옅은 선 밑): 주변 시설 체크 칸. map-view.js의 renderFacilityFilter가 채운다. 축척과 상관없이 늘 보인다 (아이콘은 100m 이하에서만 뜬다)
+         모바일은 아파트 창이 열리면 상자를 숨기고(창에 가린다), 웹 배치는 창이 열려 있어도 보인다 -->
+    <div class="facility-tab" id="facility-tab">
+      <div class="map-key" id="legend-list">
+        <ul class="legend__list">
+          <li class="legend__item"><span class="legend__swatch legend__swatch--now"></span>지금<span class="visually-hidden"> 가능</span></li>
+          <li class="legend__item"><span class="legend__swatch legend__swatch--within"></span>기간 내<span class="visually-hidden"> 가능</span></li>
+          <li class="legend__item"><span class="legend__swatch legend__swatch--lack"></span><span class="visually-hidden">자금 </span>부족</li>
+        </ul>
+        <ul class="legend__list map-key__marks">
+          <li class="legend__item">
+            <svg class="map-key__pin" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1C6 1 1.5 5.4 1.5 11.2 1.5 18.6 12 31 12 31s10.5-12.4 10.5-19.8C22.5 5.4 18 1 12 1zm0 14.3a4.1 4.1 0 1 1 0-8.2 4.1 4.1 0 0 1 0 8.2z"/></svg>
+            선택한 아파트
+          </li>
+        </ul>
+        <div class="facility-filter" id="facility-filter" role="group" aria-label="지도에 보일 주변 시설"></div>
+      </div>
+      <button type="button" class="facility-tab__button" id="legend-toggle" aria-expanded="true" aria-controls="legend-list" aria-label="범례와 주변 시설 보기">
         <span class="facility-tab__round">
           <svg class="facility-tab__pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
         </span>
@@ -293,8 +297,8 @@
   <script src="js/share.js?v=20261019-2"></script>
   <script src="js/apartment.js?v=20261020-10"></script>
   <!-- 광주 5개 구 경계 (FR-MAP-28). map-view.js가 쓰므로 그보다 먼저 불러온다 -->
-  <script src="js/boundary.js?v=20261020-3"></script>
-  <script src="js/map-view.js?v=20261020-28"></script>
+  <script src="js/boundary.js?v=20261020-4"></script>
+  <script src="js/map-view.js?v=20261020-29"></script>
   <!-- 웹(1024px 이상) 배치 (박채은). 아래 창(sheet.js)을 왼쪽 패널로 쓰게 감싼다. 그래서 맨 마지막에 둔다 -->
   <script src="js/map-web.js?v=20261020-10"></script>
 </body>

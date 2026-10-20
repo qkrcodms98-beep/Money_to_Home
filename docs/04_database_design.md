@@ -40,7 +40,8 @@
 | `apartments` | 아파트. 주소, 준공 연도, 좌표, 세대수 | 약 1,054 | 1차 | FR-DATA-04, 13, T-DATA-08 |
 | `trades` | 실거래 한 건씩 | 약 16,919 | 1차 | FR-DATA-02, 09, T-DATA-08 |
 | `apartment_prices` | 아파트와 면적대별 평균가, 거래 건수, 공급면적. 화면이 읽는 표 | 약 1,848 | 1차 | FR-DATA-02, 12, FR-APT-01, 16 |
-| `apartment_facilities` | 아파트마다 주변 시설 종류별 가장 가까운 곳, 거리, 반경 안의 수 | 아파트 × 9 (약 9,500) | 3차 | FR-MAP-23 |
+| `apartment_facilities` | 아파트마다 주변 시설 종류별 가장 가까운 곳, 거리, 반경 안의 수 | 아파트 × 10 (약 10,550) | 3차 | FR-MAP-23 |
+| `bus_stops` | 광주 5개 구의 시내버스 정류장. 이름과 좌표 (2026-10-20) | 약 4,267 | 3차 | FR-MAP-23 |
 | `data_collections` | 자료의 수집 기준일 | 자료 종류 × 수집 횟수 | 2차 | FR-DATA-05, T-DATA-10 |
 | `saved_results` | 회원이 저장한 계산 결과 | 저장 횟수 | 3차 | FR-RESULT-07, 08, T-RESULT-06 |
 
@@ -166,6 +167,12 @@ erDiagram
         DECIMAL latitude "위도"
         DECIMAL longitude "경도"
     }
+    bus_stops {
+        VARCHAR stop_id PK "정류장 번호"
+        VARCHAR name "이름"
+        DECIMAL latitude "위도"
+        DECIMAL longitude "경도"
+    }
     data_collections {
         INT id PK "번호"
         VARCHAR dataset "자료 종류"
@@ -214,6 +221,7 @@ erDiagram
 | `users` → `saved_results` | 1 : 여러 | 회원이 결과를 여러 개 저장한다. |
 | `apartments`, `loan_products` → `saved_results` | 0 또는 1 : 여러 | 저장한 결과가 가리키는 아파트와 상품. 원본이 없어져도 저장한 결과는 남는다. |
 | `data_collections` | 혼자 | 다른 표와 연결하지 않는다. |
+| `bus_stops` | 혼자 | 다른 표와 연결하지 않는다. 아파트와의 거리는 화면이 좌표로 잰다 (2026-10-20). |
 
 ---
 
@@ -406,13 +414,23 @@ erDiagram
 | 칸 | 형식 | 빈 값 | 설명 | 근거 |
 | --- | --- | --- | --- | --- |
 | `apartment_id` | INT UNSIGNED | | `apartments.id`. 아파트를 지우면 같이 지운다. 기본키의 앞 | FR-MAP-23 |
-| `kind` | VARCHAR(20) | | `subway`, `school`, `mart`, `convenience`, `hospital`, `elementary`, `middle`, `high`, `university`. 기본키의 뒤 | FR-MAP-23 |
+| `kind` | VARCHAR(20) | | `subway`, `school`, `mart`, `convenience`, `hospital`, `elementary`, `middle`, `high`, `university`, `bus`(2026-10-20 더함. 가장 가까운 버스정류장, `bus_stops`에서 계산). 기본키의 뒤 | FR-MAP-23 |
 | `place_name` | VARCHAR(100) | ○ | 가장 가까운 곳의 이름. 반경 안에 없으면 비운다 (화면은 "근처에 없음") | |
 | `distance` | INT UNSIGNED | ○ | 직선거리. m. 지하철역은 가장 가까운 출구까지 | |
 | `exit_no` | TINYINT UNSIGNED | ○ | 지하철역의 가장 가까운 출구 번호. 못 찾으면 비우고 `distance`는 역까지 | |
 | `place_count` | INT UNSIGNED | | 반경 안의 수. 병원은 동물병원을 뺀 수 | |
 | `radius` | INT UNSIGNED | | 찾은 반경. m. 대학교만 5000, 나머지 1000 | |
 | `latitude`, `longitude` | DECIMAL(10,7) | ○ | 그 곳의 좌표. 지하철역은 가장 가까운 출구. 지도에서 고른 아파트와 점선으로 잇는다 (2026-10-19 더함) | FR-MAP-23 |
+
+### 3.7b `bus_stops` 버스정류장 (3차, 2026-10-20)
+
+광주 5개 구의 시내버스 정류장마다 한 줄이다. `data/load_facilities.py`가 `data/bus_stops_gwangju.csv`(국토교통부 「전국 버스정류장 위치정보」에서 광주만 고른 파일)를 넣는다. 카카오 장소 검색은 시내버스 정류장을 돌려주지 않아 이 자료를 쓴다. 지도는 화면 안의 정류장을 A-28로 읽어 역세권과 상관없이 모두 띄운다 (아파트마다 가장 가까운 한 곳만 띄우면 카카오맵보다 훨씬 적게 보였다). 넣을 때마다 전부 지우고 다시 넣고, 받은 날은 `data_collections`(`bus_stops`)에 남긴다.
+
+| 칸 | 형식 | 빈 값 | 설명 | 근거 |
+| --- | --- | --- | --- | --- |
+| `stop_id` | VARCHAR(20) | | 정류장 번호. 원본의 정류장번호 (예: `KJB3908`). 기본키 | FR-MAP-23 |
+| `name` | VARCHAR(100) | | 정류장 이름. 길 건너편 정류장은 이름이 같고 번호가 다르다 | |
+| `latitude`, `longitude` | DECIMAL(10,7) | | 좌표. (위도, 경도)에 인덱스를 두어 지도 영역으로 찾는다 | FR-MAP-23 |
 
 ### 3.7 `data_collections` 수집 기준일
 
@@ -421,7 +439,7 @@ erDiagram
 | 칸 | 형식 | 빈 값 | 설명 | 근거 |
 | --- | --- | --- | --- | --- |
 | `id` | INT UNSIGNED, 자동 증가 | | 기본키 | |
-| `dataset` | VARCHAR(20) | | 자료 종류. `trades`, `coordinates`, `supply_area`, `households`, `facilities` | FR-DATA-05 |
+| `dataset` | VARCHAR(20) | | 자료 종류. `trades`, `coordinates`, `supply_area`, `households`, `facilities`, `bus_stops` | FR-DATA-05 |
 | `source` | VARCHAR(100) | | 받은 곳. "실거래가 API", "실거래가 공개시스템 CSV"처럼 적는다. | |
 | `base_date` | DATE | | 기준일. 거래는 수집한 날, 세대수는 자료의 기준 시점 | FR-DATA-05, FR-APT-15 |
 | `row_count` | INT UNSIGNED | ○ | 넣은 줄 수 | |
@@ -498,6 +516,7 @@ erDiagram
 | 9 | 세대수를 붙인다. | `apartments` | 전부 다시 붙인다. |
 | 10 | 기준일을 남긴다. | `data_collections` | 줄을 하나 더한다. |
 | 11 | 주변 시설을 넣는다 (`data/load_facilities.py`). 좌표가 있어야 한다. | `apartment_facilities` | 전부 지우고 다시 넣는다. 기준일은 10과 같이 남긴다. |
+| 12 | 버스정류장을 넣는다 (`data/load_facilities.py`의 `--from-file`, `--add-bus`가 11과 같이 한다). | `bus_stops` | 전부 지우고 다시 넣는다. 기준일은 10과 같이 남긴다. |
 
 ### 5.1 실거래 CSV의 열이 들어가는 곳
 
@@ -549,6 +568,7 @@ erDiagram
 | 8 | 내 재무정보 조회와 저장 | `profiles` | 기본키 | FR-PROFILE-04, 05 |
 | 9 | 수집 기준일 | `data_collections` | | FR-DATA-05 |
 | 10 | 내가 저장한 결과 목록 | `saved_results` | (회원, 저장한 시각) | FR-RESULT-08 |
+| 11 | 지도에 보이는 영역의 버스정류장 (A-28) | `bus_stops` | (위도, 경도) | FR-MAP-23 |
 
 - **구분과 개수는 DB에서 세지 않는다.** 지금 가능, 기간 내 가능, 자금 부족은 사용자의 보유자산과 대출 선택에 따라 달라진다. 서버가 2번의 결과를 받아 공통 계산 모듈로 구분하고(C-05, C-09), 동별·구별 개수와 표시 위치(그 동 아파트 좌표의 평균)도 그 자리에서 센다 (FR-MAP-20, 21, 31).
 - 조합이 광주 5개 구 전체로 1,848개뿐이라 전부 읽어 계산해도 3초 기준(NFR-01)에 충분하다고 본다. 실제 속도는 만든 뒤 재서 확인한다.
@@ -694,6 +714,7 @@ DB에 값이 있어야 지킬 수 있는 요구사항만 적었다.
 | FR-MAP-01, 07, 22, FR-DATA-04 | `apartments.latitude`, `longitude`, `geocode_status` |
 | FR-MAP-08 | `apartments.name` |
 | FR-MAP-20, 21, 31 | `apartments.gu`, `dong`, 좌표. 개수는 서버가 센다. |
+| FR-MAP-23 | `apartment_facilities`, `bus_stops` |
 | FR-DATA-02, 03, 09, 10 | `trades`의 모든 칸 |
 | FR-DATA-05 | `data_collections.base_date` |
 | FR-DATA-12 | `apartment_prices.supply_area`, `supply_area_method` |
@@ -861,7 +882,7 @@ CREATE TABLE IF NOT EXISTS apartment_prices (
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS apartment_facilities (
   apartment_id  INT UNSIGNED      NOT NULL COMMENT '아파트',
-  kind          VARCHAR(20)       NOT NULL COMMENT '종류. subway, school, mart, convenience, hospital, elementary, middle, high, university',
+  kind          VARCHAR(20)       NOT NULL COMMENT '종류. subway, school, mart, convenience, hospital, elementary, middle, high, university, bus',
   place_name    VARCHAR(100)      NULL     COMMENT '가장 가까운 곳의 이름. 반경 안에 없으면 비운다',
   distance      INT UNSIGNED      NULL     COMMENT '아파트에서 그곳까지의 직선거리. m. 지하철역은 가장 가까운 출구까지',
   exit_no       TINYINT UNSIGNED  NULL     COMMENT '지하철역의 가장 가까운 출구 번호. 출구를 못 찾으면 비우고 distance는 역까지',
@@ -878,11 +899,25 @@ ALTER TABLE apartment_facilities ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10,7
 ALTER TABLE apartment_facilities ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL COMMENT '경도' AFTER latitude;
 
 -- ------------------------------------------------------------------
+-- 버스정류장 (3차, FR-MAP-23, 2026-10-20). 광주 5개 구의 시내버스 정류장마다 한 줄
+-- data/load_facilities.py가 data/bus_stops_gwangju.csv(국토교통부 전국 버스정류장 위치정보)에서 넣는다
+-- 지도가 화면 안 정류장을 A-28로 읽는다. 다시 넣을 때는 전부 지우고 넣는다
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS bus_stops (
+  stop_id    VARCHAR(20)    NOT NULL COMMENT '정류장 번호. 국토교통부 자료의 정류장번호 (예: KJB3908)',
+  name       VARCHAR(100)   NOT NULL COMMENT '정류장 이름',
+  latitude   DECIMAL(10,7)  NOT NULL COMMENT '위도',
+  longitude  DECIMAL(10,7)  NOT NULL COMMENT '경도',
+  PRIMARY KEY (stop_id),
+  KEY ix_bus_stops_lat_lng (latitude, longitude)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='버스정류장';
+
+-- ------------------------------------------------------------------
 -- 수집 기준일 (2차). 자료를 넣을 때마다 한 줄
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS data_collections (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '번호',
-  dataset     VARCHAR(20)  NOT NULL COMMENT '자료 종류. trades, coordinates, supply_area, households, facilities',
+  dataset     VARCHAR(20)  NOT NULL COMMENT '자료 종류. trades, coordinates, supply_area, households, facilities, bus_stops',
   source      VARCHAR(100) NOT NULL COMMENT '받은 곳',
   base_date   DATE         NOT NULL COMMENT '기준일',
   row_count   INT UNSIGNED NULL     COMMENT '줄 수',

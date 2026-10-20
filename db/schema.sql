@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS apartment_prices (
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS apartment_facilities (
   apartment_id  INT UNSIGNED      NOT NULL COMMENT '아파트',
-  kind          VARCHAR(20)       NOT NULL COMMENT '종류. subway, school, mart, convenience, hospital, elementary, middle, high, university',
+  kind          VARCHAR(20)       NOT NULL COMMENT '종류. subway, school, mart, convenience, hospital, elementary, middle, high, university, bus',
   place_name    VARCHAR(100)      NULL     COMMENT '가장 가까운 곳의 이름. 반경 안에 없으면 비운다',
   distance      INT UNSIGNED      NULL     COMMENT '아파트에서 그곳까지의 직선거리. m. 지하철역은 가장 가까운 출구까지',
   exit_no       TINYINT UNSIGNED  NULL     COMMENT '지하철역의 가장 가까운 출구 번호. 출구를 못 찾으면 비우고 distance는 역까지',
@@ -169,11 +169,25 @@ ALTER TABLE apartment_facilities ADD COLUMN IF NOT EXISTS latitude  DECIMAL(10,7
 ALTER TABLE apartment_facilities ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7) NULL COMMENT '경도' AFTER latitude;
 
 -- ------------------------------------------------------------------
+-- 버스정류장 (3차, FR-MAP-23, 2026-10-20). 광주 5개 구의 시내버스 정류장마다 한 줄
+-- data/load_facilities.py가 data/bus_stops_gwangju.csv(국토교통부 전국 버스정류장 위치정보)에서 넣는다
+-- 지도가 화면 안 정류장을 A-28로 읽는다. 다시 넣을 때는 전부 지우고 넣는다
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS bus_stops (
+  stop_id    VARCHAR(20)    NOT NULL COMMENT '정류장 번호. 국토교통부 자료의 정류장번호 (예: KJB3908)',
+  name       VARCHAR(100)   NOT NULL COMMENT '정류장 이름',
+  latitude   DECIMAL(10,7)  NOT NULL COMMENT '위도',
+  longitude  DECIMAL(10,7)  NOT NULL COMMENT '경도',
+  PRIMARY KEY (stop_id),
+  KEY ix_bus_stops_lat_lng (latitude, longitude)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='버스정류장';
+
+-- ------------------------------------------------------------------
 -- 수집 기준일 (2차). 자료를 넣을 때마다 한 줄
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS data_collections (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '번호',
-  dataset     VARCHAR(20)  NOT NULL COMMENT '자료 종류. trades, coordinates, supply_area, households, facilities',
+  dataset     VARCHAR(20)  NOT NULL COMMENT '자료 종류. trades, coordinates, supply_area, households, facilities, bus_stops',
   source      VARCHAR(100) NOT NULL COMMENT '받은 곳',
   base_date   DATE         NOT NULL COMMENT '기준일',
   row_count   INT UNSIGNED NULL     COMMENT '줄 수',

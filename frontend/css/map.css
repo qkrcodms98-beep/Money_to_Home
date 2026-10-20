@@ -867,6 +867,8 @@
 .facility--mt1 { --facility-color: #ea9e35; }
 .facility--cs2 { --facility-color: #dcab21; }
 .facility--hp8 { --facility-color: #ce5364; }
+/* 버스정류장 (2026-10-20 세환): 카카오 지도 바탕의 버스정류장 아이콘과 같은 파랑, 둥근 네모. 지도 화면에서 뽑은 값이다 */
+.facility--bus { --facility-color: #4a8fe4; }
 
 .facility__dot {
   display: flex;
@@ -1030,26 +1032,99 @@
   }
 }
 
-/* ───────── 시설 단추와 체크 칸 (map-view.js의 renderFacilityFilter) ─────────
-   지도 왼쪽 아래, 카카오 로고 바로 위. '시설' 단추를 누르면 위로 체크 칸이 열린다. 자리는 임시다 (2026-10-19, 세환이 나중에 정한다).
-   아이콘이 나오는 축척(100m 이하)에서, 아파트 창이 닫혀 있을 때만 보인다.
-   단추는 동그란 위치 그림(시안 2). 종류 그림은 지도 아이콘과 같은 모양과 색이다 (.facility--sw8 등의 --facility-color).
-   줄마다, 단추마다 누르는 자리는 44px 높이다. */
+/* ───────── 범례 + 시설 체크 칸 (map.html의 .facility-tab, map-view.js의 renderLegend · renderFacilityFilter) ─────────
+   모바일은 지도 왼쪽 아래, 카카오 로고 바로 위 (2026-10-20 세환. 범례를 왼쪽 위에서 내려 체크 칸과 합쳤다).
+   웹(1024px 이상)은 지도 왼쪽 위 (2026-10-20 세환). 단추가 위에 있고 상자는 단추 아래로 펼쳐진다.
+   동그란 위치 단추는 늘 같은 자리에 있고, 누르면 범례 · 체크 칸을 접고 편다 (처음에는 펼침, 접은 상태는 기억).
+   펼치면 반투명 흰 상자 하나가 범례, 체크 칸, 단추까지 감싼다. 단추는 모바일은 상자 안 왼쪽 아래(2026-10-20 세환이 그려 준 대로), 웹은 왼쪽 위.
+   상자 위: 말풍선 구분(지금 · 기간 내 · 부족)과 선택한 아파트. 글자와 집 모양은 new-style.css의 .legend__list · .legend__item을 그대로 쓴다.
+   상자 아래(옅은 선 밑): 시설 체크 칸. 축척과 상관없이 늘 보인다. 체크는 줄 오른쪽 끝. 줄마다 누르는 자리는 44px 높이다.
+   종류 그림은 지도 아이콘과 같은 모양과 색이다 (.facility--sw8 등의 --facility-color). */
 .facility-tab {
+  /* 바탕은 예전 범례 상자와 같은 반투명 흰색 (new-style.css .legend). common.css에 없는 값이라 여기서만 쓰는 변수로 둔다 */
+  --map-key-bg: rgba(255, 255, 255, 0.86);
+  --map-key-line: rgba(60, 60, 67, 0.18); /* 범례와 체크 칸 사이의 옅은 선 */
+  --map-key-pad: 6px; /* 펼쳤을 때 상자 안쪽 여백. 그만큼 상자를 바깥으로 넓혀 단추 자리가 바뀌지 않게 한다 */
+  --map-key-left: 10px;
   position: absolute;
-  bottom: 22px; /* 카카오 로고(지도 왼쪽 아래) 바로 위. 로고는 이용 약관상 가리지 않는다 (2026-10-19 더 내림) */
-  left: 8px;
+  bottom: 22px; /* 단추가 카카오 로고(지도 왼쪽 아래) 바로 위. 로고는 이용 약관상 가리지 않는다 */
+  left: var(--map-key-left);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+}
+
+/* 펼침: 상자 하나가 범례 · 체크 칸 · 단추를 감싼다. 안쪽 여백만큼 바깥으로 넓혀 단추는 접었을 때와 같은 자리 */
+.facility-tab:has(.facility-tab__button[aria-expanded='true']) {
+  bottom: calc(22px - var(--map-key-pad));
+  left: calc(var(--map-key-left) - var(--map-key-pad));
+  padding: var(--map-key-pad);
+  border-radius: 10px;
+  background: var(--map-key-bg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .facility-tab[hidden],
+.map-key[hidden],
 .facility-filter[hidden] {
   display: none;
 }
 
+.map-key {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  align-self: stretch;
+  min-width: 132px;
+  padding: 0 6px 0 4px; /* 상자 안쪽 여백(6px)과 더해 왼쪽 10px, 오른쪽 12px. 위아래 여백은 줄마다 높이로 준다 */
+}
+
+.map-key .legend__list {
+  gap: 0;
+  margin: 0;
+  padding-right: 0; /* new-style.css는 예전 범례의 ▾ 자리를 비워 두었다. 이 상자에는 ▾가 없다 */
+}
+
+/* 위쪽(범례) 줄도 아래 체크 칸과 비슷한 크기로 (2026-10-20 세환): 그림 칸 22px, 글자 13px.
+   범례 여섯 줄은 한 덩어리로 보이게 줄 사이 선을 두지 않는다. 선은 범례와 체크 칸 사이에 하나만.
+   누르는 줄이 아니라 높이는 체크 칸(44px)보다 조금 낮은 40px */
+.map-key .legend__item {
+  gap: 8px;
+  height: 40px;
+  color: var(--color-text);
+  font-size: var(--text-help);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+/* 집 모양(지금 · 기간 내 · 부족)은 22px 칸 가운데에 16px로 */
+.map-key .legend__swatch {
+  width: 22px;
+  height: 16px;
+}
+
+/* 선택한 아파트 줄은 2026-10-20 세환이 준 시안 그대로 (지하철역 · 버스정류장 줄은 체크 칸과 겹쳐 뺐다).
+   위의 말풍선 구분 세 줄과 선 없이 이어 둔다 (2026-10-20 세환). 색은 common.css에 없는 시안의 값이라 여기서만 쓰는 변수로 둔다 */
+.map-key__marks {
+  --map-key-pin: #e5355c; /* 선택한 아파트: 진분홍 위치 표시 */
+}
+
+/* 선택한 아파트: 진분홍 위치 표시. 22px 칸 가운데 */
+.map-key__pin {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  fill: var(--map-key-pin);
+}
+
+/* 펼쳤을 때 마지막 체크 줄(버스정류장)과 단추 사이를 조금 띄운다 (2026-10-20 세환). 단추 자리는 그대로이고 상자가 위로 그만큼 커진다 */
+.facility-tab:has(.facility-tab__button[aria-expanded='true']) .facility-tab__button {
+  margin-top: 8px;
+}
+
+/* 동그란 위치 단추 (시안 2). 누르는 자리 44px 안에 지름 40px 반투명 흰 원, 가운데 남색 위치 그림. 상자가 펼쳐져 있으면 남색으로 채운다 */
 .facility-tab__button {
   display: flex;
   align-items: center;
@@ -1061,7 +1136,6 @@
   cursor: pointer;
 }
 
-/* 동그란 단추 (시안 2). 누르는 자리 44px 안에 지름 40px 반투명 흰 원, 가운데 남색 위치 그림 */
 .facility-tab__round {
   display: flex;
   align-items: center;
@@ -1082,7 +1156,6 @@
   fill: currentColor;
 }
 
-/* 열려 있으면 단추를 남색으로 채운다 */
 .facility-tab__button[aria-expanded='true'] .facility-tab__round {
   background: var(--new-chip-on, var(--color-primary));
   color: var(--color-on-primary);
@@ -1093,11 +1166,35 @@
   outline-offset: 2px;
 }
 
+/* 웹 배치(1024px 이상, map-web.css와 같은 폭): 지도 왼쪽 위 (2026-10-20 세환).
+   칩 줄과 안내(!)는 머리 줄로 옮겨 가므로(map-web.js) 예전 범례 자리(map-web.css의 .legend top 14px)가 비어 있다.
+   지도 왼쪽 끝의 목록 접기 단추(.map-web-fold, 폭 16px)에 가리지 않게 왼쪽 26px.
+   단추를 맨 위에 두고(HTML에서는 범례 뒤라 화면 읽기 순서는 그대로) 상자는 단추 아래로 펼친다 */
+@media (min-width: 1024px) {
+  .facility-tab {
+    --map-key-left: 26px;
+    top: 14px;
+    bottom: auto;
+  }
+
+  .facility-tab:has(.facility-tab__button[aria-expanded='true']) {
+    top: calc(14px - var(--map-key-pad));
+    bottom: auto;
+  }
+
+  .facility-tab__button {
+    order: -1;
+  }
+
+  .facility-tab:has(.facility-tab__button[aria-expanded='true']) .facility-tab__button {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+}
+
+/* 체크 칸: 범례 아래 옅은 선으로 나눈다 */
 .facility-filter {
-  padding: 0 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  border-top: 1px solid var(--map-key-line);
 }
 
 .facility-filter__item {
@@ -1113,9 +1210,7 @@
   cursor: pointer;
 }
 
-.facility-filter__item + .facility-filter__item {
-  border-top: 1px solid var(--color-line);
-}
+/* 체크 줄 사이에는 선을 두지 않는다 (2026-10-20 세환. 범례 줄과 같게). 선은 범례와 체크 칸 사이에 하나만 */
 
 
 .facility-filter__input {
@@ -1126,8 +1221,20 @@
   cursor: pointer;
 }
 
+/* 줄의 차례: 그림 · 이름 · (오른쪽 끝) 체크 칸 (2026-10-20 세환. 예전에는 체크 칸이 맨 앞).
+   문서 안의 차례(입력 · 체크 · 그림 · 이름)는 그대로 두어 :checked ~ 규칙이 그대로 듣게 한다 */
+.facility-filter__dot {
+  order: 1;
+}
+
+.facility-filter__item > span:last-child {
+  order: 2;
+}
+
 /* 체크 칸. 켜면 파랑 바탕에 흰 체크 */
 .facility-filter__check {
+  order: 3;
+  margin-left: auto;
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -1174,7 +1281,8 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.facility--sw8 .facility-filter__dot {
+.facility--sw8 .facility-filter__dot,
+.facility--bus .facility-filter__dot {
   border-radius: 6px;
 }
 
@@ -1195,4 +1303,43 @@
 
 .facility-filter__input:not(:checked) ~ span:last-child {
   color: var(--color-text-hint);
+}
+
+/* 버스정류장 아이콘은 지하철역처럼 둥근 네모 (카카오 지도 모양) */
+.facility--bus .facility__dot {
+  border-radius: 6px;
+}
+
+/* ───────── 넓게 볼 때 고른 아파트 (map-view.js의 renderPickedPin) ─────────
+   동 표시 · 구 표시 수준에서 마지막으로 연 아파트 자리에 빨간 위치 표시. 누르면 그 아파트 창을 다시 연다.
+   누르는 자리는 44px, 그림은 아래 끝이 아파트 자리에 오게 그 안의 아래쪽에 둔다 */
+.picked-pin {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.picked-pin__shape {
+  width: 26px;
+  height: 35px;
+  fill: #e5355c; /* 범례의 '선택한 아파트'(.map-key__marks의 --map-key-pin)와 같은 시안 색 */
+  stroke: var(--color-bg);
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.picked-pin:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 안내 ( ! ): 범례가 왼쪽 아래로 내려가 그 자리(왼쪽 위)로 붙인다 (2026-10-20. 예전에는 범례 오른쪽, new-style.css의 left 104px) */
+.map-area .info-tip {
+  left: 10px;
 }

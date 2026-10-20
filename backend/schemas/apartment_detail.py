@@ -28,7 +28,7 @@ class FacilityDetail(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    kind: str  # subway, school, mart, convenience, hospital, elementary, middle, high, university
+    kind: str  # subway, school, mart, convenience, hospital, elementary, middle, high, university, bus(버스정류장)
     place_name: str | None  # 가장 가까운 곳. 반경 안에 없으면 null ("근처에 없음")
     distance: int | None  # 직선거리. m. 지하철역은 가장 가까운 출구까지
     exit_no: int | None  # 지하철역의 출구 번호. 못 찾았으면 null (distance는 역까지)

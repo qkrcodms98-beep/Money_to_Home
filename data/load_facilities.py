@@ -1,4 +1,4 @@
-"""아파트마다 주변 시설(지하철역 · 학교 · 대형마트 · 편의점 · 병원)을 카카오 로컬 API로 찾아 apartment_facilities에 넣는다.
+"""아파트마다 주변 시설(지하철역 · 학교 · 대형마트 · 편의점 · 병원 · 버스정류장)을 카카오 로컬 API로 찾아 apartment_facilities에 넣는다.
 
 요구사항 FR-MAP-23 (와이어프레임 C6). 화면 모양은 안세환, 미리 받아 두는 방식은 2026-10-19 팀장 결정.
 아파트와 좌표는 data/load_trades.py, data/geocode.py가 먼저 DB에 넣어 두어야 한다.
@@ -14,7 +14,15 @@
   python data/load_facilities.py --limit 5          5곳만 찾아 data/facilities.csv에 적고 DB에 넣는다 (구마다 고르게)
   python data/load_facilities.py                    남은 아파트 전부를 찾아 적고 DB에 넣는다. 돌리기 전에 단체방에 알린다
   python data/load_facilities.py --from-file data/facilities.csv
-                                                    카카오를 부르지 않고 파일의 값을 DB에 넣는다 (나머지 세 명)
+                                                    카카오를 부르지 않고 파일의 값을 DB에 넣는다 (나머지 세 명).
+                                                    버스정류장 표(bus_stops)도 data/bus_stops_gwangju.csv로 같이 채운다
+
+  python data/load_facilities.py --add-bus         버스정류장 줄을 data/bus_stops_gwangju.csv로 다시 계산해 넣는다 (2026-10-20 더함).
+                                                    카카오를 부르지 않는다. 몇 초면 끝나고 몇 번을 돌려도 결과가 같다. --dry-run과 같이 쓸 수 있다.
+                                                    버스정류장 표(bus_stops)도 같이 채운다
+  python data/load_facilities.py --make-bus-stops 전국버스정류장위치정보.csv
+                                                    국토교통부 「전국 버스정류장 위치정보」(공공데이터포털 15067528, CP949 CSV)에서
+                                                    광주광역시만 골라 data/bus_stops_gwangju.csv를 만든다. 원본은 크므로(약 20MB) 저장소에 올리지 않는다
 
   --force       data/facilities.csv에 이미 있는 아파트도 다시 찾는다 (시설을 최신으로 바꿀 때). 평소에는 없는 아파트만 찾는다.
 
@@ -30,13 +38,19 @@
   middle       1km    중학교, 같은 방법
   high         1km    고등학교, 같은 방법
   university   5km    대학교, 같은 방법. 1km 안에는 거의 없어 5km
+  bus          1km    data/bus_stops_gwangju.csv(광주BIS 정류장 4,267곳) 가운데 직선거리로 가장 가까운 곳 (2026-10-20 더함).
+                       카카오 장소 검색은 시내버스 정류장을 돌려주지 않아(시외버스 정류장만 나옴) 국토교통부 자료로 계산한다.
+                       지도는 정류장 표(bus_stops, A-28)를 모두 띄우고, 이 줄은 정류장 표를 못 읽을 때만 대신 쓴다. place_count는 1km 안의 정류장 수
   반경 안에 없으면 이름과 거리를 비운다 (화면은 "근처에 없음"). 시설을 지어내지 않는다.
   place_count는 반경 안의 수(카카오의 total_count). 병원은 받은 쪽(최대 45곳)에서 동물병원을 뺀 수다.
   latitude, longitude는 그 곳의 좌표다. 지하철역은 가장 가까운 출구의 좌표 (2026-10-19 더함. 지도에서 아파트와 점선으로 잇는다).
 
 넣는 곳
   apartment_facilities   넣을 때마다 전부 지우고 파일의 값으로 다시 넣는다. 몇 번을 돌려도 결과가 같다
+  bus_stops              data/bus_stops_gwangju.csv의 정류장 전부 (2026-10-20 더함). 지도가 화면 안 정류장을 A-28로 읽는다.
+                         --from-file, --add-bus 때 전부 지우고 다시 넣는다. 표가 없으면 db/schema.sql의 bus_stops 부분을 먼저 실행한다
   data_collections       dataset 'facilities', 기준일은 받은 날 가운데 가장 늦은 날. 마지막 줄과 기준일·줄 수가 같으면 더하지 않는다
+                         버스정류장 표는 dataset 'bus_stops', 기준일은 정류장 자료의 수집일. 같은 규칙
 
 남기는 파일
   data/facilities.csv    받은 결과 (구, 동, 지번, 아파트명, 종류, 이름, 거리, 출구, 수, 반경, 위도, 경도, 받은 날).
@@ -50,6 +64,7 @@
 """
 import argparse
 import csv
+import math
 import os
 import re
 import sys
@@ -82,6 +97,12 @@ SCHOOL_KINDS = [
 ]
 CALLS_PER_APARTMENT = 14  # --dry-run에 보여 줄 어림. 분류 5 + 학교 4 + 병원 쪽 1 + 역이 가까운 곳의 출구 8
 
+# 버스정류장 (2026-10-20). 국토교통부 「전국 버스정류장 위치정보」에서 광주만 고른 파일. 카카오를 부르지 않는다
+BUS_STOPS_PATH = BASE_DIR / "data" / "bus_stops_gwangju.csv"
+BUS_STOPS_COLS = ["stop_id", "name", "latitude", "longitude", "collected_on"]
+BUS_CITY = "광주광역시"  # 원본의 도시명
+EARTH_RADIUS_M = 6371000
+
 SLEEP_SECONDS = 0.05
 MAX_RETRY = 3
 TIMEOUT_SECONDS = 10
@@ -90,6 +111,8 @@ OUT_PATH = BASE_DIR / "data" / "facilities.csv"
 OUT_COLS = ["gu", "dong", "jibun", "name", "kind", "place_name", "distance", "exit_no", "place_count", "radius",
             "latitude", "longitude", "collected_on"]
 SOURCE = "카카오 로컬 API (장소 검색)"
+BUS_SOURCE = "국토교통부 전국 버스정류장 위치정보"
+NO_TABLE = 1146  # MariaDB: 표가 없다
 
 
 class StopAll(Exception):
@@ -227,10 +250,60 @@ def by_school(session, key, apartment, kind, word, radius):
 
 
 def collect_one(session, key, apartment):
-    """아파트 한 곳의 아홉 줄 (값 부분)"""
+    """아파트 한 곳의 아홉 줄 (값 부분). 버스정류장은 카카오가 아니라 파일로 따로 계산한다 (run_add_bus)"""
     rows = [by_category(session, key, apartment, kind, code) for kind, code in CATEGORY_KINDS]
     rows += [by_school(session, key, apartment, kind, word, radius) for kind, word, radius in SCHOOL_KINDS]
     return rows
+
+
+# ------------------------------------------------------------------
+# 2-1. 버스정류장 (파일로 계산. 카카오를 부르지 않는다)
+# ------------------------------------------------------------------
+def make_bus_stops(source):
+    """국토교통부 「전국 버스정류장 위치정보」 CSV(CP949)에서 광주만 골라 BUS_STOPS_PATH로 쓴다"""
+    with open(source, newline="", encoding="cp949") as f:
+        rows = [r for r in csv.DictReader(f) if r.get("도시명") == BUS_CITY]
+    if not rows:
+        sys.exit(f"{source}에 {BUS_CITY} 정류장이 없습니다. 국토교통부 전국 버스정류장 위치정보 파일인지 확인해 주세요.")
+    with open(BUS_STOPS_PATH, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(BUS_STOPS_COLS)
+        for r in rows:
+            writer.writerow([r["정류장번호"], r["정류장명"], r["위도"], r["경도"], r["정보수집일"]])
+    print(f"저장: {BUS_STOPS_PATH} ({BUS_CITY} 정류장 {len(rows):,}곳)")
+
+
+def read_bus_stops():
+    """[(이름, 위도, 경도, 수집일)]. 파일이 없으면 멈춘다"""
+    if not BUS_STOPS_PATH.exists():
+        sys.exit(f"{BUS_STOPS_PATH}이 없습니다. --make-bus-stops로 먼저 만들어 주세요.")
+    with open(BUS_STOPS_PATH, newline="", encoding="utf-8-sig") as f:
+        return [(r["name"], float(r["latitude"]), float(r["longitude"]), r["collected_on"]) for r in csv.DictReader(f)]
+
+
+def meters_between(lat1, lng1, lat2, lng2):
+    """두 좌표 사이의 직선거리(m). 하버사인 공식"""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
+
+
+def nearest_bus(apartment, stops):
+    """아파트에서 가장 가까운 버스정류장 (값 부분). 반경(1km) 안에 없으면 비운다"""
+    lat, lng = float(apartment["latitude"]), float(apartment["longitude"])
+    near = []
+    for name, s_lat, s_lng, _ in stops:
+        if abs(s_lat - lat) > 0.01 or abs(s_lng - lng) > 0.012:  # 1km보다 확실히 먼 곳은 계산하지 않는다
+            continue
+        distance = meters_between(lat, lng, s_lat, s_lng)
+        if distance <= RADIUS:
+            near.append((distance, name, s_lat, s_lng))
+    if not near:
+        return found("bus", RADIUS)
+    distance, name, s_lat, s_lng = min(near)
+    place = {"place_name": name, "x": f"{s_lng:.7f}", "y": f"{s_lat:.7f}", "distance": round(distance)}
+    return found("bus", RADIUS, place, len(near))
 
 
 # ------------------------------------------------------------------
@@ -327,6 +400,44 @@ def load_into_db(conn, rows, dry_run):
             "base_date": base, "collection_added": added}
 
 
+def load_bus_stops_table(conn, dry_run):
+    """data/bus_stops_gwangju.csv로 bus_stops 표를 다시 채운다 (A-28). 전부 지운 뒤 넣으므로 몇 번을 돌려도 결과가 같다"""
+    if not BUS_STOPS_PATH.exists():
+        print(f"버스정류장 표: {BUS_STOPS_PATH.name}이 없어 건너뜀 (--make-bus-stops로 만든다)")
+        return
+    with open(BUS_STOPS_PATH, newline="", encoding="utf-8-sig") as f:
+        rows = list(csv.DictReader(f))
+    values = [(r["stop_id"], r["name"], to_coord(r["latitude"]), to_coord(r["longitude"])) for r in rows]
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM bus_stops")
+    except Exception as error:  # 표를 아직 만들지 않은 DB
+        if error.args and error.args[0] == NO_TABLE:
+            conn.rollback()
+            print("버스정류장 표: bus_stops 표가 없습니다. HeidiSQL에서 db/schema.sql의 bus_stops 부분(CREATE TABLE)을 먼저 실행해 주세요.")
+            return
+        raise
+    cur.executemany("INSERT INTO bus_stops (stop_id, name, latitude, longitude) VALUES (%s, %s, %s, %s)", values)
+    base = max((r["collected_on"] for r in rows if r.get("collected_on")), default=None)
+    added = False
+    if base and values:
+        cur.execute("SELECT base_date, row_count FROM data_collections WHERE dataset = 'bus_stops' ORDER BY id DESC LIMIT 1")
+        last = cur.fetchone()
+        if not last or str(last["base_date"]) != base or last["row_count"] != len(values):
+            cur.execute(
+                "INSERT INTO data_collections (dataset, source, base_date, row_count) VALUES ('bus_stops', %s, %s, %s)",
+                (BUS_SOURCE, base, len(values)),
+            )
+            added = True
+    if dry_run:
+        conn.rollback()
+    else:
+        conn.commit()
+    word = "넣으면" if dry_run else "넣음"
+    print(f"버스정류장 표 {word}: {len(values):,}곳, 기준일 {base}, data_collections {'한 줄 더함' if added else '그대로 (마지막 줄과 같음)'}"
+          + (" (dry-run이라 되돌림)" if dry_run else ""))
+
+
 # ------------------------------------------------------------------
 # 4. 실행
 # ------------------------------------------------------------------
@@ -347,10 +458,13 @@ def run_check(conn, key):
     apartment = spread_by_gu(apartments, 1)[0]
     print(f"시험: {apartment['gu']} {apartment['dong']} {apartment['name']} (파일과 DB는 바꾸지 않음)")
     with requests.Session() as session:
-        for row in collect_one(session, key, apartment):
-            where = f"{row['place_name']} {row['distance']}m" if row["place_name"] else "근처에 없음"
-            exit_text = f" ({row['exit_no']}번 출구)" if row["exit_no"] else ""
-            print(f"  {row['kind']:<12} {where}{exit_text} · {int(row['radius']) // 1000}km 안 {row['place_count']}곳")
+        values = collect_one(session, key, apartment)
+    if BUS_STOPS_PATH.exists():
+        values.append(nearest_bus(apartment, read_bus_stops()))
+    for row in values:
+        where = f"{row['place_name']} {row['distance']}m" if row["place_name"] else "근처에 없음"
+        exit_text = f" ({row['exit_no']}번 출구)" if row["exit_no"] else ""
+        print(f"  {row['kind']:<12} {where}{exit_text} · {int(row['radius']) // 1000}km 안 {row['place_count']}곳")
 
 
 def run_collect(conn, key, limit, force, dry_run):
@@ -390,6 +504,37 @@ def run_collect(conn, key, limit, force, dry_run):
     print_load(load_into_db(conn, rows, dry_run=False), dry_run=False)
 
 
+def run_add_bus(conn, dry_run):
+    """facilities.csv의 버스정류장 줄을 정류장 파일로 모두 다시 계산한다 (예전 버스 줄은 버린다). 다른 줄은 그대로 둔다"""
+    rows = [r for r in read_out(OUT_PATH) if r["kind"] != "bus"]
+    if not rows:
+        sys.exit(f"{OUT_PATH}이 없습니다. 먼저 전체를 받거나(--limit 없이) 팀이 올린 파일을 받아 주세요.")
+    stops = read_bus_stops()
+    done = {apartment_key(r) for r in rows}
+    apartments = [a for a in read_apartments(conn.cursor()) if apartment_key(a) in done]
+    collected = max(stop[3] for stop in stops)
+    values = []
+    for apartment in apartments:
+        base = {"gu": apartment["gu"], "dong": apartment["dong"], "jibun": apartment["jibun"], "name": apartment["name"]}
+        values.append({**base, **nearest_bus(apartment, stops), "collected_on": collected})
+    near = sum(1 for v in values if v["place_name"])
+    print(f"버스정류장: 정류장 {len(stops):,}곳(수집일 {collected}), 아파트 {len(values):,}곳 가운데 1km 안에 있는 곳 {near:,}곳")
+    if dry_run:
+        return
+    rows = sort_rows(rows + values)
+    write_out(rows)
+    print(f"저장: {OUT_PATH} ({len(rows):,}줄)")
+    print_load(load_into_db(conn, rows, dry_run=False), dry_run=False)
+
+
+def sort_rows(rows):
+    """아파트 순서는 그대로 두고, 아파트마다 버스정류장 줄을 그 아파트의 줄 끝에 모은다"""
+    order = {}
+    for r in rows:
+        order.setdefault(apartment_key(r), len(order))
+    return sorted(rows, key=lambda r: (order[apartment_key(r)], r["kind"] == "bus"))
+
+
 def main():
     ap = argparse.ArgumentParser(description="주변 시설을 카카오 로컬 API로 찾아 apartment_facilities에 넣는다")
     ap.add_argument("--check", action="store_true")
@@ -397,7 +542,13 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--from-file")
+    ap.add_argument("--add-bus", action="store_true")
+    ap.add_argument("--make-bus-stops")
     args = ap.parse_args()
+
+    if args.make_bus_stops:
+        make_bus_stops(args.make_bus_stops)  # DB와 카카오를 쓰지 않는다
+        return
 
     from backend.database import connect
     conn = connect()
@@ -408,6 +559,11 @@ def main():
                 sys.exit(f"파일이 없거나 비었습니다: {args.from_file}")
             print(f"파일 {args.from_file}: {len(rows):,}줄")
             print_load(load_into_db(conn, rows, args.dry_run), args.dry_run)
+            load_bus_stops_table(conn, args.dry_run)
+            return
+        if args.add_bus:
+            run_add_bus(conn, args.dry_run)  # 카카오를 부르지 않으므로 키가 없어도 된다
+            load_bus_stops_table(conn, args.dry_run)
             return
         if args.dry_run:
             run_collect(conn, None, args.limit, args.force, dry_run=True)
