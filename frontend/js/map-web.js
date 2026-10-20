@@ -9,6 +9,8 @@
 //   - 목록은 늘 열려 있다. 아파트 창을 닫으면(✕, 뒤로 가기, 다른 지역 고르기) 창을 닫지 않고 목록만 남긴다.
 //   - 지도는 창에 가리지 않으므로 고른 아파트는 지도의 가운데에 둔다. 패널 폭이 바뀌면 카카오맵에 알린다 (relayout).
 //   - 목록 패널을 접고 펼 수 있다 (store의 map.web_fold).
+//   - 로드뷰는 아파트 패널 맨 위에 늘 보인다 (아파트 정보 탭 · 시나리오 탭 모두, 2026-10-20 팀장 결정).
+//     모바일은 창 맨 위(손잡이 앞)에 두고 전체 단계에서만 보이지만, 웹에는 단계가 없으므로 자리를 아파트 패널 안으로 옮긴다.
 //
 // html에 다는 표시 (map-web.css가 쓴다)
 //   data-map-web-panel = "list" | "apartment"   패널에 지금 보이는 것. 창이 닫혀 있으면 없다
@@ -31,6 +33,8 @@ const mapWeb = {
     endDrag: sheet.endDrag,
     targetHeight: sheet.targetHeight,
     infoVisible: aptPanel.infoVisible,
+    roadviewVisible: aptPanel.roadviewVisible,
+    roadviewBox: aptPanel.roadviewBox,
   },
 
   mapWidth: 0, // 지도의 폭. 바뀌었을 때만 relayout 한다 (높이가 바뀌는 것은 map-view.js의 fitMapToSheet가 맞춘다)
@@ -52,6 +56,8 @@ const mapWeb = {
         else mapWeb.openList();
       }
       sheet.apply(); // 표시를 다시 단다 (모바일이면 sheet.js의 원래 표시로 돌아간다)
+      mapWeb.placeRoadview();
+      aptPanel.renderRoadview();
     });
   },
 
@@ -109,12 +115,40 @@ const mapWeb = {
       else delete root.dataset.mapWebPanel;
     };
 
+    // 로드뷰: 웹에서는 아파트 패널이 열려 있으면 늘 보인다 (단계와 상관없이)
+    aptPanel.roadviewVisible = () => {
+      if (!mapWeb.isOn()) return base.roadviewVisible();
+      return sheet.isShown() && sheet.mode === 'apartment';
+    };
+    // 로드뷰 자리를 만들 때와 웹 ↔ 모바일이 바뀔 때 알맞은 곳에 둔다
+    aptPanel.roadviewBox = () => {
+      const box = base.roadviewBox();
+      mapWeb.placeRoadview(box);
+      return box;
+    };
+
     // 아파트 정보 탭은 원래 80% 이상에서만 그린다. 웹에서는 단계와 상관없이 늘 보인다
     aptPanel.infoVisible = () => {
       if (!mapWeb.isOn()) return base.infoVisible();
       return sheet.isShown() && sheet.mode === 'apartment' &&
         document.getElementById('apt-tab-info').getAttribute('aria-selected') === 'true';
     };
+  },
+
+  // 로드뷰 자리를 옮긴다. 웹: 아파트 패널 맨 위(이름 줄 위). 모바일: 창 맨 위(손잡이 앞, apartment.js가 처음 둔 곳)
+  // 옮긴 뒤에는 카카오 로드뷰에 새 크기를 알린다 (relayout)
+  placeRoadview(box = document.getElementById('apt-roadview')) {
+    if (!box) return;
+    const panel = document.getElementById('apartment-panel');
+    const handle = document.getElementById('sheet-handle');
+    if (mapWeb.isOn()) {
+      if (box.parentElement === panel && panel.firstElementChild === box) return;
+      panel.prepend(box);
+    } else {
+      if (box.nextElementSibling === handle) return;
+      handle.parentElement.insertBefore(box, handle);
+    }
+    if (aptPanel.roadview) requestAnimationFrame(() => aptPanel.roadview.relayout());
   },
 
   // 목록을 연다. 기록(history)을 남기지 않는다: 늘 열려 있는 목록이라 뒤로 가기는 앞 화면으로 가야 한다.
