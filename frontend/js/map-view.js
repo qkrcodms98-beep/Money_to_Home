@@ -65,7 +65,7 @@ const ALL_GU_NAME = '광주 5개 구 전체'; // 구 표시를 볼 때 지역 �
 // 가까이 볼 때 말풍선끼리 이만큼(넓이의 비율) 넘게 겹치면 하나로 묶는다.
 const OVERLAP_RATIO = 0.35;
 const MARKER_SIZE = { width: 72, height: 57, tipX: 8.5, tipY: 57 }; // 말풍선의 크기와 꼬리 끝의 자리 (map.css)
-const ZOOM_MS = 600; // 동 표시를 눌렀을 때 그 동으로 확대되는 시간
+const ZOOM_MS = 350; // 구 표시를 눌렀을 때 그 구로 확대되는 시간 (2026-10-20 600 → 350. 동 표시는 움직임 없이 바로 옮긴다)
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 // 지도 화면을 그냥 열면 광주 5개 구 전체를 가장 넓게(구 표시) 보여 준다 (2026-10-20 팀장 결정. 예전에는 서구 치평동).
@@ -1864,10 +1864,7 @@ function changeSort(sort) {
 // 동 표시를 누름 → 그 동으로 확대한다. 목록은 저절로 올리지 않는다 (2026-10-14에 정함).
 // 확대가 끝난 뒤에 창을 올린다. 그사이 다른 곳으로 옮겼거나 다시 넓게 보고 있으면 올리지 않는다.
 async function openDong({ gu, dong }) {
-  const started = Date.now();
-  await zoomToRegion({ gu, dong });
-  const left = ZOOM_MS + 150 - (Date.now() - started);
-  if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
+  await zoomToRegion({ gu, dong }); // 동은 움직임 없이 바로 옮기므로 끝나기를 기다리지 않는다 (2026-10-20)
   const same = mapState.region.gu === gu && mapState.region.dong === dong;
   if (!same || mapState.mode !== 'apartment' || !mapState.data) return;
   selectMarker(null); // 목록은 저절로 올리지 않는다. "목록" 버튼으로 연다
@@ -2648,7 +2645,8 @@ async function zoomToRegion({ gu, dong }) {
   // 구 표시를 누르면 그 구의 동이 한 화면에 가장 많이 들어오는 자리로 (denseFit). 동 좌표가 없으면 구 경계에 맞춘다
   const fit = (drill && denseFit(gu)) || regionFit({ gu, dong }, drill);
   const center = fit ? null : regionCenter({ gu, dong });
-  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 동 표시를 누르면 확대하는 움직임 없이 바로 그 동을 보여 준다 (2026-10-20 팀장 결정). 움직임은 구 표시를 누를 때만
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches || Boolean(dong);
   if ((!fit && !center) || still || (fit && fit.level >= mapState.map.getLevel())) {
     // 자리를 모르거나, 움직임을 줄이도록 설정했거나, 더 넓게 봐야 하면(확대가 아님) 바로 옮긴다
     if (fit && drill) {
