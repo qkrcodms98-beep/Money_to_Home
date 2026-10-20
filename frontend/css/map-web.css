@@ -158,6 +158,12 @@
     height: var(--touch-size);
   }
 
+  /* 내 조건 문장과 수정은 목록 맨 위의 내 조건 상자(list.js, 김목산)로 옮겼다. 머리 줄에는 로그인만 남는다 (2026-10-20) */
+  .condition-bar__text,
+  .condition-bar__link--edit {
+    display: none;
+  }
+
   /* ───────── 지도: 머리 줄 아래, 패널 오른쪽 ───────── */
   .map-area {
     position: absolute;
