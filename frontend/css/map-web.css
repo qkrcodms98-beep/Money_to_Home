@@ -78,7 +78,7 @@
     display: block;
     height: var(--map-web-bar);
     /* 파랑 머리 줄 (2026-10-20 팀장 결정). 왼쪽 rgb(42, 110, 193)에서 오른쪽 끝 rgb(120, 182, 240)까지 밝아지는 그라데이션 */
-    background-color : rgb(1, 16, 68);
+    background-color: #2e4a6a; /* 짙은 청회색 (2026-10-20 팀장) */
   }
 
   /* 로고. 모양은 입력 화면과 같다 (common.css의 .header__home, .header__logo, .header__name, .header__to) */
