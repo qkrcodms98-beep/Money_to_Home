@@ -657,7 +657,7 @@
 .apt-near__row {
   display: flex;
   align-items: center;
-  padding: 7px 0;
+  padding: 11px 0; /* 줄마다 두세 줄이 되어 사이를 조금 더 띄운다 (2026-10-19, 7px → 11px) */
   line-height: var(--line-height);
 }
 
@@ -704,7 +704,7 @@
 }
 
 .apt-near__row--sub {
-  padding: 4px 0;
+  padding: 8px 0;
 }
 
 .apt-near__row--sub .apt-near__label {
@@ -730,6 +730,11 @@
 /* 걷는 거리, "· 도보 약 8분", "[5]번 출구까지 약 500m"는 한 덩어리로 둔다. 줄은 덩어리 사이에서만 바뀐다 */
 .apt-near__walk {
   white-space: nowrap;
+}
+
+/* "도보 약 N분"은 늘 다음 줄 (줄마다 이름 · 거리 / 도보 시간의 두 줄로 맞춘다) */
+.apt-near__time {
+  display: block;
 }
 
 .apt-near__exit {
@@ -791,17 +796,6 @@
 }
 
 /* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준 · 직선거리" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */
-.apt-near__source {
-  margin: 6px 0 0;
-  color: var(--color-text-sub);
-  font-size: var(--text-badge);
-  line-height: 1.4;
-}
-
-.apt-near__source:empty {
-  display: none;
-}
-
 /* 좌표가 없는 아파트의 안내 (P-06 ⑱, 목업 4009:604). 아파트 정보 탭 맨 위의 점선 상자 */
 .apt-info__notice {
   margin: 0 0 8px;

@@ -87,8 +87,7 @@ const APT_NEAR_SCHOOLS = [
 const APT_NEAR_MORE = '학교 종류별로 보기';
 const APT_NEAR_LESS = '학교 종류별 접기';
 const APT_NEAR_NONE = '근처에 없음'; // 반경 안에 없을 때
-const APT_NEAR_SOURCE = '카카오 장소 정보'; // 맨 아래 출처. 뒤에 받은 날과 거리 안내를 붙인다
-const APT_NEAR_WALK_NOTE = '거리 · 시간은 직선거리로 어림'; // 맨 아래 출처 끝. 걷는 거리가 실제 길이 아님을 알린다
+// 맨 아래 출처 줄("카카오 장소 정보 · 받은 날 기준 · 거리 · 시간은 직선거리로 어림")은 뺐다 (2026-10-20 세환. "어림"으로 끝나는 말이 좋지 않아서)
 const APT_NEAR_ON_MAP = '지도에서 보기'; // 찾은 줄의 단추 이름 끝에 붙인다 (화면 읽기)
 // 찾은 줄 끝의 작은 위치 표시. 누르면 지도에서 보여 준다는 뜻
 const APT_NEAR_PIN = 'M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z';
@@ -531,9 +530,7 @@ const aptPanel = {
         list.append(sub);
       }
     });
-    const source = document.createElement('p');
-    source.className = 'apt-near__source';
-    box.append(title, list, source);
+    box.append(title, list);
     return box;
   },
 
@@ -562,10 +559,6 @@ const aptPanel = {
       const item = byKind.get(cell.dataset.kind);
       aptPanel.nearFill(cell, item ? aptPanel.nearValue(item) : APT_NEAR_NONE, cell.dataset.kind);
     });
-    const [year, month, day] = (detail.facilities_base_date || '').split('-');
-    box.querySelector('.apt-near__source').textContent = year
-      ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준 · ${APT_NEAR_WALK_NOTE}`
-      : '';
   },
 
   // 한 줄의 값. 화면에는 nearFill이 "전남고등학교 약 170m · 도보 약 3분"으로 적는다.
@@ -594,30 +587,30 @@ const aptPanel = {
     button.className = 'apt-near__link';
     const pin = aptNearIcon(APT_NEAR_PIN);
     pin.setAttribute('class', 'apt-near__pin');
-    // 걷는 거리와 시간. 거리와 시간 사이에서만 줄이 바뀐다 (sheet.css .apt-near__walk)
+    // 걷는 거리와 시간. "도보 약 N분"은 늘 다음 줄에 둔다 (줄마다 모양이 같게, 2026-10-19 세환. sheet.css .apt-near__time)
     const { distance, time } = aptWalk(value.meters);
     const walk = document.createElement('span');
     walk.className = 'apt-near__walk';
     walk.textContent = distance;
     const minutes = document.createElement('span');
-    minutes.className = 'apt-near__walk';
-    minutes.append(`· ${time}`, pin); // 위치 표시는 시간 바로 뒤에 붙여 혼자 다음 줄로 내려가지 않게
+    minutes.className = 'apt-near__walk apt-near__time';
+    minutes.append(time, pin); // 위치 표시는 시간 바로 뒤에 붙여 혼자 다음 줄로 내려가지 않게
     let label;
     if (value.exit) {
       const badge = document.createElement('span');
       badge.className = 'apt-near__exit';
       badge.textContent = value.exit;
-      // "[5]번 출구까지 약 430m · 도보 약 7분"은 늘 다음 줄에서 시작한다 (sheet.css). 넘치면 "· 도보 약 7분"만 그다음 줄로
+      // "[5]번 출구까지 약 430m"는 늘 다음 줄에서 시작하고, "도보 약 7분"은 그다음 줄 (sheet.css)
       const keep = document.createElement('span');
       keep.className = 'apt-near__keep';
       const head = document.createElement('span');
       head.className = 'apt-near__walk';
       head.append(badge, '번 출구까지 ', distance);
-      keep.append(head, ' ', minutes);
+      keep.append(head, minutes);
       button.append(document.createTextNode(value.before), keep);
       label = `${value.before}${value.exit}번 출구까지 ${distance} · ${time}`;
     } else {
-      button.append(document.createTextNode(`${value.name} `), walk, ' ', minutes);
+      button.append(document.createTextNode(`${value.name} `), walk, minutes);
       label = `${value.name} ${distance} · ${time}`;
     }
     button.setAttribute('aria-label', `${label} ${APT_NEAR_ON_MAP}`);
