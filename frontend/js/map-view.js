@@ -178,6 +178,7 @@ const mapState = {
   cityLoading: null, // 광주 전체를 받는 중인 요청 { key, request }. 같은 조건이면 함께 기다린다
   listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
   idleTimer: null,
+  legendSheet: false, // 모바일 표시 · 시설 창이 올라와 있는가 (renderLegend)
   zoomUntil: 0, // 이때(ms)까지 확대 애니메이션이 돈다. 그 전의 확대는 기다린다 (animateZoom)
   zoomNext: null, // 기다리는 확대 { level, options }
   zoomTimer: null,
@@ -947,6 +948,10 @@ function updateFacilityTab() {
   // 웹 배치(1024px 이상, map-web.js)에서는 창이 왼쪽 패널이라 지도를 가리지 않으므로 늘 보인다
   const web = typeof mapWeb !== 'undefined' && mapWeb.isOn();
   tab.hidden = !web && sheet.isShown();
+  if (!web && sheet.isShown() && mapState.legendSheet) {
+    mapState.legendSheet = false;
+    renderLegend();
+  }
   const box = document.getElementById('facility-filter');
   if (box) box.hidden = false;
 }
@@ -2498,6 +2503,14 @@ function renderLackSwitch() {
 }
 
 function renderLegend() {
+  // 모바일(1023px 이하)은 아래에서 올라오는 창이다. 오른쪽 눈 단추로 열고, ✕ · 뒤 어두운 곳으로 닫는다.
+  // 처음에는 늘 닫혀 있고 기억하지 않는다 (2026-10-20 팀장 결정. 다른 지도 앱의 레이어 창과 같게)
+  const sheetMode = !isWebLayout();
+  const tab = document.getElementById('facility-tab');
+  tab.classList.toggle('facility-tab--sheet', sheetMode);
+  tab.classList.toggle('facility-tab--sheet-open', sheetMode && mapState.legendSheet);
+  document.getElementById('facility-dim').hidden = !(sheetMode && mapState.legendSheet);
+  document.getElementById('legend-open').setAttribute('aria-expanded', String(sheetMode && mapState.legendSheet));
   // 처음에는 펼쳐 둔다 (2026-10-20 팀장 결정: 말풍선 구분과 시설 체크 칸까지 다 보이게). 접은 사람은 기억해 둔 대로 접는다
   const open = store.get('map').legend_open !== false;
   const button = document.getElementById('legend-toggle');
@@ -2519,7 +2532,17 @@ function bindEvents() {
     aptPanel.render();
   });
 
-  // 범례 접고 펴기
+  // 모바일: 표시 · 시설 창 열고 닫기
+  const setLegendSheet = (open) => {
+    mapState.legendSheet = open;
+    renderLegend();
+  };
+  document.getElementById('legend-open').addEventListener('click', () => setLegendSheet(!mapState.legendSheet));
+  document.getElementById('legend-close').addEventListener('click', () => setLegendSheet(false));
+  document.getElementById('facility-dim').addEventListener('click', () => setLegendSheet(false));
+  window.addEventListener('resize', renderLegend); // 웹 ↔ 모바일이 바뀌면 상자 ↔ 창
+
+  // 범례 접고 펴기 (웹)
   document.getElementById('legend-toggle').addEventListener('click', () => {
     store.set('map', { legend_open: store.get('map').legend_open === false });
     renderLegend();

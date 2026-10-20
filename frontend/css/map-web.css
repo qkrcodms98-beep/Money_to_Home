@@ -746,6 +746,12 @@
     }
   }
 
+  /* 모바일의 눈 단추와 표시 · 시설 창은 웹에서 쓰지 않는다 (웹은 왼쪽 위 상자) */
+  .map-button--layers,
+  .facility-dim {
+    display: none !important;
+  }
+
   /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 손잡이) */
   .list__close {
     display: none !important;
