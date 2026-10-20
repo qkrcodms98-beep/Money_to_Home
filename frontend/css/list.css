@@ -549,3 +549,79 @@
     display: none;
   }
 }
+
+/* ───────── 웹(가로 1024px 이상)의 내 조건 상자 (2026-10-20) ─────────
+   목록 맨 위에 붙어 있고 목록만 아래로 스크롤된다 (sticky). 지도 화면 머리 줄의 내 조건 문장 대신이다 */
+@media (min-width: 1024px) {
+  .list__goal {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 0 4px;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-bg);
+  }
+
+  .list__goal-label,
+  .list__goal-value,
+  .list__goal-sub {
+    margin: 0;
+    padding-right: 64px; /* 수정 단추 자리 */
+  }
+
+  .list__goal-label {
+    color: var(--color-text-sub);
+    font-size: var(--text-badge);
+    font-weight: var(--font-medium);
+  }
+
+  .list__goal-value {
+    color: var(--color-text);
+    font-size: var(--text-title);
+    font-weight: var(--font-bold);
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+  }
+
+  .list__goal-until {
+    color: var(--color-text-sub);
+    font-size: var(--text-label);
+    font-weight: var(--font-medium);
+    letter-spacing: 0;
+  }
+
+  .list__goal-sub {
+    margin-top: 2px;
+    overflow: hidden;
+    padding-right: 0;
+    color: var(--color-text-hint);
+    font-size: var(--text-badge);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .list__goal-edit {
+    position: absolute;
+    top: 14px;
+    right: 20px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-pill);
+    color: var(--color-text-sub);
+    font-size: var(--text-badge);
+    font-weight: var(--font-medium);
+    text-decoration: none;
+  }
+
+  .list__goal-edit:hover {
+    border-color: var(--color-text-sub);
+    color: var(--color-text);
+  }
+}

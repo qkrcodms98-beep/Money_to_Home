@@ -106,6 +106,49 @@ const listShownCats = () => {
   return keys;
 };
 
+// 웹의 내 조건 상자 (목록 맨 위, 2026-10-20). 지도 화면 머리 줄의 "내 조건" 문장을 웹에서는 여기로 옮긴다.
+//   5년 뒤 목표할 수 있는 가격
+//   3억 6,666만 원 까지                      [수정]
+//   보유 5,000만 원 · 월 100만 원 · 5년 · 보금자리론 30년
+// 금액은 A-05 응답의 target_price (계산하지 않는다), 아래 줄은 넣어 둔 입력값(store의 input)이다.
+// 대출 상품 이름은 A-04에서 한 번만 받아 둔다. 받기 전이나 실패하면 "대출 30년"으로 적는다
+let listLoanProducts = null; // A-04 응답의 products. 받기 전에는 null
+let listLoanRequest = null;
+function listLoanName(id) {
+  if (!listLoanRequest) {
+    listLoanRequest = api.get('/api/loan-products')
+      .then((data) => { listLoanProducts = (data && data.products) || []; })
+      .catch(() => { listLoanProducts = []; });
+  }
+  const product = (listLoanProducts || []).find((p) => p.id === id);
+  return product ? product.name : null;
+}
+
+function listGoal(targetPrice) {
+  const input = store.get('input') || {};
+  const box = listEl('div', 'list__goal');
+  const when = input.target_years === 0 ? '지금' : `${input.target_years}년 뒤`;
+  box.append(listEl('p', 'list__goal-label', `${when} 목표할 수 있는 가격`));
+  const value = listEl('p', 'list__goal-value', format.won(targetPrice));
+  value.append(listEl('span', 'list__goal-until', ' 까지'));
+  box.append(value);
+  const sub = listEl('p', 'list__goal-sub');
+  const writeSub = () => {
+    const period = input.target_years === 0 ? '지금' : `${input.target_years}년`;
+    const loan = input.loan_choice === 'none'
+      ? '대출 없이'
+      : `${listLoanName(input.loan_product_id) || '대출'} ${input.repayment_years}년`;
+    sub.textContent = `보유 ${format.won(input.current_assets)} · 월 ${format.won(input.monthly_saving)} · ${period} · ${loan}`;
+  };
+  writeSub();
+  if (listLoanProducts === null && input.loan_choice !== 'none') listLoanRequest.then(writeSub); // 이름이 오면 고쳐 쓴다
+  box.append(sub);
+  const edit = listEl('a', 'list__goal-edit', '수정');
+  edit.href = 'profile.html';
+  box.append(edit);
+  return box;
+}
+
 // 웹의 구분 탭. 개수는 늘 서버가 준 전체 개수다. 고르면 store의 map.list_cats에 그 구분 하나(전체면 셋)를 둔다
 function listTabs(counts, shown, onPick) {
   const tabs = listEl('div', 'list__tabs');
@@ -401,6 +444,7 @@ function listEmpty(title, help, buttons = []) {
 }
 
 const listView = {
+  lastTarget: null, // 마지막으로 받은 A-05의 target_price. 불러오는 중 화면의 내 조건 상자에 쓴다
   last: null, // 마지막으로 그린 { container, result, options }. 웹 ↔ 모바일이 바뀌면 칩 · 탭을 바꿔 다시 그린다
 
   // A-05를 불러 그리고, 받은 결과를 돌려준다. 조건은 guard.conditions()가 만든다.
@@ -431,6 +475,8 @@ const listView = {
   renderLoading(container, { where, onClose } = {}) {
     const root = listEl('section', 'list list--loading');
     root.setAttribute('aria-busy', 'true');
+    // 웹: 지역만 바꿔 다시 받는 동안에도 내 조건 상자는 남긴다 (목표 가능 가격은 지역과 상관없다)
+    if (LIST_WEB_QUERY.matches && listView.lastTarget != null) root.append(listGoal(listView.lastTarget));
     const head = listEl('header', 'list__head');
     const place = [where && where.gu, where && where.dong].filter(Boolean).join(' ');
     const title = listEl('h2', 'list__title');
@@ -489,7 +535,9 @@ const listView = {
     };
     options = { ...options, onView };
     listView.last = { container, result: full, options };
+    listView.lastTarget = result.target_price;
     const root = listEl('section', `list list--${listViewMode()}`);
+    if (LIST_WEB_QUERY.matches) root.append(listGoal(result.target_price)); // 웹: 내 조건 상자
     root.append(listHead(result, options));
 
     // 결과 없음 (P-05 ⑨, FR-APT-07). '조건 초기화', '조건 바꾸기'는 부르는 쪽이 넘겼을 때만
