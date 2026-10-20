@@ -39,6 +39,13 @@
     const el = isPage(target) ? document.scrollingElement : target;
     const z = zoom();
     const box = frame(target);
+    // 부모가 접혀 상자가 안 보이면 바로 숨긴다
+    if (box.height < 1 || box.right - box.left < 1 || !scrollable(target)) {
+      thumb.classList.add('scrollbar-thumb--gone'); // 서서히가 아니라 바로
+      thumb.classList.remove('scrollbar-thumb--on');
+      return;
+    }
+    thumb.classList.remove('scrollbar-thumb--gone');
     const ratio = el.clientHeight / el.scrollHeight;
     const length = Math.max(MIN * z, box.height * ratio);
     const room = box.height - length;
@@ -49,12 +56,25 @@
     thumb.style.height = `${length / z}px`;
   };
 
+  // 손잡이가 보이는 동안(사라지는 중 포함)은 매 프레임 상자를 따라간다.
+  // 패널이 접히거나 펼쳐지며 상자가 움직여도 손잡이가 그 자리에 남지 않는다 (2026-10-20)
+  let following = false;
+  const follow = () => {
+    place();
+    if (thumb.classList.contains('scrollbar-thumb--on') || getComputedStyle(thumb).opacity !== '0') requestAnimationFrame(follow);
+    else following = false;
+  };
+
   const show = (el) => {
     if (!scrollable(el)) return;
     target = el;
     if (!thumb.isConnected) document.body.appendChild(thumb);
     place();
     thumb.classList.add('scrollbar-thumb--on');
+    if (!following) {
+      following = true;
+      requestAnimationFrame(follow);
+    }
     clearTimeout(timer);
     if (!drag) timer = setTimeout(() => thumb.classList.remove('scrollbar-thumb--on'), HIDE_MS);
   };
@@ -108,4 +128,11 @@
   thumb.addEventListener('pointercancel', endDrag);
 
   window.addEventListener('resize', place);
+  // 접기 · 펴기는 html이나 패널의 속성(class · hidden · data-*)을 바꾼다. 바뀌는 즉시 맞춘다 (프레임을 기다리지 않는다)
+  new MutationObserver(() => {
+    if (thumb.classList.contains('scrollbar-thumb--on')) place();
+  }).observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['class', 'hidden', 'data-map-web-fold', 'data-map-web-apt-fold', 'data-map-web-panel', 'data-sheet', 'data-stage'] });
+  document.addEventListener('transitionend', () => {
+    if (thumb.classList.contains('scrollbar-thumb--on')) place();
+  }, true);
 })();

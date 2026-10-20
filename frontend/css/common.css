@@ -730,3 +730,7 @@ dialog {
   width: 7px;
   background: rgba(0, 0, 0, 0.45);
 }
+
+.scrollbar-thumb--gone {
+  transition: none; /* 부모가 접혀 상자가 사라지면 손잡이도 바로 사라진다 */
+}
