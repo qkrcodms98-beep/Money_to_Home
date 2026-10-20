@@ -22,7 +22,7 @@ register_error_handlers(app)
 
 # 1KB가 넘는 응답은 압축해서 보낸다 (2026-10-20). 광주 전체 아파트(A-05, 약 520KB)와 법정동 경계(약 550KB)가 크게 줄어든다.
 # 브라우저가 Accept-Encoding: gzip을 보낼 때만 압축하므로 다른 동작은 그대로다
-app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)  # 9(기본)보다 조금 덜 줄지만 압축이 몇 배 빠르다
 
 
 @app.middleware("http")

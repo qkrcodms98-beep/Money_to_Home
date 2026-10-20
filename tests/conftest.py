@@ -15,6 +15,17 @@ from sqlalchemy.pool import StaticPool
 from backend import models
 from backend.database import Base, get_db
 from backend.main import app
+from backend.services import response_cache
+
+
+@pytest.fixture(autouse=True)
+def no_response_cache():
+    """테스트마다 DB가 새로 만들어지므로 응답 기억(response_cache)은 끈다. 켠 채로 보는 테스트는 따로 켠다"""
+    response_cache.enabled = False
+    response_cache.clear()
+    yield
+    response_cache.enabled = False
+    response_cache.clear()
 
 
 @pytest.fixture

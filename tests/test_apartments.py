@@ -334,6 +334,37 @@ def test_where_all_with_gu_is_rejected(client, chipyeong):
     assert _search(client, where={"all": True, "gu": "서구"}).status_code == 422
 
 
+# ------------------------------------------------------------------
+# A-05 · A-12 응답 기억 (backend/services/response_cache.py, 2026-10-20)
+# ------------------------------------------------------------------
+def test_cache_returns_same_answer_until_new_data(client, db, chipyeong):
+    from backend.services import response_cache
+    response_cache.enabled = True
+    first = _search(client).json()
+    db.get(models.Apartment, 13).households = 999  # 적재 기록 없이 바꾸면 기억해 둔 응답이 그대로 나온다
+    db.commit()
+    assert _search(client).json() == first
+    db.add(models.DataCollection(dataset="households", source="test", base_date=date(2026, 10, 20), row_count=1))
+    db.commit()  # 새로 넣은 기록이 생기면 다시 계산한다
+    again = _search(client).json()
+    assert next(a for a in again["apartments"] if a["id"] == 13)["households"] == 999
+
+
+def test_cache_keeps_requests_apart(client, chipyeong):
+    from backend.services import response_cache
+    response_cache.enabled = True
+    assert _sorted_ids(client, "price_asc") == [12, 11, 15, 13, 14]
+    assert _sorted_ids(client, "price_desc") == [14, 13, 15, 11, 12]  # 정렬이 다르면 다른 응답
+    assert _search(client, monthly_saving=0).json()["target_price"] != _search(client).json()["target_price"]
+
+
+def test_cache_does_not_keep_errors(client, chipyeong):
+    from backend.services import response_cache
+    response_cache.enabled = True
+    assert _search(client, sort="name").status_code == 422
+    assert _search(client, sort="name").status_code == 422
+
+
 def test_unknown_sort_is_rejected(client, chipyeong):
     res = _search(client, sort="name")
     assert res.status_code == 422
