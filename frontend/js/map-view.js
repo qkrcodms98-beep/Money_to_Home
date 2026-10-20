@@ -117,11 +117,11 @@ const FACILITY_KAKAO_GLYPHS = {
 // 이름표 둘째 줄의 걷는 사람 그림 (24 × 24)
 const FACILITY_WALK_ICON = 'M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7';
 // 점선 한 칸의 길이와 칸 사이(px). 굵은 칸 하나가 아파트에서 시설 쪽으로 한 칸씩 옮겨 간다
-const FACILITY_LINK_DASH = 12;
-const FACILITY_LINK_GAP = 9;
+const FACILITY_LINK_DASH = 4; // 둥근 끝(굵기 4)이 양쪽에 붙어 보이는 칸은 8px, 칸 사이는 4px (2026-10-20 더 촘촘하게. 예전 12 · 9)
+const FACILITY_LINK_GAP = 8;
 const FACILITY_LINK_GROW_MS = 800; // 처음 한 번: 점선이 아파트에서 시설까지 뻗어 가는 시간
 const FACILITY_LINK_GROW_PAUSE_MS = 1000; // 처음 한 번: 다 뻗은 뒤 굵은 칸 되풀이로 넘어가기까지 쉬는 시간
-const FACILITY_LINK_STEP_MS = 120; // 굵은 칸이 다음 칸으로 넘어가는 간격
+const FACILITY_LINK_STEP_MS = 70; // 굵은 칸이 다음 칸으로 넘어가는 간격 (칸이 촘촘해져 120 → 70. 움직이는 빠르기는 거의 같다)
 const FACILITY_LINK_PAUSE_MS = 600; // 시설에 닿은 뒤 처음부터 다시 할 때까지 쉬는 시간
 
 const CATEGORY_NAMES = { now: '지금 가능', within: '기간 내 가능', lack: '자금 부족' };
@@ -166,6 +166,7 @@ const mapState = {
   facilityOpen: null, // 이름을 펼친 시설 아이콘
   facilityOpenId: null, // 이름을 펼친 시설의 id ("kind:이름")
   facilityLink: null, // 고른 아파트 → 펼친 시설의 점선 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
+  facilityLinkFrom: null, // 점선이 시작하는 아파트 자리 (kakao.maps.LatLng). 기준점을 화면 안으로 옮길 때 쓴다 (placeFacilityLink)
   facilityLinkDrawn: null, // 점선을 마지막으로 그린 때의 { key, button }. 같으면 다시 그리지 않는다 (굵은 칸이 처음으로 돌아가지 않게)
   facilityPin: null, // 아파트 창의 주변 시설 줄을 눌러 지도에 띄운 시설 { kind, place }. 넓게 보아도 이것만은 남긴다
   facilityFit: false, // 창이 30%로 다 내려오면 고른 아파트와 facilityPin이 둘 다 보이게 지도를 맞춘다
@@ -233,6 +234,7 @@ function createMap(center) {
     if (sheet.phase === 'closed' && mapState.selectedId !== null) selectMarker(null);
   });
   kakao.maps.event.addListener(map, 'click', onMapClick);
+  kakao.maps.event.addListener(map, 'center_changed', safely(placeFacilityLink)); // 아파트가 화면 밖으로 나가도 점선이 끊기지 않게
   kakao.maps.event.addListener(map, 'dragend', safely(() => {
     scheduleBoundsLoad();
     watchIdle(map);
@@ -818,7 +820,10 @@ function fitFacilityPin() {
 // 동작 줄이기를 켠 사람에게는 굵은 칸 없이 진한 점선만 그린다.
 // 거리는 선 위가 아니라 시설 이름표의 둘째 줄에 따로 띄운다: (걷는 사람) "약 10분 · 약 670m".
 // 걷는 거리와 시간은 직선거리로 어림한 값이다 (apartment.js의 aptWalk, 아파트 정보 탭과 같은 값. 길찾기는 외부 API라 쓰지 않는다).
-// 선은 아파트 자리에 단 CustomOverlay 안의 SVG다. 확대 수준이 바뀌면 두 점 사이의 px가 바뀌므로 다시 그린다.
+// 선은 CustomOverlay 안의 SVG다. 확대 수준이 바뀌면 두 점 사이의 px가 바뀌므로 다시 그린다.
+// 카카오맵은 자리가 화면 밖으로 나간 CustomOverlay를 문서에서 뗀다. 아파트 자리에 달면 아파트가 화면 밖으로 나갈 때 선이 통째로 사라졌다.
+// 그래서 선의 자리(기준점)는 늘 화면 안에 두고, SVG를 아파트 자리만큼 비켜 그린다 (placeFacilityLink, 2026-10-20).
+// 같은 요소를 옮기기만 하므로 점선 애니메이션은 끊기지 않는다.
 function drawFacilityLink() {
   const { map, facilityOpen } = mapState;
   // 아파트 창이 30%로 열려 있을 때만 잇는다. 80% 이상이면 지도가 거의 가려져 있고, 닫혀 있으면 이름만 보인다
@@ -894,6 +899,8 @@ function drawFacilityLink() {
   mapState.facilityLink.setContent(box);
   mapState.facilityLink.setPosition(from);
   mapState.facilityLink.setMap(map);
+  mapState.facilityLinkFrom = from;
+  placeFacilityLink(); // 아파트가 이미 화면 밖이면 기준점을 화면 안으로
   if (!lead) return;
 
   // 굵은 칸을 index번째 칸에 둔다. 마지막 칸에 닿으면 아이콘을 키우고, 쉰 뒤 첫 칸부터 다시
@@ -938,6 +945,33 @@ function drawFacilityLink() {
   };
   reach(0);
   mapState.facilityLinkFrame = requestAnimationFrame(grow);
+}
+
+// 점선의 기준점을 화면 안에 둔다. 기준점이 화면 가장자리 FACILITY_LINK_EDGE 안쪽에 있으면 그대로 두고(끌 때마다 옮기지 않게),
+// 벗어나면 지도 가운데로 옮기고 SVG를 그만큼 비켜 그린다. 지도가 움직일 때마다(center_changed) 부른다
+const FACILITY_LINK_EDGE = 0.2; // 화면 폭 · 높이의 이 비율만큼 안쪽
+
+function placeFacilityLink() {
+  const { map, facilityLink: link, facilityLinkFrom: from } = mapState;
+  if (!map || !link || !from || !link.getMap()) return;
+  const svg = link.getContent().querySelector && link.getContent().querySelector('.facility-link__svg');
+  if (!svg) return;
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const padLat = (ne.getLat() - sw.getLat()) * FACILITY_LINK_EDGE;
+  const padLng = (ne.getLng() - sw.getLng()) * FACILITY_LINK_EDGE;
+  const at = link.getPosition();
+  const inside = at.getLat() > sw.getLat() + padLat && at.getLat() < ne.getLat() - padLat
+    && at.getLng() > sw.getLng() + padLng && at.getLng() < ne.getLng() - padLng;
+  if (inside) return;
+  const anchor = map.getCenter();
+  const projection = map.getProjection();
+  const a = projection.containerPointFromCoords(from);
+  const c = projection.containerPointFromCoords(anchor);
+  svg.style.left = `${a.x - c.x}px`;
+  svg.style.top = `${a.y - c.y}px`;
+  link.setPosition(anchor);
 }
 
 // 이름표 둘째 줄: 걷는 사람 그림 + "약 5분"(시설 색, 굵게) + " · 약 320m"(회색). 값은 apartment.js의 aptWalk (정보 탭과 같은 값)
