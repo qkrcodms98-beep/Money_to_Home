@@ -141,6 +141,7 @@ const mapState = {
   summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
+  mapWidth: 0, // 카카오맵에 마지막으로 알린 지도의 폭(px). ensureMapSize가 상자의 폭과 비교한다
   loadedBounds: null, // 영역으로 받았을 때 서버에 보낸 영역 (보이는 영역보다 넓다). 이 안에서 움직이면 다시 받지 않는다
   preload: null, // 구·동으로 받은 뒤 주변을 미리 받아 둔 것 { bounds, data, key }. 지도를 끌기 시작하면 바로 쓴다
   byBounds: false, // 아파트를 지도에 보이는 영역으로 받고 있는가 (손으로 지도를 움직인 뒤). 아니면 구·동으로 받는다
@@ -220,7 +221,10 @@ function createMap(center) {
   const map = new kakao.maps.Map(container, { center: toLatLng(center), level: DEFAULT_LEVEL });
   map.setMinLevel(MIN_LEVEL);
   map.setMaxLevel(MAX_LEVEL);
+  mapState.mapWidth = container.clientWidth;
+  mapState.mapHeight = container.clientHeight;
   guardWheel(container);
+  watchMapHealth(container);
   kakao.maps.event.addListener(map, 'zoom_changed', safely(() => {
     renderScale();
     onZoomChanged();
@@ -252,6 +256,7 @@ function createMap(center) {
 
 // 지도가 멈춘 뒤 (idle). 확대 수준이 바뀌면 말풍선끼리 겹치는 정도가 달라진다. 움직임이 끝난 뒤에 다시 묶는다.
 function onMapIdle(map) {
+  ensureMapSize(); // 멈출 때마다 상자 크기와 카카오맵이 아는 크기가 같은지 본다
   renderScale();
   hideKakaoScale();
   // 빠르게 확대 · 축소하면 앞 수준에서 받던 자료가 늦게 와서 표시가 지금 수준과 어긋난 채 남았다 (9인데 동 표시).
@@ -283,6 +288,52 @@ function guardWheel(container) {
     }
     last = now;
   }, { capture: true, passive: false });
+}
+
+// ───────── 지도 크기 맞추기 (2026-10-20) ─────────
+// 카카오맵은 지도 상자의 크기가 바뀐 것을 스스로 모른다. 알리지(relayout) 않으면 예전 크기만큼만 지도 조각을 그리고
+// 그 밖에서는 끌기 · 누르기가 먹지 않았다 (지도 일부만 그려진 채 커서가 움직이지 않음).
+// 창 크기를 바꿀 때, 웹 ↔ 모바일이 바뀔 때, 다른 탭에 갔다 돌아올 때, 페이지를 뒤로 가기로 다시 열 때 생겼다.
+// 그래서 아래 때마다 상자 크기와 마지막으로 알린 크기를 비교해 다르면 알린다.
+//   상자 크기가 바뀜(ResizeObserver, map-web.js) · 창 크기가 바뀜 · 지도를 누르기 시작함 · 지도가 멈춤(idle)
+//   다른 탭에서 돌아옴 · 뒤로 가기로 다시 열림 (이때는 크기가 같아도 다시 그리게 한다: force)
+// 폭이 바뀌면 보던 가운데를 그대로 둔다 (웹에서 고른 아파트가 있으면 그 아파트를 가운데로).
+// 높이만 바뀌면 왼쪽 위를 붙잡는다 (모바일 아래 창이 지도를 줄이고 늘리는 것과 같게. 창이 움직이는 동안은 fitMapToSheet가 맞춘다)
+function ensureMapSize({ force = false } = {}) {
+  const { map } = mapState;
+  if (!map) return false;
+  const box = document.getElementById('kakao-map');
+  const width = box.clientWidth;
+  const height = box.clientHeight;
+  if (!width || !height) return false; // 숨겨져 있다. 보일 때 다시 맞춘다
+  const widthChanged = width !== mapState.mapWidth;
+  const heightChanged = height !== mapState.mapHeight;
+  if (!force && !widthChanged && !heightChanged) return false;
+  if (!force && !widthChanged && sheet.moving) return false;
+  const center = map.getCenter(); // relayout 전에는 아직 예전 크기의 가운데
+  map.relayout();
+  mapState.mapWidth = width;
+  mapState.mapHeight = height;
+  if (widthChanged || force) {
+    const web = typeof mapWeb !== 'undefined' && mapWeb.isOn();
+    if (!(web && centerSelected())) map.setCenter(center);
+  }
+  renderScale();
+  return true;
+}
+
+function watchMapHealth(container) {
+  // 다시 보이게 된 직후에는 크기가 아직 0일 수 있어 한 번 미룬다 (requestAnimationFrame은 숨은 탭에서 멈추므로 setTimeout)
+  const later = (force) => setTimeout(safely(() => ensureMapSize({ force })), 50);
+  window.addEventListener('resize', safely(() => ensureMapSize()));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') later(true);
+  });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) later(true);
+  });
+  // 끌기를 시작하기 전에 맞춘다. 크기가 어긋나 있으면 끌어도 지도가 움직이지 않았다
+  container.addEventListener('pointerdown', safely(() => ensureMapSize()), { capture: true });
 }
 
 function safely(handler) {
@@ -1955,6 +2006,7 @@ function fitMapToSheet() {
   if (after === before) return false;
   map.relayout();
   mapState.mapHeight = after;
+  mapState.mapWidth = box.clientWidth;
   const settled = sheet.phase === 'open' && !sheet.moving;
   if (settled) centerSelected();
   renderScale();
