@@ -132,7 +132,8 @@
     left: var(--map-web-search-left);
     z-index: 6;
     width: var(--map-web-search-width);
-    border: 0; /* 파랑 머리 줄 위라 파란 테두리는 뺀다 (2026-10-20 팀장 결정). 모바일은 그대로 */
+    border: 0; /* 파랑 머리 줄 위라 파란 테두리와 그림자는 뺀다 (2026-10-20 팀장 결정). 모바일은 그대로 */
+    box-shadow: none;
   }
 
   .search-view {
