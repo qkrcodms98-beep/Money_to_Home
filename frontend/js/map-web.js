@@ -8,7 +8,7 @@
 //     모양은 map-web.css가 단계와 상관없이 왼쪽 패널로 그린다. 손잡이를 누르거나 끌어도 바뀌지 않는다.
 //   - 목록은 늘 열려 있다. 아파트 창을 닫으면(✕, 뒤로 가기, 다른 지역 고르기) 창을 닫지 않고 목록만 남긴다. 목록의 스크롤 자리는 그대로 둔다.
 //   - 지도는 창에 가리지 않으므로 고른 아파트는 지도의 가운데에 둔다. 패널 폭이 바뀌면 카카오맵에 알린다 (relayout).
-//   - 목록 패널을 접고 펼 수 있다 (store의 map.web_fold).
+//   - 목록 패널을 접고 펼 수 있다. 접은 상태는 저장하지 않는다: 지도 화면을 열면 늘 목록이 펼쳐진 채로 시작한다 (2026-10-20 팀장 결정).
 //   - 로드뷰는 아파트 패널 맨 위에 늘 보인다 (아파트 정보 탭 · 시나리오 탭 모두, 2026-10-20 팀장 결정).
 //     모바일은 창 맨 위(손잡이 앞)에 두고 전체 단계에서만 보이지만, 웹에는 단계가 없으므로 자리를 아파트 패널 안으로 옮긴다.
 //
@@ -188,18 +188,22 @@ const mapWeb = {
   },
 
   // ───────── 목록 패널 접기 ─────────
+  // 접은 상태는 이 화면을 보는 동안만 기억한다 (mapWeb.folded). 새로 열면 목록이 펼쳐져 있다
+  folded: false,
+
   initFold() {
     const button = document.getElementById('map-web-fold');
     if (!button) return;
+    store.set('map', { web_fold: null }); // 예전에 저장해 둔 접기 값을 지운다
     const render = () => {
-      const folded = store.get('map').web_fold === true;
+      const { folded } = mapWeb;
       document.documentElement.toggleAttribute('data-map-web-fold', folded);
       button.setAttribute('aria-expanded', String(!folded));
       button.setAttribute('aria-label', folded ? '목록 펴기' : '목록 접기');
       button.querySelector('.map-web-fold__icon').textContent = folded ? '›' : '‹';
     };
     button.addEventListener('click', () => {
-      store.set('map', { web_fold: store.get('map').web_fold !== true });
+      mapWeb.folded = !mapWeb.folded;
       render();
     });
     render();
