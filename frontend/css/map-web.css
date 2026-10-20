@@ -194,6 +194,36 @@
     transition: none;
   }
 
+  /* 넓은 지도에서 잘 보이게: 반투명 대신 흰 바탕 + 그림자, 48 × 48로 조금 크게 (2026-10-20 팀장 결정). 모바일은 그대로 */
+  .map-controls .map-button {
+    width: 48px;
+    height: 48px;
+    background: var(--color-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .map-controls > .map-button,
+  .map-controls .zoom-buttons {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .map-controls .zoom-buttons .map-button {
+    box-shadow: none;
+  }
+
+  .map-controls .zoom-buttons .map-button + .map-button {
+    border-top-color: var(--color-line);
+  }
+
+  .map-controls .map-button__main {
+    font-size: 17px;
+  }
+
+  .map-controls .map-button__sub {
+    font-size: 11px;
+  }
+
   /* 목록이 늘 보이므로 지도 위 "목록" 단추는 숨긴다 */
   .list-button {
     display: none;
