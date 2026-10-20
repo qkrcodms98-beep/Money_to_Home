@@ -162,6 +162,9 @@ const mapState = {
   cityLoading: null, // 광주 전체를 받는 중인 요청 { key, request }. 같은 조건이면 함께 기다린다
   listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
   idleTimer: null,
+  zoomUntil: 0, // 이때(ms)까지 확대 애니메이션이 돈다. 그 전의 확대는 기다린다 (animateZoom)
+  zoomNext: null, // 기다리는 확대 { level, options }
+  zoomTimer: null,
   sdk: null, // 카카오맵 키와 SDK를 받는 Promise (kakaoReady) // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
   cityStart: false, // 광주 전체(구 표시)로 열었는가. 지역을 정해 열면 false (initMap)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
@@ -281,22 +284,58 @@ function onMapIdle(map) {
 // 1. 휠은 WHEEL_GAP_MS에 한 번만 카카오맵에 넘긴다 (그 사이의 휠은 버린다).
 // 2. 화면을 그리는 코드가 오류를 내도 카카오맵의 사건 처리가 끊기지 않게 잡는다 (safely).
 // 3. 확대 · 끌기 뒤 IDLE_WAIT_MS 안에 idle이 오지 않으면 지도를 다시 그리게 하고, idle에서 할 일을 대신 한다.
-const WHEEL_GAP_MS = 120;
+const WHEEL_GAP_MS = 300; // 휠 한 번에 카카오맵이 확대하는 애니메이션 시간쯤. 그 사이의 휠은 버린다 (예전 120은 애니메이션을 겹치게 했다)
 const IDLE_WAIT_MS = 1200;
 
 function guardWheel(container) {
-  let last = 0;
   // 지도 상자의 부모에서 먼저 잡는다 (capture). 카카오맵은 지도 상자와 그 안에서 휠을 받는다
+  // 확대 애니메이션이 도는 동안(mapState.zoomUntil 전)의 휠은 버린다. 넘긴 휠도 애니메이션 시간만큼 다음 확대를 막는다 (animateZoom)
   container.parentElement.addEventListener('wheel', (event) => {
     if (!container.contains(event.target)) return;
     const now = Date.now();
-    if (now - last < WHEEL_GAP_MS) {
+    if (now < mapState.zoomUntil) {
       event.preventDefault(); // 화면이 대신 스크롤되지 않게
       event.stopPropagation(); // 카카오맵까지 가지 않는다
       return;
     }
-    last = now;
+    mapState.zoomUntil = now + WHEEL_GAP_MS;
   }, { capture: true, passive: false });
+}
+
+// ───────── 확대 · 축소는 한 번에 하나씩 (2026-10-20) ─────────
+// 카카오맵은 확대 애니메이션이 도는 중에 또 확대 · 축소를 받으면 상태가 꼬여, 그 뒤로는 확대 명령을 무시한 채
+// 서로 다른 수준의 지도 조각이 섞인 그림으로 멈췄다 (+ − 단추를 빠르게 누를 때 재현). 멈춘 뒤에는 되살릴 방법이 없어 겹치지 않게 막는다.
+// 애니메이션이 도는 동안 온 확대는 목표만 기억해 두었다가(zoomNext) 끝나면 이어서 한다. 여러 번 누르면 그만큼 쌓인다
+const ZOOM_ANIM_MS = 300; // 카카오맵의 { animate: true } 확대가 걸리는 시간쯤
+const ZOOM_SETTLE_MS = 80; // 끝난 뒤 다음 확대까지 조금 쉰다
+
+function animateZoom(level, options = {}) {
+  const { map } = mapState;
+  if (!map) return;
+  const target = Math.min(Math.max(level, MIN_LEVEL), MAX_LEVEL);
+  const now = Date.now();
+  if (now < mapState.zoomUntil) {
+    mapState.zoomNext = { level: target, options };
+    clearTimeout(mapState.zoomTimer);
+    mapState.zoomTimer = setTimeout(safely(() => {
+      const next = mapState.zoomNext;
+      mapState.zoomNext = null;
+      if (next) animateZoom(next.level, next.options);
+    }), mapState.zoomUntil - now);
+    return;
+  }
+  if (target === map.getLevel()) return;
+  const animate = options.animate;
+  const ms = animate ? (typeof animate === 'object' && animate.duration) || ZOOM_ANIM_MS : 0;
+  mapState.zoomUntil = now + ms + ZOOM_SETTLE_MS;
+  map.setLevel(target, options);
+}
+
+// 단추로 한 단계. 앞에서 눌러 기다리는 목표가 있으면 거기서 한 단계 더
+function zoomStep(delta) {
+  if (!mapState.map) return;
+  const from = mapState.zoomNext ? mapState.zoomNext.level : mapState.map.getLevel();
+  animateZoom(from + delta, { animate: true });
 }
 
 // ───────── 지도 크기 맞추기 (2026-10-20) ─────────
@@ -1406,7 +1445,7 @@ function openGroup(group) {
   }
   mapState.selectedId = shown.id;
   quietZoom(700);
-  map.setLevel(map.getLevel() - 1, { anchor: toLatLng(shown), animate: { duration: 300 } });
+  animateZoom(map.getLevel() - 1, { anchor: toLatLng(shown), animate: { duration: 300 } });
 }
 
 // ───────── 넓게 볼 때: 동 표시 (P-05 ③) ─────────
@@ -2145,12 +2184,9 @@ function bindEvents() {
   });
 
   // 확대·축소 (FR-MAP-25)
-  document.getElementById('zoom-in').addEventListener('click', () => {
-    if (mapState.map) mapState.map.setLevel(mapState.map.getLevel() - 1, { animate: true });
-  });
-  document.getElementById('zoom-out').addEventListener('click', () => {
-    if (mapState.map) mapState.map.setLevel(mapState.map.getLevel() + 1, { animate: true });
-  });
+  // 빠르게 여러 번 눌러도 애니메이션이 겹치지 않게 한 단계씩 차례로 (animateZoom)
+  document.getElementById('zoom-in').addEventListener('click', () => zoomStep(-1));
+  document.getElementById('zoom-out').addEventListener('click', () => zoomStep(1));
 
   // 지도를 불러오지 못했을 때 다시 시도
   document.getElementById('map-retry').addEventListener('click', startKakaoMap);
@@ -2709,7 +2745,7 @@ async function zoomToRegion({ gu, dong }) {
     const anchor = projection.coordsFromContainerPoint(
       new kakao.maps.Point((scale * point.x - middle.x) / (scale - 1), (scale * point.y - middle.y) / (scale - 1)),
     );
-    map.setLevel(level, { anchor, animate: { duration: ZOOM_MS } });
+    animateZoom(level, { anchor, animate: { duration: ZOOM_MS } });
     // 계산의 반올림으로 조금 어긋난 것을 끝난 뒤에 맞춘다.
     setTimeout(() => {
       if (mapState.region.gu === gu && mapState.region.dong === dong) map.panTo(fit ? centerFor(target, middle) : target);
