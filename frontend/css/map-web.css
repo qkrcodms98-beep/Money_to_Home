@@ -707,8 +707,18 @@
     content: '‹';
   }
 
+  /* 접혀 있으면 손잡이를 조금 넓히고 세로로 "범례 ›"를 적어, 무엇을 여는 손잡이인지 알 수 있게 (2026-10-20) */
+  .facility-tab__button[aria-expanded='false'] {
+    width: 24px;
+    height: 72px;
+    color: var(--color-text);
+  }
+
   .facility-tab__button[aria-expanded='false']::before {
-    content: '›';
+    content: '범례 ›';
+    font-size: 12px;
+    letter-spacing: 1px;
+    writing-mode: vertical-rl;
   }
 
   .facility-tab__button:hover {

@@ -2498,7 +2498,8 @@ function renderLackSwitch() {
 }
 
 function renderLegend() {
-  const open = store.get('map').legend_open !== false; // 처음부터 펼쳐 둔다
+  // 처음에는 접어 둔다 (2026-10-20 팀장 결정. 지도를 덜 가리게). 펼친 사람은 기억해 둔 대로 연다
+  const open = store.get('map').legend_open === true;
   const button = document.getElementById('legend-toggle');
   button.setAttribute('aria-expanded', String(open));
   button.setAttribute('aria-label', open ? '범례와 주변 시설 접기' : '범례와 주변 시설 펴기');
@@ -2520,7 +2521,7 @@ function bindEvents() {
 
   // 범례 접고 펴기
   document.getElementById('legend-toggle').addEventListener('click', () => {
-    store.set('map', { legend_open: store.get('map').legend_open === false });
+    store.set('map', { legend_open: store.get('map').legend_open !== true });
     renderLegend();
   });
 
