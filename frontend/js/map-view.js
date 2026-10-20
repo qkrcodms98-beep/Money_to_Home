@@ -68,6 +68,9 @@ const MARKER_SIZE = { width: 72, height: 57, tipX: 8.5, tipY: 57 }; // 말풍선
 const ZOOM_MS = 600; // 동 표시를 눌렀을 때 그 동으로 확대되는 시간
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
+// 지도 화면을 그냥 열면 광주 5개 구 전체를 가장 넓게(구 표시) 보여 준다 (2026-10-20 팀장 결정. 예전에는 서구 치평동).
+// 저장한 결과 · 공유받은 화면의 "지도에서 보기"처럼 지역을 정해 열 때만(store의 map.open_region) 그 지역으로 연다
+const CITY_CENTER = { latitude: 35.1557, longitude: 126.8838 }; // 다섯 구 표시 자리(GU_MARKER_PLACES)의 가운데쯤
 const MIN_LEVEL = 1;
 const TAP_MOVE_PX = 6; // 누른 채 이만큼 넘게 움직였으면 누른 것이 아니라 끈 것이다
 const TAP_GUARD_MS = 400; // 말풍선을 누른 뒤 이 안에 오는 지도의 click은 말풍선의 것이다
@@ -155,6 +158,7 @@ const mapState = {
   citySeq: 0, // 광주 전체를 받는 요청의 번호
   listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
   idleTimer: null, // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
+  cityStart: false, // 광주 전체(구 표시)로 열었는가. 지역을 정해 열면 false (initMap)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
   facilities: [], // 지도 위 주변 시설 아이콘 (kakao.maps.CustomOverlay). 축척 100m 이하에서 화면 안 아파트들의 시설 + 아파트 창에서 띄운 시설
@@ -2527,6 +2531,16 @@ function panToRegion() {
   map.setCenter(toLatLng(center));
 }
 
+// 광주 5개 구 전체를 가장 넓게 (구 표시). 고른 지역(경계 강조)은 없다. 목록은 광주 전체가 된다 (renderCityList)
+function showCity() {
+  const { map } = mapState;
+  if (!map) return;
+  quietZoom(500);
+  mapState.focus = null;
+  map.setLevel(MAX_LEVEL);
+  map.setCenter(toLatLng(CITY_CENTER));
+}
+
 // 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
 async function moveToRegion({ gu, dong }) {
   useRegion();
@@ -2617,7 +2631,7 @@ async function startKakaoMap() {
   try {
     const key = await loadKakaoKey();
     await loadKakaoSdk(key);
-    if (!mapState.map) mapState.map = createMap(regionCenter(mapState.region) || DEFAULT_CENTER);
+    if (!mapState.map) mapState.map = createMap(mapState.cityStart ? CITY_CENTER : regionCenter(mapState.region) || DEFAULT_CENTER);
     mapState.mapHeight = document.getElementById('kakao-map').clientHeight;
   } catch (error) {
     console.error('[map]', error.message); // 키 값은 찍지 않는다
@@ -2625,7 +2639,8 @@ async function startKakaoMap() {
     return;
   }
   setMapMessage(null);
-  panToRegion();
+  if (mapState.cityStart) showCity();
+  else panToRegion();
   renderMarkers();
   renderScale();
   refitWhenBdongArrives();
@@ -2635,7 +2650,7 @@ async function startKakaoMap() {
 // 법정동이 오면 그 동 전체에 다시 맞춘다. 그사이 사용자가 지도를 움직였거나 다른 지역을 골랐으면 그대로 둔다.
 function refitWhenBdongArrives() {
   const { map, region } = mapState;
-  if (!map || !region.dong || mapState.focus) return;
+  if (!map || !region.dong || mapState.focus || mapState.cityStart) return; // 광주 전체로 열었으면 동으로 옮기지 않는다
   const level = map.getLevel();
   const center = map.getCenter();
   mapBoundary.bdongReady().then((ok) => {
@@ -2666,6 +2681,8 @@ async function initMap() {
     mapState.regions = [];
   }
   mapState.region = restoreRegion();
+  mapState.cityStart = store.get('map').open_region !== true;
+  store.set('map', { open_region: null }); // 한 번만 쓴다. 새로 고치면 다시 광주 전체부터
   renderRegionName();
 
   // 지도와 아파트를 함께 받는다. 어느 쪽이 먼저 와도 말풍선이 그려진다.
