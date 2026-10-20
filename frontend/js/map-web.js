@@ -37,6 +37,7 @@ const mapWeb = {
     roadviewBox: aptPanel.roadviewBox,
   },
 
+  wasOn: false, // 마지막으로 맞춘 배치가 웹이었는가 (창 폭이 1200px을 넘나드는 것을 알아챈다)
   mapWidth: 0, // 지도의 폭. 바뀌었을 때만 relayout 한다 (높이가 바뀌는 것은 map-view.js의 fitMapToSheet가 맞춘다)
 
   init() {
@@ -49,16 +50,27 @@ const mapWeb = {
       if (mapWeb.isOn()) mapWeb.openList();
     });
 
-    // 창 폭이 1200px을 넘나들 때
-    MAP_WEB_QUERY.addEventListener('change', () => {
-      if (mapWeb.isOn()) {
+    // 창 폭이 1200px을 넘나들 때. 미디어 쿼리의 change만으로는 놓치는 브라우저가 있어 resize에서도 확인한다.
+    // 앞의 상태(mapWeb.wasOn)와 다를 때만 바꾼다
+    mapWeb.wasOn = mapWeb.isOn();
+    const onModeChange = () => {
+      const on = mapWeb.isOn();
+      if (on === mapWeb.wasOn) return;
+      mapWeb.wasOn = on;
+      if (on) {
         if (sheet.isShown()) sheet.show(MAP_WEB_STAGE, sheet.mode); // 모바일 단계에서 웹 단계로
         else mapWeb.openList();
+      } else if (sheet.isShown() && sheet.mode === 'list') {
+        mapWeb.base.hide(); // 웹에서만 늘 열어 두던 목록은 닫는다. 모바일은 지도만 보이는 처음 모양에서 시작한다
+      } else if (sheet.isShown()) {
+        mapWeb.base.show(MAP_WEB_STAGE, sheet.mode); // 아파트를 보던 중이면 모바일 30%로 둔다
       }
       sheet.apply(); // 표시를 다시 단다 (모바일이면 sheet.js의 원래 표시로 돌아간다)
       mapWeb.placeRoadview();
       aptPanel.renderRoadview();
-    });
+    };
+    MAP_WEB_QUERY.addEventListener('change', onModeChange);
+    window.addEventListener('resize', onModeChange);
   },
 
   // ───────── 아래 창을 왼쪽 패널로 ─────────
