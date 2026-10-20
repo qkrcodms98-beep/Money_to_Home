@@ -284,6 +284,38 @@
     margin: 0 0 8px;
   }
 
+  /* 공유 · ✕는 로드뷰 사진 오른쪽 위에 올린다. 사진 위에서도 보이게 반투명 검은 바탕에 흰 아이콘 (2026-10-20 팀장 결정).
+     비는 첫 줄은 접어서 이름 줄과 면적 줄이 한 줄씩 위로 올라온다 (가로 자리는 그대로). "← 목록"이 있을 때는 첫 줄을 둔다 */
+  #apartment-panel:has(> .apt-roadview:not([hidden])) {
+    position: relative;
+  }
+
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__top:not(:has(.apt__back:not([hidden]))) {
+    height: 0;
+    min-height: 0;
+    margin: 0;
+  }
+
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    gap: 0;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .share-action,
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .apt__nav-button--close {
+    color: #fff;
+  }
+
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .share-icon {
+    stroke: #fff;
+  }
+
   html[data-map-web-fold] #apartment-panel {
     border-left: 0;
   }
