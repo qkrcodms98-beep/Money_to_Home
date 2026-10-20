@@ -163,6 +163,7 @@
 
   .condition-bar__link {
     height: var(--touch-size);
+    padding: 0 14px; /* 누르는 자리를 넓히고 오른쪽 끝에서 조금 안으로 (2026-10-20 팀장) */
     color: #ffffff; /* 파랑 머리 줄 위의 "로그인" */
     font-size: var(--text-item); /* 13px → 16px (2026-10-20 팀장 결정) */
   }
