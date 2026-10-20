@@ -1136,18 +1136,24 @@
   overflow-wrap: anywhere;
 }
 
-/* "상한 초과"는 둘째 줄 끝이 아니라 금액 바로 위 오른쪽에 둔다 (2026-10-20 팀장 결정). 둘째 줄이 넘쳐 줄이 바뀌던 것을 막는다.
-   그 줄만 위 여백을 늘려 표시 자리를 만든다 */
-.list .list-card__slide:has(.list-card__tag--cap) {
-  position: relative;
-  padding-top: 32px;
+/* "상한 초과"는 둘째 줄 끝이 아니라 카드 위 선에 걸쳐 금액 위 오른쪽에 둔다 (2026-10-20 팀장 결정).
+   둘째 줄이 넘쳐 줄이 바뀌던 것을 막는다. 카드 높이는 그대로다. 카드는 면적을 옆으로 넘기려고 넘친 것을 가리므로 이 카드만 풀어 준다
+   (면적 칸은 .list-card__body가 따로 가린다) */
+.list .list-card:has(> .list-card__tag--cap) {
+  overflow: visible;
 }
 
-.list .list-card__slide .list-card__tag--cap {
+.list .list-card > .list-card__tag--cap {
   position: absolute;
-  top: 10px;
-  right: 6px;
+  top: -10px; /* 표시 높이(20px)의 절반. 가운데가 선에 온다 */
+  right: 42px; /* 금액 오른쪽 끝에 맞춘다 (› 자리 36px + 금액 오른쪽 여백) */
+  z-index: 1;
   margin: 0;
+  box-shadow: 0 0 0 2px var(--color-bg); /* 선과 겹치는 자리를 흰 테두리로 끊는다 */
+}
+
+.list .list-card > .list-card__tag--cap[hidden] {
+  display: none;
 }
 
 .list .list-gauge {

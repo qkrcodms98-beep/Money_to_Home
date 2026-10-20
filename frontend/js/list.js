@@ -273,12 +273,6 @@ function listCard(apartment, handlers) {
     if (apartment.latitude === null || apartment.longitude === null) {
       meta.append(listEl('span', 'list-card__tag', LIST_TEXT.noCoord));
     }
-    // 평균가가 상품의 대상 주택 가격 상한을 넘는 면적 (FR-LOAN-14). 알리기만 하고 빼지 않는다
-    if (area.over_price_cap) {
-      const cap = listEl('span', 'list-card__tag list-card__tag--cap', LIST_TEXT.overCap);
-      cap.title = LIST_TEXT.overCapHelp;
-      meta.append(cap);
-    }
     mid.append(meta);
     if (listViewMode() === 'gauge') mid.append(listGauge(area));
     slide.append(mid);
@@ -286,8 +280,19 @@ function listCard(apartment, handlers) {
     track.append(slide);
   });
 
+  // 평균가가 상품의 대상 주택 가격 상한을 넘는 면적 (FR-LOAN-14). 알리기만 하고 빼지 않는다.
+  // 카드 위 선에 걸쳐 금액 위 오른쪽에 하나만 둔다 (new-style.css, 2026-10-20 팀장 결정). 보고 있는 면적이 넘을 때만 보인다
+  const cap = apartment.areas.some((a) => a.over_price_cap)
+    ? listEl('span', 'list-card__tag list-card__tag--cap', LIST_TEXT.overCap)
+    : null;
+  if (cap) {
+    cap.title = LIST_TEXT.overCapHelp;
+    card.append(cap);
+  }
+
   const show = () => {
     const area = apartment.areas[index];
+    if (cap) cap.hidden = !area.over_price_cap;
     const areaGroup = LIST_GROUPS.find((g) => g.key === area.category);
     track.style.transform = `translateX(${-100 * index}%)`;
     body.setAttribute('aria-label', `${apartment.name}, ${format.area(area.supply_area, area.exclusive_area)}, ${areaGroup.badge}`);
