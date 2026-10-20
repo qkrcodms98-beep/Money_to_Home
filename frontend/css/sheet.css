@@ -174,43 +174,27 @@
   display: none;
 }
 
+/* 로드뷰 자리 두 개를 겹쳐 두고 번갈아 쓴다 (apartment.js의 showPano, 2026-10-20 크로스페이드).
+   새 사진이 든 쪽이 위(--top)에서 투명하게 준비되었다가 서서히 나타난다(--on) */
 .apt-roadview__view {
   position: absolute;
   inset: 0;
-  z-index: 0; /* 카카오 로드뷰 안의 쌓임을 이 안에 가둔다. 그래야 아래 덮개가 그 위에 온다 */
-}
-
-/* 아파트를 바꾸는 동안 덮개 두 장 (apartment.js의 coverRoadview, 2026-10-20 팀장 결정). 덮을 때는 바로, 걷을 때는 천천히
-     아래(::before): 투명하지 않은 흰 판. 바뀌는 사진이 비치지 않게 다 가린다
-     위(::after): 사진 위 공유 · ✕ 바탕(map-web.css)과 같은 색 · 진하기의 반투명 검정 */
-.apt-roadview::before,
-.apt-roadview::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+  z-index: 0;
+  isolation: isolate; /* 카카오 로드뷰 안의 쌓임을 이 안에 가둔다 */
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 }
 
-.apt-roadview::before {
-  background: var(--color-bg);
+.apt-roadview__view--top {
+  z-index: 1;
 }
 
-.apt-roadview::after {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.apt-roadview--switching::before,
-.apt-roadview--switching::after {
+.apt-roadview__view--on {
   opacity: 1;
-  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .apt-roadview::before,
-  .apt-roadview::after {
+  .apt-roadview__view {
     transition: none;
   }
 }

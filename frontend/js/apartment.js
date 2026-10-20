@@ -63,11 +63,13 @@ const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 
 // 로드뷰를 바꿀 때 (2026-10-20 팀장: 아파트를 넘길 때마다 사진이 빠르게 바뀌는 모습이 보기 싫다)
 //   - 동을 받으면 그 동 아파트들의 로드뷰 지점(panoId)을 미리 찾아 둔다 (prefetchRoadviews). 넘길 때 찾느라 기다리지 않는다.
 //     카카오 로드뷰는 한 번에 한 장만 띄울 수 있고 사진을 미리 받아 두는 기능이 없어, 지점까지만 미리 찾는다.
-//   - 사진을 바꾸고 아파트 쪽으로 돌리는 동안은 덮개로 가렸다가, 다 되면 덮개를 천천히 걷는다 (sheet.css .apt-roadview--switching)
+//   - 로드뷰 화면을 두 개 두고 번갈아 쓴다 (크로스페이드, 2026-10-20 팀장 결정). 새 사진은 뒤의 화면에 띄워 아파트 쪽으로 돌린 뒤,
+//     앞 사진 위로 서서히 나타나게 한다 (sheet.css .apt-roadview__view--on). 사진이 바뀌는 모습이나 빈 화면이 보이지 않는다
 const APT_ROADVIEW_PREFETCH_MAX = 80; // 한 번에 미리 찾는 아파트 수의 상한
 const APT_ROADVIEW_PREFETCH_AT_ONCE = 4; // 동시에 찾는 수
-const APT_ROADVIEW_SETTLE_MS = 250; // 사진을 바꾸고 돌린 뒤 덮개를 걷기까지 기다리는 시간 (사진 조각이 채워지는 동안)
-const APT_ROADVIEW_COVER_MAX_MS = 1500; // 신호가 안 와도 이만큼 지나면 덮개를 걷는다
+const APT_ROADVIEW_SETTLE_MS = 250; // 새 사진을 띄우고 돌린 뒤 나타나게 하기까지 기다리는 시간 (사진 조각이 채워지는 동안)
+const APT_ROADVIEW_REVEAL_MAX_MS = 1500; // 신호가 안 와도 이만큼 지나면 나타나게 한다
+const APT_ROADVIEW_FADE_MS = 400; // 새 사진이 앞 사진 위로 나타나는 시간 (sheet.css의 transition과 같다)
 const APT_ROADVIEW_TILT = -20; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
 const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보인다 (-3 ~ 3)
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
@@ -164,7 +166,9 @@ const aptPanel = {
   handlers: {},
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
   panoIds: new Map(), // 아파트 번호 → 가장 가까운 로드뷰 지점(panoId). 없으면 null. 찾은 것만 둔다
-  roadviewCoverTimer: null,
+  roadviews: [null, null], // 번갈아 쓰는 로드뷰 두 개 (kakao.maps.Roadview). 만든 것만
+  roadviewFront: 0, // 지금 보이는 쪽 (0 또는 1). aptPanel.roadview는 이쪽이다
+  roadviewTimers: [],
   areaOnly: false, // 지금 다시 그리는 것이 면적 칩을 눌러서인가 (render 동안만 true)
   similarTimer: null, // 면적 칸이 다 미끄러진 뒤 비슷한 아파트를 받는 타이머
   loading: new Set(), // 받는 중인 아파트 번호
@@ -391,9 +395,13 @@ const aptPanel = {
     box.id = 'apt-roadview';
     box.className = 'apt-roadview';
     box.hidden = true;
-    const view = document.createElement('div');
-    view.className = 'apt-roadview__view';
-    view.hidden = true;
+    // 번갈아 쓰는 로드뷰 자리 두 개 (크로스페이드)
+    const views = [0, 1].map(() => {
+      const view = document.createElement('div');
+      view.className = 'apt-roadview__view';
+      view.hidden = true;
+      return view;
+    });
     const empty = document.createElement('div');
     empty.className = 'apt-roadview__empty';
     empty.hidden = true;
@@ -405,7 +413,7 @@ const aptPanel = {
     text.className = 'apt-roadview__text';
     text.textContent = APT_NO_ROADVIEW;
     empty.append(icon, text);
-    box.append(view, empty);
+    box.append(...views, empty);
     const handle = document.getElementById('sheet-handle');
     handle.parentElement.insertBefore(box, handle);
     return box;
@@ -414,7 +422,10 @@ const aptPanel = {
   // 'view' 로드뷰, 'empty' 기본 이미지, null 아무것도 (찾는 중)
   roadviewShow(which) {
     const box = aptPanel.roadviewBox();
-    box.querySelector('.apt-roadview__view').hidden = which !== 'view';
+    box.querySelectorAll('.apt-roadview__view').forEach((view) => {
+      view.hidden = which !== 'view';
+      if (which !== 'view') view.classList.remove('apt-roadview__view--on', 'apt-roadview__view--top');
+    });
     box.querySelector('.apt-roadview__empty').hidden = which !== 'empty';
   },
 
@@ -441,49 +452,72 @@ const aptPanel = {
     }
     const id = apartment.id;
     const position = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
-    aptPanel.coverRoadview(true); // 앞 아파트의 사진은 덮어 두고 바꾼다
     try {
       aptPanel.findPano(apartment, (panoId) => {
         if (aptPanel.roadviewFor !== id) return; // 찾는 사이에 다른 아파트로 넘겼다
         if (panoId === null || panoId === undefined) {
           aptPanel.roadviewShow('empty');
-          aptPanel.coverRoadview(false);
           return;
         }
-        aptPanel.roadviewShow('view');
-        const view = aptPanel.roadviewBox().querySelector('.apt-roadview__view');
-        if (!aptPanel.roadview) {
-          aptPanel.roadview = new kakao.maps.Roadview(view);
-          // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 아파트 쪽을 바라보게 돌리고, 조금 뒤 덮개를 걷는다
-          const settle = () => {
-            aptPanel.aimRoadview();
-            clearTimeout(aptPanel.roadviewCoverTimer);
-            aptPanel.roadviewCoverTimer = setTimeout(() => aptPanel.coverRoadview(false), APT_ROADVIEW_SETTLE_MS);
-          };
-          kakao.maps.event.addListener(aptPanel.roadview, 'init', settle);
-          kakao.maps.event.addListener(aptPanel.roadview, 'panoid_changed', settle);
-        }
-        aptPanel.roadviewTarget = position;
-        const samePano = typeof aptPanel.roadview.getPanoId === 'function' && aptPanel.roadview.getPanoId() === panoId;
-        aptPanel.roadview.setPanoId(panoId, position);
-        aptPanel.roadview.relayout();
-        if (samePano) { // 같은 지점이면 바뀌었다는 신호가 오지 않는다. 방향만 돌리고 걷는다
-          aptPanel.aimRoadview();
-          aptPanel.roadviewCoverTimer = setTimeout(() => aptPanel.coverRoadview(false), APT_ROADVIEW_SETTLE_MS);
-        }
+        aptPanel.showPano(panoId, position, id);
       });
     } catch (error) {
       aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
-      aptPanel.coverRoadview(false);
     }
   },
 
-  // 로드뷰 덮개. 덮을 때는 바로, 걷을 때는 천천히 (sheet.css). 신호가 오지 않아도 APT_ROADVIEW_COVER_MAX_MS 뒤에는 걷는다
-  coverRoadview(on) {
+  // 새 사진을 뒤의 화면에 띄우고, 아파트 쪽으로 돌린 뒤 앞 사진 위로 서서히 나타나게 한다 (크로스페이드).
+  // 지금 보이는 사진이 없으면(처음, 기본 이미지 뒤) 앞 화면에 그대로 띄워 나타나게 한다
+  showPano(panoId, position, id) {
     const box = aptPanel.roadviewBox();
-    clearTimeout(aptPanel.roadviewCoverTimer);
-    box.classList.toggle('apt-roadview--switching', on);
-    if (on) aptPanel.roadviewCoverTimer = setTimeout(() => aptPanel.coverRoadview(false), APT_ROADVIEW_COVER_MAX_MS);
+    const views = box.querySelectorAll('.apt-roadview__view');
+    const front = aptPanel.roadviewFront;
+    const showing = views[front].classList.contains('apt-roadview__view--on') && !views[front].hidden;
+    const slot = showing ? 1 - front : front;
+    const view = views[slot];
+    const other = views[1 - slot];
+    aptPanel.roadviewTimers.forEach(clearTimeout);
+    aptPanel.roadviewTimers = [];
+    box.querySelector('.apt-roadview__empty').hidden = true;
+    views.forEach((item) => { item.hidden = false; });
+    view.classList.remove('apt-roadview__view--on'); // 투명한 채로 맨 위에 둔다
+    view.classList.add('apt-roadview__view--top');
+    other.classList.remove('apt-roadview__view--top');
+    if (!showing) other.classList.remove('apt-roadview__view--on');
+
+    let rv = aptPanel.roadviews[slot];
+    if (!rv) {
+      rv = new kakao.maps.Roadview(view);
+      aptPanel.roadviews[slot] = rv;
+      // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 기다리던 일을 한다
+      const ready = () => {
+        const next = rv.onReady;
+        rv.onReady = null;
+        if (next) next();
+      };
+      kakao.maps.event.addListener(rv, 'init', ready);
+      kakao.maps.event.addListener(rv, 'panoid_changed', ready);
+    }
+    let shown = false;
+    const reveal = () => {
+      if (shown || aptPanel.roadviewFor !== id) return;
+      shown = true;
+      view.classList.add('apt-roadview__view--on'); // 서서히 나타난다
+      aptPanel.roadviewFront = slot;
+      aptPanel.roadview = rv;
+      aptPanel.roadviewTarget = position;
+      // 다 나타난 뒤 앞 사진은 투명하게 둔다 (다음에 뒤의 화면으로 쓴다)
+      aptPanel.roadviewTimers.push(setTimeout(() => other.classList.remove('apt-roadview__view--on'), APT_ROADVIEW_FADE_MS));
+    };
+    rv.onReady = () => {
+      aptPanel.aimRoadview(rv, position);
+      aptPanel.roadviewTimers.push(setTimeout(reveal, APT_ROADVIEW_SETTLE_MS));
+    };
+    const samePano = typeof rv.getPanoId === 'function' && rv.getPanoId() === panoId;
+    rv.setPanoId(panoId, position);
+    rv.relayout();
+    if (samePano && rv.onReady) rv.onReady(); // 같은 지점이면 바뀌었다는 신호가 오지 않는다
+    aptPanel.roadviewTimers.push(setTimeout(reveal, APT_ROADVIEW_REVEAL_MAX_MS)); // 신호가 안 와도 언젠가는 보인다
   },
 
   // 아파트의 가장 가까운 로드뷰 지점. 찾아 둔 것이 있으면 바로, 없으면 카카오에 물어 기억해 둔다
@@ -520,9 +554,7 @@ const aptPanel = {
   // 촬영 지점(로드뷰의 자리)에서 아파트 좌표로 가는 방위각(북쪽 0도, 시계 방향)을 구해 시점의 좌우 각도(pan)로 둔다.
   // 위아래(tilt)는 살짝 위(-20도, 카카오는 음수가 위), 확대(zoom)는 가장 넓게(-3). 아파트 건물이 위층까지 들어온다
   roadviewTarget: null,
-  aimRoadview() {
-    const rv = aptPanel.roadview;
-    const target = aptPanel.roadviewTarget;
+  aimRoadview(rv = aptPanel.roadview, target = aptPanel.roadviewTarget) {
     if (!rv || !target) return;
     const from = rv.getPosition();
     if (!from) return;
