@@ -1393,3 +1393,12 @@
 .apt-roadview {
   max-height: 40vh;
 }
+
+/* 넓은 모바일 화면(태블릿, 줄인 PC 창)에서 검색 줄과 검색 결과가 창 폭 전체로 늘어나지 않게 (2026-10-20).
+   왼쪽 자리는 그대로 두고 길이만 560px에서 멈춘다. 휴대폰(390)에서는 그대로. 웹(1024px 이상)은 map-web.css가 정한다 */
+@media (max-width: 1023px) {
+  .search-row,
+  .search-view {
+    max-width: 560px;
+  }
+}
