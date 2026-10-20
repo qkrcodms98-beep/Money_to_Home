@@ -365,7 +365,7 @@
   }
 
   /* 패널 접기 · 펴기 손잡이 (2026-10-20 팀장 결정). 패널 오른쪽 끝의 세로 가운데에 붙은 얇은 탭.
-     목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 눈에 덜 띄게 옅게 두고, 마우스를 올리면 조금 진해진다 */
+     목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 22 × 76, 흰 바탕에 옅은 그림자. 마우스를 올리면 조금 진해진다 */
   .map-web-fold {
     position: absolute;
     top: calc(var(--map-web-bar) + (100vh - var(--map-web-bar)) / 2);
@@ -374,17 +374,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
-    height: 56px;
+    width: 22px;
+    height: 76px;
     padding: 0;
     border: 1px solid var(--color-line);
     border-left: 0;
-    border-radius: 0 8px 8px 0;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-    color: var(--color-text-hint);
+    border-radius: 0 10px 10px 0;
+    background: var(--color-bg);
+    box-shadow: 2px 1px 6px rgba(0, 0, 0, 0.12);
+    color: var(--color-text-sub);
     font-family: inherit;
-    font-size: 13px;
+    font-size: 18px;
+    font-weight: var(--font-bold);
     line-height: 1;
     cursor: pointer;
     transform: translateY(-50%);
@@ -393,7 +394,7 @@
 
   .map-web-fold:hover,
   .map-web-fold:focus-visible {
-    background: var(--color-bg);
+    background: var(--color-bg-sub);
     color: var(--color-text);
   }
 
@@ -408,7 +409,7 @@
   }
 
   html[data-map-web-panel="apartment"][data-map-web-apt-fold] .map-web-fold--apt {
-    transform: translateY(calc(-50% + 64px));
+    transform: translateY(calc(-50% + 88px));
   }
 
   /* 아파트 패널을 접음: 고른 아파트는 그대로 두고 패널만 숨겨 지도를 넓힌다 */

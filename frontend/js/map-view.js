@@ -137,6 +137,7 @@ const mapState = {
   tappedAt: 0, // 지도 위 표시를 마지막으로 누른 때 (ms)
   loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
+  idleTimer: null, // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
   facilities: [], // 지도 위 주변 시설 아이콘 (kakao.maps.CustomOverlay). 아파트 창에서 띄운 시설 하나만 단다
@@ -196,11 +197,13 @@ function createMap(center) {
   const map = new kakao.maps.Map(container, { center: toLatLng(center), level: DEFAULT_LEVEL });
   map.setMinLevel(MIN_LEVEL);
   map.setMaxLevel(MAX_LEVEL);
-  kakao.maps.event.addListener(map, 'zoom_changed', () => {
+  guardWheel(container);
+  kakao.maps.event.addListener(map, 'zoom_changed', safely(() => {
     renderScale();
     onZoomChanged();
     drawFacilityLink(); // 확대 수준이 바뀌면 점선의 길이(px)가 바뀐다
-  });
+    watchIdle(map);
+  }));
   // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
   kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
   // 창을 닫은 뒤 남겨 둔 말풍선(keepOnClose)은 지도를 끌면 푼다
@@ -208,20 +211,73 @@ function createMap(center) {
     if (sheet.phase === 'closed' && mapState.selectedId !== null) selectMarker(null);
   });
   kakao.maps.event.addListener(map, 'click', onMapClick);
-  kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
-  kakao.maps.event.addListener(map, 'idle', () => {
-    renderScale();
-    hideKakaoScale();
-    // 확대 수준이 바뀌면 말풍선끼리 겹치는 정도가 달라진다. 움직임이 끝난 뒤에 다시 묶는다.
-    if (mapState.mode === 'apartment' && mapState.level !== map.getLevel()) renderMarkers();
-    renderFacilities();
-    keepFacilityNameInside(); // 지도가 움직였으면 펼친 이름표가 화면 밖으로 나가지 않게 다시 맞춘다
-  });
+  kakao.maps.event.addListener(map, 'dragend', safely(() => {
+    scheduleBoundsLoad();
+    watchIdle(map);
+  }));
+  kakao.maps.event.addListener(map, 'idle', safely(() => {
+    clearTimeout(mapState.idleTimer);
+    onMapIdle(map);
+  }));
   hideKakaoScale();
   // 경계 (js/boundary.js). 행정동 선은 동 표시가 나오기 전(말풍선 수준)에서만 그린다
   // 경계가 오면 구 표시를 경계 안으로 다시 벌린다 (먼저 그려졌으면 경계 확인 없이 벌려져 있다)
   mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL }).then(() => respreadGuMarkers());
   return map;
+}
+
+// 지도가 멈춘 뒤 (idle). 확대 수준이 바뀌면 말풍선끼리 겹치는 정도가 달라진다. 움직임이 끝난 뒤에 다시 묶는다.
+function onMapIdle(map) {
+  renderScale();
+  hideKakaoScale();
+  // 빠르게 확대 · 축소하면 앞 수준에서 받던 자료가 늦게 와서 표시가 지금 수준과 어긋난 채 남았다 (9인데 동 표시).
+  // 멈춘 뒤 한 번 더 맞춘다
+  if (mapState.data && markerMode() !== mapState.mode) onZoomChanged();
+  if (mapState.mode === 'apartment' && mapState.level !== map.getLevel()) renderMarkers();
+  renderFacilities();
+  keepFacilityNameInside(); // 지도가 움직였으면 펼친 이름표가 화면 밖으로 나가지 않게 다시 맞춘다
+}
+
+// ───────── 무리한 확대 · 축소 막기 (2026-10-20) ─────────
+// 휠을 세게 굴리면 카카오맵이 확대 애니메이션을 끝내지 못하고, 서로 다른 수준의 지도 조각과 경계가 겹친 채 멈췄다.
+// 1. 휠은 WHEEL_GAP_MS에 한 번만 카카오맵에 넘긴다 (그 사이의 휠은 버린다).
+// 2. 화면을 그리는 코드가 오류를 내도 카카오맵의 사건 처리가 끊기지 않게 잡는다 (safely).
+// 3. 확대 · 끌기 뒤 IDLE_WAIT_MS 안에 idle이 오지 않으면 지도를 다시 그리게 하고, idle에서 할 일을 대신 한다.
+const WHEEL_GAP_MS = 120;
+const IDLE_WAIT_MS = 1200;
+
+function guardWheel(container) {
+  let last = 0;
+  // 지도 상자의 부모에서 먼저 잡는다 (capture). 카카오맵은 지도 상자와 그 안에서 휠을 받는다
+  container.parentElement.addEventListener('wheel', (event) => {
+    if (!container.contains(event.target)) return;
+    const now = Date.now();
+    if (now - last < WHEEL_GAP_MS) {
+      event.preventDefault(); // 화면이 대신 스크롤되지 않게
+      event.stopPropagation(); // 카카오맵까지 가지 않는다
+      return;
+    }
+    last = now;
+  }, { capture: true, passive: false });
+}
+
+function safely(handler) {
+  return (...args) => {
+    try {
+      handler(...args);
+    } catch (error) {
+      console.error('지도 사건 처리 중 오류', error);
+    }
+  };
+}
+
+function watchIdle(map) {
+  clearTimeout(mapState.idleTimer);
+  mapState.idleTimer = setTimeout(safely(() => {
+    map.relayout(); // 멈춘 조각을 지금 수준으로 다시 그린다
+    map.setCenter(map.getCenter());
+    onMapIdle(map);
+  }), IDLE_WAIT_MS);
 }
 
 // 지도를 누르면 지도 위의 창을 닫는다. 말풍선을 누른 직후의 click은 말풍선의 것이라 넘긴다 (onTap)
