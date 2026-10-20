@@ -77,8 +77,8 @@
     z-index: 5;
     display: block;
     height: var(--map-web-bar);
-    /* 파랑 머리 줄 (2026-10-20 팀장 결정). 왼쪽 rgb(41, 111, 197)에서 오른쪽 끝 rgb(120, 182, 240)까지 밝아지는 그라데이션 (처음 것은 티가 안 나서 더 줌) */
-    background: linear-gradient(90deg, rgb(41, 111, 197) 0%, rgb(66, 140, 222) 55%, rgb(120, 182, 240) 100%);
+    /* 파랑 머리 줄 (2026-10-20 팀장 결정). 왼쪽 rgb(42, 110, 193)에서 오른쪽 끝 rgb(120, 182, 240)까지 밝아지는 그라데이션 */
+    background: linear-gradient(90deg, rgb(42, 110, 193) 0%, rgb(101, 159, 225) 55%, rgb(120, 182, 240) 100%);
   }
 
   /* 로고. 모양은 입력 화면과 같다 (common.css의 .header__home, .header__logo, .header__name, .header__to) */
