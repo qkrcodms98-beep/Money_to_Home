@@ -639,18 +639,16 @@
     right: 20px;
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
-    padding: 0 12px;
-    border: 1px solid var(--color-line-strong);
-    border-radius: var(--radius-pill);
+    min-height: 30px; /* 누르는 자리는 그대로 두고 모양만 글자 링크로 (2026-10-20 팀장 결정) */
+    padding: 0 2px;
     color: var(--color-text-sub);
-    font-size: var(--text-badge);
+    font-size: var(--text-help);
     font-weight: var(--font-medium);
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .list__goal-edit:hover {
-    border-color: var(--color-text-sub);
     color: var(--color-text);
   }
 }
