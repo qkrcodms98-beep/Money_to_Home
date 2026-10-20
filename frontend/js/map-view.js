@@ -137,6 +137,9 @@ const mapState = {
   tappedAt: 0, // 지도 위 표시를 마지막으로 누른 때 (ms)
   loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
+  city: null, // 광주 전체 목록의 A-05 응답 { key, data } (renderCityList)
+  citySeq: 0, // 광주 전체를 받는 요청의 번호
+  listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
   idleTimer: null, // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
@@ -919,6 +922,7 @@ function renderMarkers() {
   mapState.mode = markerMode();
   mapState.level = map.getLevel();
   renderRegionName();
+  if ((mapState.mode === 'gu') !== Boolean(mapState.listCity)) renderList(); // 구 표시 수준을 드나들면 목록을 광주 전체 ↔ 지역으로
   if (mapState.mode === 'gu') {
     renderAreaMarkers('gu');
     return;
@@ -1342,6 +1346,11 @@ const listPlace = () => {
 // 목록 (P-06 ⑤). 그리기는 김목산의 list.js. A-05 응답을 받을 때마다 부른다.
 function renderList() {
   if (!mapState.data) return;
+  mapState.listCity = mapState.mode === 'gu';
+  if (mapState.listCity) {
+    renderCityList();
+    return;
+  }
   listView.render(document.getElementById('apt-list'), visibleData(), {
     where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
     sort: currentSort(),
@@ -1350,6 +1359,42 @@ function renderList() {
     onClose: () => sheet.close(),
     ...(currentFilters() ? { onResetFilters: () => applyFilters(null), onChangeFilters: () => openFilters() } : {}),
   });
+}
+
+// ───────── 구 표시 수준의 목록: 광주 전체 (2026-10-20) ─────────
+// 지도를 구 표시 수준으로 넓게 보면 목록에 광주 5개 구 전체의 아파트를 보인다 (A-05 where.all).
+// 지도의 표시와 자료(mapState.data)는 그대로 두고 목록만 따로 받는다. 같은 조건 · 정렬이면 받아 둔 것을 쓴다.
+// 목록에서 아파트를 고르면 이름 검색에서 고른 것처럼 그 동으로 옮겨 연다 (onSearchPick).
+const CITY_NAME = '광주 전체';
+
+async function renderCityList() {
+  const list = document.getElementById('apt-list');
+  const key = requestKey();
+  const options = {
+    where: { gu: CITY_NAME },
+    sort: currentSort(),
+    onSort: changeSort,
+    onSelect: (apartment) => onSearchPick(apartment),
+    onClose: () => sheet.close(),
+    ...(currentFilters() ? { onResetFilters: () => applyFilters(null), onChangeFilters: () => openFilters() } : {}),
+  };
+  if (mapState.city && mapState.city.key === key) {
+    listView.render(list, mapState.city.data, options);
+    return;
+  }
+  const mine = ++mapState.citySeq;
+  listView.renderLoading(list, { where: options.where, onClose: options.onClose });
+  let data;
+  try {
+    data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where: { all: true }, sort: currentSort() }));
+  } catch (error) {
+    if (mine !== mapState.citySeq || !mapState.listCity) return;
+    listView.renderError(list, { message: error.status === 422 ? error.detail : MSG.dataFail, onRetry: renderCityList, onClose: options.onClose });
+    return;
+  }
+  if (mine !== mapState.citySeq || !mapState.listCity) return; // 그사이 다시 받았거나 구 표시 수준을 벗어났다
+  mapState.city = { key, data };
+  listView.render(list, data, options);
 }
 
 // ───────── 조건 창 (P-05 ②) ─────────
@@ -1852,7 +1897,7 @@ function regionCenter({ gu, dong }) {
 }
 
 // 목록의 정렬 (A-05의 sort). store의 map.sort에 둔다. 모르는 값이면 구분순이다.
-const SORTS = ['category', 'price_asc', 'price_desc'];
+const SORTS = ['category', 'price_asc', 'price_desc', 'area_desc', 'households_desc', 'newest'];
 const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'category');
 
 // 조건 창에서 고른 조건 (A-05, A-12의 filters). store의 map.filters에 둔다. 조건이 하나도 없으면 null

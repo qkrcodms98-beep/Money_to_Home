@@ -42,7 +42,8 @@ def list_regions(db: Session = Depends(get_db)):
 def search_apartments(body: SearchIn, db: Session = Depends(get_db)):
     where = body.where
     return apartment.search(
-        db, body.conditions, where.gu, where.dong, body.filters, body.sort, where.keyword, where.bounds
+        db, body.conditions, where.gu, where.dong, body.filters, body.sort, where.keyword, where.bounds,
+        everywhere=bool(where.all),
     )
 
 
