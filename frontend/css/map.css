@@ -1515,7 +1515,7 @@
     padding: 2px 16px 10px;
     border: 1px solid var(--new-sheet-line, var(--color-line));
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.86); /* 반투명 흰색 + 살짝 흐림 (2026-10-20 팀장 결정). 지도가 비쳐 덜 답답하게 */
+    background: rgba(255, 255, 255, 0.72); /* 반투명 흰색 + 살짝 흐림 (2026-10-20 팀장 결정, 0.86 → 0.72). 지도가 비쳐 덜 답답하게 */
     box-shadow: none;
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
