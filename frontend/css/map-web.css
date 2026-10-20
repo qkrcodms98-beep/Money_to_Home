@@ -562,10 +562,6 @@
     white-space: nowrap;
   }
 
-  .picked-card__name {
-    color: var(--color-text-sub);
-  }
-
   .picked-card__close {
     flex: none;
     width: 28px;

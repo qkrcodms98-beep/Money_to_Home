@@ -1857,9 +1857,14 @@ function renderPickedPin() {
   if (wrap.dataset.apartment !== String(apartment.id)) {
     wrap.dataset.apartment = String(apartment.id);
     bubble.hidden = true; // 다른 아파트가 되면 접어 둔다
-    bubble.querySelector('.picked-pin__place').textContent = `${apartment.gu} ${apartment.dong} · ${apartment.name}`;
-    bubble.setAttribute('aria-label', `선택한 아파트 ${apartment.name}, ${apartment.gu} ${apartment.dong}. 누르면 아파트 정보를 다시 엽니다`);
   }
+  // 말풍선: 첫 줄은 아파트 이름, 둘째 줄은 "광산구 신가동 · 84㎡ (전용 59㎡)" (2026-10-20 팀장 결정). 면적은 창에서 보던 면적
+  const area = pickedArea(apartment);
+  const size = area ? format.area(area.supply_area, area.exclusive_area, store.get('map').area_unit || 'm2') : '';
+  const place = [`${apartment.gu} ${apartment.dong}`, size].filter(Boolean).join(' · ');
+  bubble.querySelector('.picked-pin__title').textContent = apartment.name;
+  bubble.querySelector('.picked-pin__place').textContent = place;
+  bubble.setAttribute('aria-label', `선택한 아파트 ${apartment.name}, ${place}. 누르면 아파트 정보를 다시 엽니다`);
   mapState.pickedPin.setPosition(toLatLng(apartment));
   mapState.pickedPin.setMap(map);
   renderPickedCard(apartment);
@@ -1893,16 +1898,19 @@ function renderPickedCard(apartment) {
   if (!card) return;
   const show = Boolean(apartment) && isWebLayout() && mapState.pickedCardClosed !== apartment.id;
   card.hidden = !show;
-  if (!show || card.dataset.apartment === String(apartment.id)) return;
-  card.dataset.apartment = String(apartment.id);
+  if (!show) return;
+  // 머리: 첫 줄은 아파트 이름, 둘째 줄은 "광산구 신가동 · 84㎡ (전용 59㎡)" (말풍선과 같다, 2026-10-20 팀장 결정)
   const area = pickedArea(apartment);
   const unit = store.get('map').area_unit || 'm2';
-  card.querySelector('[data-picked="place"]').textContent = `${apartment.gu} ${apartment.dong}`;
+  const size = area ? format.area(area.supply_area, area.exclusive_area, unit) : '';
   card.querySelector('[data-picked="name"]').textContent = apartment.name;
+  card.querySelector('[data-picked="place"]').textContent = [`${apartment.gu} ${apartment.dong}`, size].filter(Boolean).join(' · ');
   card.querySelector('[data-picked="area"]').textContent = area
     ? (unit === 'pyeong' ? `${format.pyeong(area.exclusive_area)}평` : format.exclusive(area.exclusive_area))
     : '-';
   card.querySelector('[data-picked="price"]').textContent = area ? format.won(area.avg_price) : '-';
+  if (card.dataset.apartment === String(apartment.id)) return; // 역세권 · 주변 교통은 아파트가 바뀔 때만 다시 본다
+  card.dataset.apartment = String(apartment.id);
   const subway = card.querySelector('[data-picked="subway"]');
   const bus = card.querySelector('[data-picked="bus"]');
   subway.textContent = '확인하는 중';
