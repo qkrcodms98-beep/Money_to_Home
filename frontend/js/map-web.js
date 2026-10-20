@@ -305,7 +305,7 @@ const mapWeb = {
   renderFold() {}, // initFold가 채운다
 
   // 아파트 패널이 열려 있으면 두 손잡이의 세로 가운데를 "아파트 정보 · 시나리오" 탭 밑줄에 맞춘다 (2026-10-20 팀장).
-  // 로드뷰 · "← 목록" 줄에 따라 밑줄 높이가 달라서 잴 때마다 --map-web-fold-top에 넣는다. 패널이 없으면 CSS 기본(가운데에서 20 위)
+  // 로드뷰 · "← 목록" 줄에 따라 밑줄 높이가 달라서 잴 때마다 --map-web-fold-top에 넣는다. 패널이 없거나 접혀도 같은 높이에 둔다
   watchFoldTop(button, aptButton) {
     const panel = document.getElementById('apartment-panel');
     const tabs = panel && panel.querySelector('.apt__tabs');
@@ -314,10 +314,7 @@ const mapWeb = {
     const place = () => {
       const parent = button.offsetParent;
       const shown = mapWeb.isOn() && root.dataset.mapWebPanel === 'apartment' && tabs.offsetHeight > 0 && parent;
-      if (!shown) {
-        root.style.removeProperty('--map-web-fold-top');
-        return;
-      }
+      if (!shown) return; // 패널이 없거나 접혀 있으면 마지막으로 잰 높이 그대로 (처음에는 CSS 기본 441)
       const box = parent.getBoundingClientRect();
       const scale = box.height / parent.offsetHeight || 1; // 화면 90%(common.css zoom)를 CSS px로 되돌린다
       const line = (tabs.getBoundingClientRect().bottom - box.top) / scale;
