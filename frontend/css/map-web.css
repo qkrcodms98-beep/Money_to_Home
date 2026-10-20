@@ -494,6 +494,166 @@
     border-right: 0;
   }
 
+  /* 넓게 볼 때 선택한 아파트 카드: 지도 왼쪽 아래 (2026-10-20). 카카오 로고(맨 왼쪽 아래)는 가리지 않게 띄운다 */
+  .picked-card {
+    position: absolute;
+    bottom: 34px;
+    left: 16px;
+    z-index: 5;
+    display: block;
+    box-sizing: border-box;
+    width: 300px;
+    padding: 16px 16px 14px;
+    border-radius: 16px;
+    background: var(--color-bg);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+  }
+
+  .picked-card[hidden] {
+    display: none;
+  }
+
+  .picked-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .picked-card__badge {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--color-primary-soft);
+  }
+
+  .picked-card__badge svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--color-primary);
+  }
+
+  .picked-card__titles {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .picked-card__title {
+    font-size: var(--text-body);
+    font-weight: var(--font-bold);
+  }
+
+  .picked-card__place {
+    overflow: hidden;
+    color: var(--color-text-sub);
+    font-size: var(--text-help);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .picked-card__name {
+    color: var(--color-text-hint);
+  }
+
+  .picked-card__close {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    margin: -4px -4px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-sub);
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .picked-card__close:hover {
+    background: var(--color-bg-sub);
+  }
+
+  .picked-card__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .picked-card__row {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    align-items: center;
+    font-size: var(--text-help);
+  }
+
+  .picked-card__row dt {
+    color: var(--color-text-sub);
+  }
+
+  .picked-card__row dd {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    color: var(--color-text);
+    font-weight: var(--font-medium);
+  }
+
+  .picked-card__chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: var(--font-bold);
+  }
+
+  .picked-card__chip--subway {
+    background: #2f6fb6;
+  }
+
+  .picked-card__chip--bus {
+    background: #2e9e5b;
+  }
+
+  .picked-card__value--off {
+    color: var(--color-text-hint);
+    font-weight: var(--font-regular);
+  }
+
+  .picked-card__go {
+    display: block;
+    width: 100%;
+    height: 42px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-family: inherit;
+    font-size: var(--text-body);
+    font-weight: var(--font-bold);
+    cursor: pointer;
+  }
+
+  .picked-card__go:hover {
+    filter: brightness(1.06);
+  }
+
   /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 손잡이) */
   .list__close {
     display: none !important;

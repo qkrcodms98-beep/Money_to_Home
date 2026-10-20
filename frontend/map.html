@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/common.css?v=20261019-7">
   <!-- ?v= 는 버전 표시다. 이 화면이 부르는 CSS나 JS를 고치면 그 파일의 숫자를 올린다. 브라우저가 예전 파일을 캐시에서 꺼내 쓰지 않게 한다. -->
   <link rel="stylesheet" href="css/list.css?v=20261020-4">
-  <link rel="stylesheet" href="css/map.css?v=20261020-24">
+  <link rel="stylesheet" href="css/map.css?v=20261020-25">
   <link rel="stylesheet" href="css/sheet.css?v=20261020-11">
   <link rel="stylesheet" href="css/similar.css?v=20261015-3">
   <link rel="stylesheet" href="css/glossary.css?v=20261015-2">
@@ -25,7 +25,7 @@
   <!-- 새 스타일 (2026-10-18). 위의 모양을 덮어쓴다. 빼면 예전 모양 -->
   <link rel="stylesheet" href="css/new-style.css?v=20261020-4">
   <!-- 웹(1024px 이상) 배치 (박채은). 다른 CSS 뒤에 읽어 웹에서만 덮어쓴다 -->
-  <link rel="stylesheet" href="css/map-web.css?v=20261020-20">
+  <link rel="stylesheet" href="css/map-web.css?v=20261020-21">
 </head>
 <body class="map-body">
   <!-- P-05 ① 지도 기본. Figma "확정 목업 v3"의 "v3 · P-05 ① 지도 기본" (node 2037:3).
@@ -121,6 +121,27 @@
     <p class="map-toast" id="map-toast" role="status" hidden></p>
 
     <!-- 오른쪽 아래 버튼: ㎡/평 전환, 현재 위치, 확대·축소 (2차) -->
+    <!-- 넓게 볼 때 선택한 아파트 카드 (웹만, 지도 왼쪽 아래). map-view.js의 renderPickedCard가 채운다 (2026-10-20) -->
+    <section class="picked-card" id="picked-card" aria-label="선택한 아파트" hidden>
+      <header class="picked-card__head">
+        <span class="picked-card__badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 21V5.5L12 3l8 2.5V21h-6v-4h-4v4H4zm3-13v2h2V8H7zm4 0v2h2V8h-2zm4 0v2h2V8h-2zM7 12v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2z"/></svg>
+        </span>
+        <div class="picked-card__titles">
+          <strong class="picked-card__title">선택한 아파트</strong>
+          <span class="picked-card__place"><span data-picked="place"></span> <span class="picked-card__name" data-picked="name"></span></span>
+        </div>
+        <button type="button" class="picked-card__close" aria-label="선택한 아파트 카드 닫기">✕</button>
+      </header>
+      <dl class="picked-card__rows">
+        <div class="picked-card__row"><dt>전용면적</dt><dd data-picked="area"></dd></div>
+        <div class="picked-card__row"><dt>매매가</dt><dd data-picked="price"></dd></div>
+        <div class="picked-card__row"><dt>역세권</dt><dd><span class="picked-card__chip picked-card__chip--subway" aria-hidden="true">M</span><span data-picked="subway"></span></dd></div>
+        <div class="picked-card__row"><dt>주변 교통</dt><dd><span class="picked-card__chip picked-card__chip--bus" aria-hidden="true">B</span><span data-picked="bus"></span></dd></div>
+      </dl>
+      <button type="button" class="picked-card__go">아파트 다시 보기</button>
+    </section>
+
     <div class="map-controls">
       <button type="button" class="map-button map-button--unit" id="unit-button" aria-label="면적 단위 바꾸기">
         <span class="map-button__main" id="unit-main">㎡</span>
@@ -298,7 +319,7 @@
   <script src="js/apartment.js?v=20261020-10"></script>
   <!-- 광주 5개 구 경계 (FR-MAP-28). map-view.js가 쓰므로 그보다 먼저 불러온다 -->
   <script src="js/boundary.js?v=20261020-4"></script>
-  <script src="js/map-view.js?v=20261020-29"></script>
+  <script src="js/map-view.js?v=20261020-30"></script>
   <!-- 웹(1024px 이상) 배치 (박채은). 아래 창(sheet.js)을 왼쪽 패널로 쓰게 감싼다. 그래서 맨 마지막에 둔다 -->
   <script src="js/map-web.js?v=20261020-10"></script>
 </body>

@@ -1334,6 +1334,92 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
+/* 핀과 말풍선 상자. 상자의 아래 가운데가 아파트 자리 (renderPickedPin의 yAnchor 1) */
+.picked-pin-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+/* 핀을 누르면 나오는 말풍선 (2026-10-20). 핀 오른쪽 위에 붙는다. 누르면 그 아파트의 창을 다시 연다 */
+.picked-pin__bubble {
+  position: absolute;
+  bottom: calc(100% - 6px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 150px;
+  max-width: 230px;
+  padding: 8px 10px 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transform: translateX(-12px);
+}
+
+.picked-pin__bubble[hidden] {
+  display: none;
+}
+
+.picked-pin__bubble::after { /* 꼬리 */
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 10px;
+  border: 6px solid transparent;
+  border-top-color: var(--color-bg);
+}
+
+.picked-pin__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.picked-pin__title {
+  font-size: var(--text-help);
+  font-weight: var(--font-bold);
+}
+
+.picked-pin__title::before { /* 앞의 작은 빨간 핀 */
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  border-radius: 50% 50% 50% 0;
+  background: #e5355c;
+  transform: rotate(-45deg);
+  vertical-align: 1px;
+}
+
+.picked-pin__place {
+  overflow: hidden;
+  color: var(--color-text-sub);
+  font-size: var(--text-badge);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picked-pin__icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: var(--color-text-sub);
+}
+
+/* ───────── 넓게 볼 때 선택한 아파트 카드 (웹만, map-view.js의 renderPickedCard) ───────── */
+.picked-card {
+  display: none; /* 모바일에는 없다. 웹(map-web.css)에서만 보인다 */
+}
+
 .picked-pin:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
