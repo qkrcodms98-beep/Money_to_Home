@@ -37,38 +37,18 @@
   background: var(--color-bg-sub);
 }
 
-/* 모바일 화면의 틀. 목업의 크기(390 × 844)를 넘지 않는다.
-   휴대폰처럼 화면이 이보다 작으면 화면을 꽉 채우고, PC처럼 크면 이 크기로 가운데에 둔다.
-   웹 배치(1200px 이상, 와이어프레임 W7 ~ W10)는 나중에 미디어 쿼리로 따로 만든다. */
+/* 모바일 화면의 틀 (1023px 이하). 창을 가득 채운다 (2026-10-20 팀장 결정).
+   휴대폰에서는 화면 그대로, 태블릿이나 줄인 PC 창에서는 창이 커지는 만큼 같이 커진다.
+   예전에는 431px 이상에서 목업 크기(390 × 844) 카드로 가운데에 고정했다.
+   1024px 이상은 웹 배치(css/map-web.css)로 바뀐다 */
 .map-app {
   position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: var(--page-width);
   height: 100%;
-  max-height: var(--page-height, 844px);
   overflow: hidden;
   background: var(--color-bg);
-}
-
-/* 휴대폰보다 넓은 화면(PC에서 띄워 볼 때)은 목업과 똑같이 390 × 844로 고정한다.
-   창이 844px보다 낮으면 페이지가 위아래로 움직인다. */
-@media (min-width: 431px) {
-  .map-body {
-    align-items: flex-start;
-    height: auto;
-    min-height: 100vh;
-    padding: 24px 0;
-    overflow: auto;
-  }
-
-  .map-app {
-    flex-shrink: 0;
-    height: var(--page-height, 844px);
-    border-radius: 20px;
-    box-shadow: var(--shadow-control);
-  }
 }
 
 /* ───────── 내 조건 줄 ───────── */
