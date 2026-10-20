@@ -722,19 +722,20 @@
   --apt-exit-text: #1c1c1e;
 }
 
-/* 지하철역 줄: 출구 상자부터는 늘 다음 줄 ("역 이름 노선" / "[5]번 출구까지 383m"). 화면 폭과 상관없이 같은 모양 */
-.apt-near__keep {
+/* 주변 시설 한 줄은 늘 두 줄이다 (apartment.js의 nearFill, 2026-10-20). 화면 폭과 상관없이 같은 모양
+     첫 줄  이름. 한 줄에 다 들어가지 않으면 끝을 "…"로 줄인다 (자료 1,713곳 중 375px 폭에서 9곳, 웹 패널에서 2곳)
+     둘째 줄 "약 670m · 도보 약 10분" (지하철은 "[5]번 출구 약 500m · 도보 약 8분"). 줄을 바꾸지 않는다.
+            가장 긴 "[4]번 출구 약 1.3km · 도보 약 19분"도 375px 폭에 들어간다 (칸 227px, 글자 약 225px) */
+.apt-near__name {
   display: block;
-}
-
-/* 걷는 거리, "· 도보 약 8분", "[5]번 출구까지 약 500m"는 한 덩어리로 둔다. 줄은 덩어리 사이에서만 바뀐다 */
-.apt-near__walk {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* "도보 약 N분"은 늘 다음 줄 (줄마다 이름 · 거리 / 도보 시간의 두 줄로 맞춘다) */
-.apt-near__time {
+.apt-near__line {
   display: block;
+  white-space: nowrap;
 }
 
 .apt-near__exit {
@@ -795,7 +796,18 @@
   fill: var(--color-primary);
 }
 
-/* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준 · 직선거리" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */
+/* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */
+.apt-near__source {
+  margin: 6px 0 0;
+  color: var(--color-text-sub);
+  font-size: var(--text-badge);
+  line-height: 1.4;
+}
+
+.apt-near__source:empty {
+  display: none;
+}
+
 /* 좌표가 없는 아파트의 안내 (P-06 ⑱, 목업 4009:604). 아파트 정보 탭 맨 위의 점선 상자 */
 .apt-info__notice {
   margin: 0 0 8px;
