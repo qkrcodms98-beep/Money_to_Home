@@ -128,7 +128,7 @@ const saved = {
       toMap.type = 'button';
       toMap.addEventListener('click', () => {
         // 지금의 조건으로 그 아파트가 있는 동을 지도에 연다 (C3). 아파트 창을 여는 것은 지도 화면의 일이다
-        store.set('map', { gu: item.apartment.gu, dong: item.apartment.dong });
+        store.set('map', { gu: item.apartment.gu, dong: item.apartment.dong, open_region: true }); // 광주 전체가 아니라 이 동으로 연다
         location.href = 'map.html';
       });
       parts.push(toMap);

@@ -251,7 +251,7 @@ const sharePage = {
 
   // 지도가 이 아파트의 동에서 열리게 남긴다
   rememberPlace() {
-    store.set('map', { gu: sharePage.detail.gu, dong: sharePage.detail.dong });
+    store.set('map', { gu: sharePage.detail.gu, dong: sharePage.detail.dong, open_region: true }); // 광주 전체가 아니라 이 동으로 연다
   },
 
   goMap() {
