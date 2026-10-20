@@ -1605,9 +1605,9 @@ const isOnMap = (apartment) =>
 const sheetOrder = (current) =>
   mapState.data ? mapState.data.apartments.filter((apartment) => apartment === current || isOnMap(apartment)) : [];
 
-// 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구
+// 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구.
+// 지도를 끌어 영역으로 받을 때도 지도 가운데에서 가장 가까운 동이다 (loadByBounds가 mapState.region을 nearestDong으로 바꾼다)
 const listPlace = () => {
-  if (mapState.byBounds) return '보이는 곳';
   return mapState.region ? mapState.region.dong || mapState.region.gu : '';
 };
 
@@ -1620,7 +1620,8 @@ function renderList() {
     return;
   }
   listView.render(document.getElementById('apt-list'), visibleData(), {
-    where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
+    // 머리의 이름. 영역으로 받을 때도 지도 가운데에서 가장 가까운 동(nearestDong, 지역 버튼과 같은 이름)으로 적는다 (2026-10-20 팀장)
+    where: mapState.region,
     sort: currentSort(),
     onSort: changeSort,
     onSelect: openApartmentFromList,
@@ -2196,7 +2197,6 @@ const BOUNDS_WAIT = 300;
 const BOUNDS_PAD = 1; // 보이는 영역의 위아래·좌우로 이만큼(화면의 배수) 더 받는다
 const BOUNDS_MARGIN = 0.5; // 받아 둔 영역의 가장자리까지 이만큼(화면의 배수)도 남지 않으면 새로 받는다
 const PRELOAD_WAIT = 1100; // 구·동으로 옮긴 뒤 지도의 움직임이 끝나기를 기다렸다가 주변을 미리 받는다
-const BOUNDS_NAME = '지도에 보이는 곳'; // 영역으로 받았을 때 목록의 머리에 적는 이름
 
 // 지도에 보이는 영역 { south, west, north, east }. 지도가 가려져 크기가 없으면 null
 function mapBounds() {
@@ -2353,7 +2353,7 @@ async function loadData() {
   // 지도를 끌어 영역으로 다시 받을 때는 그리지 않는다. 끌 때마다 목록이 깜빡이지 않게
   if (!mapState.byBounds || !mapState.data) {
     listView.renderLoading(document.getElementById('apt-list'), {
-      where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region,
+      where: mapState.region,
       onClose: () => sheet.close(),
     });
   }
