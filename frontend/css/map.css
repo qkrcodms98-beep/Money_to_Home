@@ -250,12 +250,13 @@
   line-height: 28px;
 }
 
-/* 구마다 색 (2026-10-20 팀장 결정). 바탕 · 테두리는 위의 --color-dong을 쓰므로 색만 바꾼다. 글씨는 흰색 그대로 (map-view.js가 data-gu를 단다) */
-.dong-marker--gu[data-gu="광산구"] { --color-dong: #5b8fc9; }
-.dong-marker--gu[data-gu="북구"] { --color-dong: #e98243; }
-.dong-marker--gu[data-gu="서구"] { --color-dong: #369ba5; }
-.dong-marker--gu[data-gu="동구"] { --color-dong: #e56670; }
-.dong-marker--gu[data-gu="남구"] { --color-dong: #ad8968; }
+/* 구마다 색 (2026-10-20 팀장 결정). 구 표시와 동 표시 모두 그 구의 색이다.
+   바탕 · 테두리는 위의 --color-dong을 쓰므로 색만 바꾼다. 글씨는 흰색 그대로 (map-view.js가 data-gu를 단다) */
+.dong-marker[data-gu="광산구"] { --color-dong: #5b8fc9; }
+.dong-marker[data-gu="북구"] { --color-dong: #e98243; }
+.dong-marker[data-gu="서구"] { --color-dong: #369ba5; }
+.dong-marker[data-gu="동구"] { --color-dong: #e56670; }
+.dong-marker[data-gu="남구"] { --color-dong: #ad8968; }
 
 /* 구 표시는 동 표시(78%)보다 진하게 (2026-10-20 팀장 결정). 목표할 곳이 없는 구(.dong-marker--empty)는 그대로 옅게 */
 .dong-marker--gu:not(.dong-marker--empty) {

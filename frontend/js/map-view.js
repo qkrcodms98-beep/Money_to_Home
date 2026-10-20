@@ -1391,7 +1391,7 @@ function createAreaMarkerElement(group, name, className, onClick) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `${className}${group.target === 0 ? ' dong-marker--empty' : ''}`;
-  if (className.includes('dong-marker--gu')) button.dataset.gu = name; // 구마다 색 (map.css)
+  if (group.gu) button.dataset.gu = group.gu; // 구마다 색 (map.css). 동 표시도 그 동이 속한 구의 색
   button.setAttribute('aria-label', `${name}, 목표할 수 있는 아파트 ${group.target}곳`);
   const nameText = document.createElement('span');
   nameText.className = 'dong-marker__name';
