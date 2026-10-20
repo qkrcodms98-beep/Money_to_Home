@@ -707,18 +707,26 @@
     content: '‹';
   }
 
-  /* 접혀 있으면 손잡이를 조금 넓히고 세로로 "범례 ›"를 적어, 무엇을 여는 손잡이인지 알 수 있게 (2026-10-20) */
+  /* 접혀 있으면 손잡이가 남색 탭 "표시 · 시설"이 된다 (2026-10-20 팀장 결정. 글자 11px, 그림 없음). 지도 왼쪽 끝에 붙는다 */
   .facility-tab__button[aria-expanded='false'] {
-    width: 24px;
-    height: 72px;
-    color: var(--color-text);
+    width: auto;
+    height: 30px;
+    padding: 0 10px 0 9px;
+    border: 0;
+    background: var(--new-chip-on, #043870);
+    color: #ffffff;
+    white-space: nowrap;
   }
 
   .facility-tab__button[aria-expanded='false']::before {
-    content: '범례 ›';
-    font-size: 12px;
-    letter-spacing: 1px;
-    writing-mode: vertical-rl;
+    content: '표시 · 시설';
+    font-size: 11px;
+    font-weight: var(--font-bold);
+  }
+
+  .facility-tab__button[aria-expanded='false']:hover {
+    color: #ffffff;
+    filter: brightness(1.15);
   }
 
   .facility-tab__button:hover {
