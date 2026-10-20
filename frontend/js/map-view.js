@@ -334,6 +334,28 @@ function watchMapHealth(container) {
   });
   // 끌기를 시작하기 전에 맞춘다. 크기가 어긋나 있으면 끌어도 지도가 움직이지 않았다
   container.addEventListener('pointerdown', safely(() => ensureMapSize()), { capture: true });
+  watchInputMode();
+}
+
+// 카카오맵은 처음 만들 때 터치용인지 마우스용인지 정하고, 나중에 바뀌어도 따라가지 않는다.
+// 개발자 도구의 휴대폰 보기 · 이 앱의 모바일 보기처럼 터치 ↔ 마우스가 바뀌면 지도를 끌어도 움직이지 않았다 (2026-10-20 재현).
+// 그래서 입력 방식이 바뀌면 화면을 다시 연다. 보던 지역과 조건은 store에 있어 그대로 이어진다.
+// 실제 휴대폰과 PC에서는 바뀌지 않으므로 이 일은 생기지 않는다.
+function touchMode() {
+  return navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+}
+
+function watchInputMode() {
+  const first = touchMode();
+  let timer = null;
+  const check = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (touchMode() !== first) location.reload();
+    }, 300); // 창 크기를 끌어 바꾸는 동안 여러 번 불려도 한 번만
+  };
+  window.matchMedia('(pointer: coarse)').addEventListener('change', check);
+  window.addEventListener('resize', check);
 }
 
 function safely(handler) {
