@@ -257,6 +257,11 @@
 .dong-marker--gu[data-gu="동구"] { --color-dong: #e56670; }
 .dong-marker--gu[data-gu="남구"] { --color-dong: #ad8968; }
 
+/* 구 표시는 동 표시(78%)보다 진하게 (2026-10-20 팀장 결정). 목표할 곳이 없는 구(.dong-marker--empty)는 그대로 옅게 */
+.dong-marker--gu:not(.dong-marker--empty) {
+  background: color-mix(in srgb, var(--color-dong) 92%, transparent);
+}
+
 /* 목표할 수 있는 곳이 없는 동은 점선 테두리에 더 옅은 바탕 */
 .dong-marker--empty {
   border-style: dashed;
