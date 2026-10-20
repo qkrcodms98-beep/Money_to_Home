@@ -191,7 +191,7 @@ const mapState = {
   facilityDetails: new Map(), // 아파트 번호 → A-06 응답 (시설을 띄우려고 받은 것). 아파트 창이 받아 둔 것(aptPanel.details)은 그것을 쓴다
   facilityLoading: new Map(), // 아파트 번호 → 받는 중인 Promise. 같은 아파트를 두 번 부르지 않게
   busTiles: new Map(), // 정류장 칸 "남:서" → A-28의 정류장 목록 Promise (실패한 칸은 지워 다음에 다시 부른다)
-  facilityHidden: new Set(['SC4', 'MT1', 'CS2', 'HP8']), // 체크를 푼 시설 종류 (APT_NEAR_KINDS의 code, 버스정류장 BUS). 처음에는 대중교통(지하철역 · 버스정류장)만 켜고 나머지는 꺼 둔다 (2026-10-20 세환). 정보 탭 줄로 띄운 시설은 꺼져 있어도 보인다
+  facilityHidden: new Set(['BUS', 'SC4', 'MT1', 'CS2', 'HP8']), // 체크를 푼 시설 종류 (APT_NEAR_KINDS의 code, 버스정류장 BUS). 처음에는 지하철역만 켜고 나머지는 꺼 둔다 (2026-10-20 팀장: 버스정류장도 기본 끔). 정보 탭 줄로 띄운 시설은 꺼져 있어도 보인다
   facilityTabAllowed: false, // 시설 아이콘이 나오는 축척(100m 이하)인가. 체크 칸은 이와 상관없이 늘 보인다 (2026-10-20)
   pickedApartment: null, // 마지막으로 연 아파트. 넓게 보아 말풍선이 없어져도 빨간 위치 표시로 남긴다 (renderPickedPin)
   pickedPin: null, // 그 위치 표시 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
@@ -927,7 +927,7 @@ function clearFacilities({ keepOpen = false, keepPin = false } = {}) {
 }
 
 // 지도 왼쪽 아래 범례 상자의 아래쪽(옅은 선 밑)에 주변 시설 체크 칸을 늘 펼쳐 둔다 (2026-10-20 세환. 예전에는 동그란 단추를 눌러야 열렸다).
-// 칸마다 체크 칸 + 지도 아이콘과 같은 그림(카카오 모양, 같은 색) + 이름. 처음에는 지하철역 · 버스정류장만 켜져 있다(2026-10-20). 체크하면 그 종류의 아이콘을 지도에 달고, 풀면 뗀다.
+// 칸마다 체크 칸 + 지도 아이콘과 같은 그림(카카오 모양, 같은 색) + 이름. 처음에는 지하철역만 켜져 있다(2026-10-20). 체크하면 그 종류의 아이콘을 지도에 달고, 풀면 뗀다.
 // 범례와 체크 칸은 축척과 상관없이 늘 보인다 (2026-10-20 세환. 웹은 200m로 열려 체크 칸이 안 보였다). 아이콘은 100m 이하에서만 뜬다.
 function renderFacilityFilter(allowed) {
   mapState.facilityTabAllowed = allowed;
