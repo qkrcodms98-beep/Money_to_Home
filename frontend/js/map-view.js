@@ -1235,7 +1235,6 @@ function renderFocusLabel() {
   const { now, within, total } = focus.counts;
   const label = document.createElement('div');
   label.className = 'dong-label';
-  label.dataset.gu = focus.gu; // 그 구의 색 (map.css)
   label.setAttribute('role', 'status');
   const name = document.createElement('span');
   name.className = 'dong-label__name';
