@@ -26,7 +26,7 @@
 //   주변 시설 (3차, FR-MAP-23, T-MAP-23. 와이어프레임 C6): 기본 정보와 비슷한 아파트 사이에 둔다.
 //     지하철역, 학교, 대형마트, 편의점, 병원 다섯 줄(앞에 작은 그림). 학교 줄의 ⌄로 초·중·고·대학교를 펼친다.
 //     줄마다 반경 1km(직선) 안에서 가장 가까운 곳의 이름과, 걸어가는 거리 · 시간의 어림값 (aptWalk, 2026-10-19 세환 결정).
-//     지하철역은 가장 가까운 출구까지 ("김대중컨벤션센터역 광주1호선 5번 출구까지 약 430m · 도보 약 7분"),
+//     지하철역은 가장 가까운 출구까지의 거리 ("김대중컨벤션센터역 광주1호선" / "[5]번 출구 약 430m · 도보 약 7분"),
 //     나머지는 "전남고등학교 약 170m · 도보 약 3분". 걷는 거리는 A-06의 직선거리에 1.3을 곱한 어림값이다 (길찾기 API는 쓰지 않는다).
 //     찾은 줄을 누르면 지도에서 보여 준다: map-view.js의 showFacilityOnMap(kind, 시설)을 불러 창을 30%로 내리고
 //     고른 아파트에서 그 시설까지 점선을 잇는다.
@@ -568,21 +568,25 @@ const aptPanel = {
       : '';
   },
 
-  // 한 줄의 값. 화면에는 nearFill이 "전남고등학교 약 170m · 도보 약 3분"으로 적는다.
-  //   { name: "전남고등학교", meters: 130(직선), item }. 지하철역은 { before, exit, meters, item } (출구 번호를 노란 상자로)
-  //   출구를 못 찾은 역은 { name: "상무역 광주1호선까지", meters, item }
+  // 한 줄의 값. 화면에는 nearFill이 "전남고등학교" / "약 170m · 도보 약 3분" 두 줄로 적는다.
+  //   { name: "전남고등학교", meters: 130(직선), item }. 지하철역은 { name, exit, meters, item } (출구 번호를 노란 상자로)
+  //   출구를 못 찾은 역은 exit 없이 { name: "상무역 광주1호선", meters, item }
   // item(A-06의 시설 하나)은 줄을 누르면 지도에서 그 시설을 찾아 보여 주려고 같이 둔다
   nearValue(item) {
     if (!item.place_name) return APT_NEAR_NONE;
     const meters = Number(item.distance);
     if (item.kind !== 'subway') return { name: item.place_name, meters, item };
-    if (item.exit_no === null || item.exit_no === undefined) return { name: `${item.place_name}까지`, meters, item };
-    return { before: `${item.place_name} `, exit: String(item.exit_no), meters, item };
+    if (item.exit_no === null || item.exit_no === undefined) return { name: item.place_name, meters, item };
+    return { name: item.place_name, exit: String(item.exit_no), meters, item };
   },
 
   // 한 칸을 채운다. 글자(근처에 없음)이면 그대로 적는다.
   // 찾은 곳이면 누를 수 있게 단추로 만든다. 누르면 지도에서 그 시설을 보여 준다 (map-view.js의 showFacilityOnMap)
-  // 출구이면 번호를 지하철 출구 표지처럼 작은 노란 상자로 (sheet.css .apt-near__exit)
+  // 모든 줄이 두 줄이다 (2026-10-20): 첫 줄은 이름, 둘째 줄은 거리와 도보 시간.
+  //   "전남고등학교"                       "김대중컨벤션센터역 광주1호선"
+  //   "약 170m · 도보 약 3분 [위치]"        "[5]번 출구 약 430m · 도보 약 7분 [위치]"
+  // 지하철도 다른 시설과 같게 "까지"를 붙이지 않는다. 출구 번호는 지하철 출구 표지처럼 작은 노란 상자로 (sheet.css .apt-near__exit)
+  // 이름이 한 줄에 다 들어가지 않으면 끝을 "…"로 줄인다 (sheet.css .apt-near__name). 전체 이름은 aria-label과 title에 있다
   // kind: 그 줄의 A-06 kind (학교 종류별 줄은 elementary 등)
   nearFill(cell, value, kind) {
     if (typeof value === 'string') {
@@ -594,33 +598,27 @@ const aptPanel = {
     button.className = 'apt-near__link';
     const pin = aptNearIcon(APT_NEAR_PIN);
     pin.setAttribute('class', 'apt-near__pin');
-    // 걷는 거리와 시간. 거리와 시간 사이에서만 줄이 바뀐다 (sheet.css .apt-near__walk)
     const { distance, time } = aptWalk(value.meters);
-    const walk = document.createElement('span');
-    walk.className = 'apt-near__walk';
-    walk.textContent = distance;
-    const minutes = document.createElement('span');
-    minutes.className = 'apt-near__walk';
-    minutes.append(`· ${time}`, pin); // 위치 표시는 시간 바로 뒤에 붙여 혼자 다음 줄로 내려가지 않게
-    let label;
+
+    const name = document.createElement('span');
+    name.className = 'apt-near__name';
+    name.textContent = value.name;
+    name.title = value.name;
+
+    // 둘째 줄. "약 670m · 도보 약 10분 [위치]" (지하철은 "[5]번 출구 약 430m · 도보 약 7분 [위치]"). 줄을 바꾸지 않는다 (sheet.css .apt-near__line)
+    const line = document.createElement('span');
+    line.className = 'apt-near__line';
     if (value.exit) {
       const badge = document.createElement('span');
       badge.className = 'apt-near__exit';
       badge.textContent = value.exit;
-      // "[5]번 출구까지 약 430m · 도보 약 7분"은 늘 다음 줄에서 시작한다 (sheet.css). 넘치면 "· 도보 약 7분"만 그다음 줄로
-      const keep = document.createElement('span');
-      keep.className = 'apt-near__keep';
-      const head = document.createElement('span');
-      head.className = 'apt-near__walk';
-      head.append(badge, '번 출구까지 ', distance);
-      keep.append(head, ' ', minutes);
-      button.append(document.createTextNode(value.before), keep);
-      label = `${value.before}${value.exit}번 출구까지 ${distance} · ${time}`;
-    } else {
-      button.append(document.createTextNode(`${value.name} `), walk, ' ', minutes);
-      label = `${value.name} ${distance} · ${time}`;
+      line.append(badge, '번 출구 ');
     }
-    button.setAttribute('aria-label', `${label} ${APT_NEAR_ON_MAP}`);
+    line.append(`${distance} · ${time}`, pin);
+
+    button.append(name, line);
+    const exit = value.exit ? ` ${value.exit}번 출구` : '';
+    button.setAttribute('aria-label', `${value.name}${exit} ${distance} · ${time} ${APT_NEAR_ON_MAP}`);
     button.addEventListener('click', () => {
       if (typeof showFacilityOnMap === 'function') showFacilityOnMap(kind, value.item);
     });
