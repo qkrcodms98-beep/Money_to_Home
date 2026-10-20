@@ -106,6 +106,7 @@ def _facility(kind, name, distance, count, radius=1000, exit_no=None, lat=None, 
 def facilities(db, apartments):
     """가아파트에만 시설. 일부러 화면 순서와 다르게 넣는다. 기준일 기록 두 줄"""
     db.add_all([
+        _facility("bus", "치평동 정류장", 90, 6, lat="35.1471000", lng="126.8440000"),
         _facility("university", "광주여자대학교", 1752, 2, radius=5000),
         _facility("mart", None, None, 0),
         _facility("subway", "김대중컨벤션센터역 광주1호선", 330, 2, exit_no=5, lat="35.1466500", lng="126.8414200"),
@@ -118,7 +119,7 @@ def facilities(db, apartments):
 
 def test_facilities_in_screen_order(client, facilities):
     body = client.get("/api/apartments/12").json()
-    assert [f["kind"] for f in body["facilities"]] == ["subway", "school", "mart", "university"]
+    assert [f["kind"] for f in body["facilities"]] == ["subway", "school", "mart", "university", "bus"]  # 버스정류장은 맨 뒤
     assert body["facilities"][0] == {
         "kind": "subway", "place_name": "김대중컨벤션센터역 광주1호선", "distance": 330, "exit_no": 5,
         "place_count": 2, "radius": 1000, "latitude": 35.14665, "longitude": 126.84142,  # 지하철은 출구의 좌표

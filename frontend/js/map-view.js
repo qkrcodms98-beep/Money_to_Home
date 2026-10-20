@@ -113,15 +113,32 @@ const FACILITY_KAKAO_GLYPHS = {
   MT1: { path: 'M2.5 4h2.9l.7 2.6h14.4l-2 7.6a1.6 1.6 0 0 1-1.5 1.2H8.4a1.6 1.6 0 0 1-1.5-1.2L4.2 5.8H2.5V4zm6.2 13.2a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm7.6 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z' },
   CS2: { path: 'M12 3l8.5 6.6V21h-17V9.6L12 3z', text: '24' },
   HP8: { path: 'M9.6 4h4.8v5.6H20v4.8h-5.6V20H9.6v-5.6H4V9.6h5.6V4z' },
+  BUS: { path: 'M7 3h10a3 3 0 0 1 3 3v11a2 2 0 0 1-1.5 1.94v1.56a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V19h-7v1.5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1.56A2 2 0 0 1 4 17V6a3 3 0 0 1 3-3zM6.5 6.5v5h11v-5h-11zM8 14.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm8 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z' },
 };
+// 버스정류장 (2026-10-20 세환). 정보 탭의 줄(APT_NEAR_KINDS)은 아니고 지도에만 쓴다. 값은 A-06 facilities의 kind 'bus' (data/load_facilities.py --add-bus)
+const FACILITY_BUS_KIND = { kind: 'bus', code: 'BUS', label: '버스정류장' };
+// 넓게 볼 때 고른 아파트의 위치 표시 (24 × 32). 아래 끝이 아파트 자리
+const PICKED_PIN_PATH = 'M12 1C6 1 1.5 5.4 1.5 11.2 1.5 18.6 12 31 12 31s10.5-12.4 10.5-19.8C22.5 5.4 18 1 12 1zm0 14.3a4.1 4.1 0 1 1 0-8.2 4.1 4.1 0 0 1 0 8.2z';
+// 역세권: 가장 가까운 지하철 출구가 이 거리(직선, m) 안이면 지하철역을, 아니면 버스정류장을 그 아파트의 대중교통으로 띄운다
+const FACILITY_STATION_AREA_M = 500;
+// 역세권이 아닌 아파트에서 이 거리(직선, m) 안의 버스정류장을 모두 띄운다 (2026-10-20 세환. 정류장 표 bus_stops + A-28).
+// 예전에는 아파트마다 가장 가까운 한 곳만 띄워 카카오맵보다 정류장이 훨씬 적게 보였다
+const FACILITY_BUS_NEAR_M = 500;
+// A-28로 정류장을 받는 칸의 크기(위도 · 경도의 도, 약 2km). 지도를 조금 옮길 때마다 부르지 않게 칸 단위로 받아 둔다
+const BUS_TILE_DEG = 0.02;
 // 이름표 둘째 줄의 걷는 사람 그림 (24 × 24)
 const FACILITY_WALK_ICON = 'M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7';
 // 점선 한 칸의 길이와 칸 사이(px). 굵은 칸 하나가 아파트에서 시설 쪽으로 한 칸씩 옮겨 간다
-const FACILITY_LINK_DASH = 4; // 둥근 끝(굵기 4)이 양쪽에 붙어 보이는 칸은 8px, 칸 사이는 4px (2026-10-20 더 촘촘하게. 예전 12 · 9)
-const FACILITY_LINK_GAP = 8;
+const FACILITY_LINK_DASH = 2; // 둥근 끝(굵기 4)이 양쪽에 붙어 보이는 칸은 6px, 칸 사이는 3px (2026-10-20 한 번 더 촘촘하게. 예전 4 · 8, 그 전 12 · 9)
+const FACILITY_LINK_GAP = 7;
 const FACILITY_LINK_GROW_MS = 800; // 처음 한 번: 점선이 아파트에서 시설까지 뻗어 가는 시간
 const FACILITY_LINK_GROW_PAUSE_MS = 1000; // 처음 한 번: 다 뻗은 뒤 굵은 칸 되풀이로 넘어가기까지 쉬는 시간
-const FACILITY_LINK_STEP_MS = 70; // 굵은 칸이 다음 칸으로 넘어가는 간격 (칸이 촘촘해져 120 → 70. 움직이는 빠르기는 거의 같다)
+// 굵은 칸이 움직이는 빠르기(화면 px/초)는 시설까지의 실제 거리(m)에 비례한다. 먼 시설일수록 빠르다 (2026-10-20)
+//   화면 위 선 길이로 정하지 않는 까닭: 시설을 띄울 때 먼 시설이면 지도를 한 단계 넓혀(fitFacilityPin)
+//   243m 병원 선(122px)이 130m 학교 선(131px)보다 짧아질 수 있다. 실제 거리로 정해야 늘 먼 쪽이 빠르다
+const FACILITY_LINK_SPEED_PER_M = 0.8; // 1m마다 0.8px/초. 예: 383m 지하철 → 약 306px/초, 130m 학교 → 약 104px/초
+const FACILITY_LINK_SPEED_MIN = 90; // 아주 가까운 시설도 이보다 느리지 않게 (예전 고정 빠르기는 약 170px/초)
+const FACILITY_LINK_SPEED_MAX = 700; // 아주 먼 시설(대학 4.5km 등)도 이보다 빠르지 않게
 const FACILITY_LINK_PAUSE_MS = 600; // 시설에 닿은 뒤 처음부터 다시 할 때까지 쉬는 시간
 
 const CATEGORY_NAMES = { now: '지금 가능', within: '기간 내 가능', lack: '자금 부족' };
@@ -161,8 +178,11 @@ const mapState = {
   facilitySeq: 0, // 화면 안 시설을 모으는 차례 번호. 늦게 온 앞의 결과를 버린다
   facilityDetails: new Map(), // 아파트 번호 → A-06 응답 (시설을 띄우려고 받은 것). 아파트 창이 받아 둔 것(aptPanel.details)은 그것을 쓴다
   facilityLoading: new Map(), // 아파트 번호 → 받는 중인 Promise. 같은 아파트를 두 번 부르지 않게
-  facilityHidden: new Set(), // 체크를 푼 시설 종류 (APT_NEAR_KINDS의 code)
-  facilityTabAllowed: false, // '시설' 단추를 둘 수 있는가 (아이콘이 나오는 축척). 아파트 창이 열려 있으면 그래도 숨긴다
+  busTiles: new Map(), // 정류장 칸 "남:서" → A-28의 정류장 목록 Promise (실패한 칸은 지워 다음에 다시 부른다)
+  facilityHidden: new Set(['SC4', 'MT1', 'CS2', 'HP8']), // 체크를 푼 시설 종류 (APT_NEAR_KINDS의 code, 버스정류장 BUS). 처음에는 대중교통(지하철역 · 버스정류장)만 켜고 나머지는 꺼 둔다 (2026-10-20 세환). 정보 탭 줄로 띄운 시설은 꺼져 있어도 보인다
+  facilityTabAllowed: false, // 시설 아이콘이 나오는 축척(100m 이하)인가. 체크 칸은 이와 상관없이 늘 보인다 (2026-10-20)
+  pickedApartment: null, // 마지막으로 연 아파트. 넓게 보아 말풍선이 없어져도 빨간 위치 표시로 남긴다 (renderPickedPin)
+  pickedPin: null, // 그 위치 표시 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
   facilityOpen: null, // 이름을 펼친 시설 아이콘
   facilityOpenId: null, // 이름을 펼친 시설의 id ("kind:이름")
   facilityLink: null, // 고른 아파트 → 펼친 시설의 점선 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
@@ -170,8 +190,8 @@ const mapState = {
   facilityLinkDrawn: null, // 점선을 마지막으로 그린 때의 { key, button }. 같으면 다시 그리지 않는다 (굵은 칸이 처음으로 돌아가지 않게)
   facilityPin: null, // 아파트 창의 주변 시설 줄을 눌러 지도에 띄운 시설 { kind, place }. 넓게 보아도 이것만은 남긴다
   facilityFit: false, // 창이 30%로 다 내려오면 고른 아파트와 facilityPin이 둘 다 보이게 지도를 맞춘다
-  facilityLinkTimer: null, // 굵은 칸을 다음 칸으로 넘기는 타이머 (처음 뻗은 뒤 쉬는 타이머도)
-  facilityLinkFrame: 0, // 처음 한 번 점선이 뻗어 가는 애니메이션 (requestAnimationFrame 번호)
+  facilityLinkTimer: null, // 굵은 칸이 시설에 닿은 뒤 쉬는 타이머 (처음 뻗은 뒤 쉬는 타이머도)
+  facilityLinkFrame: 0, // 점선이 뻗어 가거나 굵은 칸이 옮겨 가는 애니메이션 (requestAnimationFrame 번호)
   facilityLinkGrown: null, // 뻗어 가기를 이미 보여 준 '아파트 id:장소 id'. 같은 둘을 다시 그릴 때(확대·축소)는 바로 되풀이로 간다
 };
 
@@ -307,7 +327,6 @@ function watchIdle(map) {
 // 지도를 누르면 지도 위의 창을 닫는다. 말풍선을 누른 직후의 click은 말풍선의 것이라 넘긴다 (onTap)
 function onMapClick() {
   closeFacilityName();
-  openFacilityTab(false); // 지도를 누르면 체크 칸을 접는다
   if (Date.now() - mapState.tappedAt > TAP_GUARD_MS) closeOverlays();
 }
 
@@ -403,7 +422,22 @@ function renderScale() {
 // 축척 100m 이하에서 화면 안 아파트들의 주변 시설을 아이콘으로 단다 (2026-10-20 세환. C안 위에서 장소 검색 없이 다시 살림).
 // 시설과 자리는 A-06 facilities(아파트마다 종류별로 가장 가까운 곳과 좌표)다. 카카오 장소 검색을 부르지 않는다 (CLAUDE.md 9번).
 // 그래서 그 동네의 모든 편의점이 아니라, 화면 안 아파트 어느 한 곳에서 가장 가까운 시설들이 뜬다. 같은 시설은 한 번만 단다.
+// 버스정류장만은 정류장 표(A-28)에서 역세권이 아닌 아파트 500m 안의 정류장을 모두 단다 (2026-10-20).
 // 아파트 창의 주변 시설 줄을 눌러 띄운 시설(facilityPin)은 넓게 보아도 남긴다. 아이콘은 아파트 말풍선보다 아래(zIndex 1).
+// A-06 facilities의 kind로 지도 아이콘의 종류 { kind, code, label, icon }. 학교 종류별은 학교, bus는 버스정류장
+function facilityKindOf(kindName) {
+  if (kindName === 'bus') return FACILITY_BUS_KIND;
+  const base = FACILITY_SCHOOL_KINDS.includes(kindName) ? 'school' : kindName;
+  return typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((entry) => entry.kind === base) || null : null;
+}
+
+// 체크 칸에 쓰는 종류와 차례: 지하철역 · 버스정류장 · 학교 · 대형마트 · 편의점 · 병원 (2026-10-20 세환. 대중교통을 앞에 모은다)
+const facilityKinds = () => {
+  if (typeof APT_NEAR_KINDS === 'undefined') return [];
+  const [subway, ...rest] = APT_NEAR_KINDS; // APT_NEAR_KINDS는 지하철역이 맨 앞 (apartment.js)
+  return [subway, FACILITY_BUS_KIND, ...rest];
+};
+
 function renderFacilities() {
   const { map } = mapState;
   if (!map) return;
@@ -415,7 +449,7 @@ function renderFacilities() {
   }
   const view = mapBounds();
   const ready = typeof APT_NEAR_KINDS !== 'undefined';
-  renderFacilityFilter(ready && map.getLevel() <= FACILITY_LEVEL); // 왼쪽 아래 '시설' 단추는 아이콘이 나오는 축척에서만
+  renderFacilityFilter(ready && map.getLevel() <= FACILITY_LEVEL);
   if (map.getLevel() > FACILITY_LEVEL || !view || !mapState.data) {
     mapState.facilitySeq += 1;
     keepOnlyFacilities(new Map());
@@ -434,15 +468,26 @@ function renderFacilities() {
     .sort((a, b) => far(a) - far(b)) // 상한을 넘으면 화면 가운데에서 가까운 아파트부터
     .slice(0, FACILITY_APT_MAX);
   const seq = ++mapState.facilitySeq;
-  Promise.all(apartments.map(facilityDetail)).then((details) => {
+  // 아파트들의 A-06과 영역 안 버스정류장(A-28)을 같이 받는다. 정류장을 못 받으면 stops는 null
+  Promise.all([Promise.all(apartments.map(facilityDetail)), busStopsIn(area)]).then(([details, stops]) => {
     if (seq !== mapState.facilitySeq || map.getLevel() > FACILITY_LEVEL || mapState.mode !== 'apartment') return;
     const want = new Map(); // 시설 id → { kind, place }
     const stations = new Map(); // 역 이름 → { kind, exits: Map(출구 id → [위도, 경도]) }
+    const offStation = []; // 역세권이 아닌 아파트의 [위도, 경도]. 이 근처의 버스정류장을 띄운다
     const inside = (place) => place.y >= area.south && place.y <= area.north && place.x >= area.west && place.x <= area.east;
     details.forEach((detail) => {
-      ((detail && detail.facilities) || []).forEach((item) => {
-        const base = FACILITY_SCHOOL_KINDS.includes(item.kind) ? 'school' : item.kind;
-        const kind = typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((entry) => entry.kind === base) : null;
+      const items = (detail && detail.facilities) || [];
+      // 대중교통은 아파트마다 하나를 고른다 (2026-10-20 세환): 역세권(지하철 출구가 500m 안)이면 지하철역, 아니면 버스정류장
+      const subway = items.find((item) => item.kind === 'subway');
+      const nearStation = Boolean(subway && subway.place_name && Number(subway.distance) <= FACILITY_STATION_AREA_M);
+      if (detail && !nearStation && detail.latitude !== null && detail.longitude !== null) {
+        offStation.push([Number(detail.latitude), Number(detail.longitude)]);
+      }
+      items.forEach((item) => {
+        if ((item.kind === 'subway' && !nearStation) || (item.kind === 'bus' && nearStation)) return;
+        // 정류장 목록을 받았으면 버스는 아래에서 근처 정류장을 모두 단다. 못 받았을 때만 A-06의 가장 가까운 한 곳을 단다
+        if (item.kind === 'bus' && stops) return;
+        const kind = facilityKindOf(item.kind);
         const place = facilityPlace(item);
         if (!kind || !place) return;
         if (item.kind === 'subway') {
@@ -468,9 +513,51 @@ function renderFacilities() {
       };
       if (inside(place)) want.set(place.id, { kind, place });
     });
+    // 역세권이 아닌 아파트에서 FACILITY_BUS_NEAR_M 안의 정류장. 길 건너편 정류장은 이름이 같아 정류장 번호로 구분한다
+    (stops || []).forEach((stop) => {
+      const place = { id: `bus:${stop.stop_id}`, place_name: stop.name, y: stop.latitude, x: stop.longitude };
+      if (!inside(place)) return;
+      const near = offStation.some(([lat, lng]) => roughMeters(lat, lng, place.y, place.x) <= FACILITY_BUS_NEAR_M);
+      if (near) want.set(place.id, { kind: FACILITY_BUS_KIND, place });
+    });
     keepOnlyFacilities(want);
     ensureFacilityPin();
   });
+}
+
+// 영역을 덮는 칸들의 버스정류장을 모아 준다 (A-28). 한 칸이라도 실패하면 null
+function busStopsIn(area) {
+  const tiles = [];
+  for (let south = Math.floor(area.south / BUS_TILE_DEG); south * BUS_TILE_DEG < area.north; south += 1) {
+    for (let west = Math.floor(area.west / BUS_TILE_DEG); west * BUS_TILE_DEG < area.east; west += 1) {
+      tiles.push(busTile(south, west));
+    }
+  }
+  return Promise.all(tiles).then((lists) => (lists.some((list) => !list) ? null : lists.flat()));
+}
+
+// 칸 하나(남쪽 끝 south × BUS_TILE_DEG, 서쪽 끝 west × BUS_TILE_DEG)의 정류장. 받은 칸은 다시 부르지 않는다
+function busTile(south, west) {
+  const key = `${south}:${west}`;
+  if (!mapState.busTiles.has(key)) {
+    const edge = (index) => (index * BUS_TILE_DEG).toFixed(2);
+    const query = `south=${edge(south)}&west=${edge(west)}&north=${edge(south + 1)}&east=${edge(west + 1)}`;
+    const loading = api.get(`/api/bus-stops?${query}`)
+      .then((body) => body.stops)
+      .catch(() => {
+        mapState.busTiles.delete(key);
+        return null;
+      });
+    mapState.busTiles.set(key, loading);
+  }
+  return mapState.busTiles.get(key);
+}
+
+// 두 좌표 사이의 대략의 직선거리(m). 정류장이 아파트에서 500m 안인지 가리는 데만 쓴다 (짧은 거리라 평면으로 어림)
+function roughMeters(lat1, lng1, lat2, lng2) {
+  const y = (lat2 - lat1) * 111320;
+  const x = (lng2 - lng1) * 111320 * Math.cos((lat1 * Math.PI) / 180);
+  return Math.hypot(x, y);
 }
 
 // 아파트 한 곳의 A-06 응답. 아파트 창이 받아 둔 것이 있으면 그것을 쓴다. 실패하면 null (그 아파트의 시설만 빠진다)
@@ -655,14 +742,14 @@ function clearFacilities({ keepOpen = false, keepPin = false } = {}) {
   if (!keepOpen && !pin) closeFacilityName();
 }
 
-// 지도 왼쪽 아래의 동그란 '시설' 단추(위치 그림)를 누르면 위로 체크 칸이 열린다 (2026-10-19 세환이 고른 시안 2).
-// 칸마다 체크 칸 + 지도 아이콘과 같은 그림(카카오 모양, 같은 색) + 이름. 처음에는 모두 체크. 체크를 풀면 그 종류의 아이콘을 지도에서 뗀다.
-// 단추는 아이콘이 나오는 축척(100m 이하)에서, 아파트 창이 닫혀 있을 때만 보인다 (창이 열리면 숨기고 칸도 접는다).
+// 지도 왼쪽 아래 범례 상자의 아래쪽(옅은 선 밑)에 주변 시설 체크 칸을 늘 펼쳐 둔다 (2026-10-20 세환. 예전에는 동그란 단추를 눌러야 열렸다).
+// 칸마다 체크 칸 + 지도 아이콘과 같은 그림(카카오 모양, 같은 색) + 이름. 처음에는 지하철역 · 버스정류장만 켜져 있다(2026-10-20). 체크하면 그 종류의 아이콘을 지도에 달고, 풀면 뗀다.
+// 범례와 체크 칸은 축척과 상관없이 늘 보인다 (2026-10-20 세환. 웹은 200m로 열려 체크 칸이 안 보였다). 아이콘은 100m 이하에서만 뜬다.
 function renderFacilityFilter(allowed) {
   mapState.facilityTabAllowed = allowed;
   const box = document.getElementById('facility-filter');
   if (box && typeof APT_NEAR_KINDS !== 'undefined' && !box.childElementCount) {
-    APT_NEAR_KINDS.forEach((kind) => {
+    facilityKinds().forEach((kind) => {
       const item = document.createElement('label');
       item.className = `facility-filter__item facility--${kind.code.toLowerCase()}`; // 색(--facility-color)은 지도 아이콘과 같다
       const input = document.createElement('input');
@@ -681,8 +768,6 @@ function renderFacilityFilter(allowed) {
       item.append(input, check, dot, text);
       box.appendChild(item);
     });
-    const button = document.getElementById('facility-tab-button');
-    if (button) button.addEventListener('click', () => openFacilityTab(button.getAttribute('aria-expanded') !== 'true'));
   }
   updateFacilityTab();
 }
@@ -691,20 +776,12 @@ function renderFacilityFilter(allowed) {
 function updateFacilityTab() {
   const tab = document.getElementById('facility-tab');
   if (!tab) return;
-  // 웹 배치(1024px 이상, map-web.js)에서는 창이 왼쪽 패널이라 지도를 가리지 않는다. 그때는 창이 열려 있어도 보인다
+  // 모바일은 아파트 창이 열리면 상자를 숨긴다 (창에 가린다. 예전 범례도 30%에서 숨겼다).
+  // 웹 배치(1024px 이상, map-web.js)에서는 창이 왼쪽 패널이라 지도를 가리지 않으므로 늘 보인다
   const web = typeof mapWeb !== 'undefined' && mapWeb.isOn();
-  const show = mapState.facilityTabAllowed && (web || !sheet.isShown());
-  tab.hidden = !show;
-  if (!show) openFacilityTab(false);
-}
-
-// 체크 칸을 열고 닫는다
-function openFacilityTab(open) {
-  const button = document.getElementById('facility-tab-button');
+  tab.hidden = !web && sheet.isShown();
   const box = document.getElementById('facility-filter');
-  if (!button || !box) return;
-  button.setAttribute('aria-expanded', String(open));
-  box.hidden = !open;
+  if (box) box.hidden = false;
 }
 
 function setFacilityShown(code, shown) {
@@ -814,7 +891,7 @@ function fitFacilityPin() {
 // ── 고른 아파트 → 펼친 시설의 점선과 거리 ──
 // 처음 한 번: 아파트 자리(말풍선 꼬리 끝)에서 시설 아이콘 가운데까지 진한 점선이 0.8초 동안 뻗어 간다.
 //   닿으면 시설 아이콘이 한 번 커졌다 돌아오고 (map.css), 1초 쉰다.
-// 그다음부터: 점선은 흐리게 다 그려져 있고, 그 위로 굵은 칸 하나가 아파트 쪽 첫 칸에서 시설 쪽으로 한 칸씩(0.12초마다) 옮겨 간다.
+// 그다음부터: 점선은 흐리게 다 그려져 있고, 그 위로 굵은 칸 하나가 아파트 쪽 첫 칸에서 시설 쪽으로 한 칸씩 옮겨 간다. 먼 시설일수록 빠르다.
 //   마지막 칸에 닿으면 아이콘이 한 번 커지고, 잠깐 쉰 뒤 첫 칸부터 다시 한다. 펼쳐 둔 동안 되풀이한다.
 // 점선이 사라졌다가(다른 시설, 창을 올림 등) 다시 나오면 처음 한 번부터 다시 한다. 확대·축소로 다시 그릴 때는 바로 되풀이로 간다.
 // 동작 줄이기를 켠 사람에게는 굵은 칸 없이 진한 점선만 그린다.
@@ -903,23 +980,36 @@ function drawFacilityLink() {
   placeFacilityLink(); // 아파트가 이미 화면 밖이면 기준점을 화면 안으로
   if (!lead) return;
 
-  // 굵은 칸을 index번째 칸에 둔다. 마지막 칸에 닿으면 아이콘을 키우고, 쉰 뒤 첫 칸부터 다시
+  // 굵은 칸이 첫 칸에서 마지막 칸까지 한 칸씩 옮겨 간다. 한 칸에 머무는 시간은 빠르기(실제 거리에 비례)로 정한다.
+  // 마지막 칸에 닿으면 아이콘을 키우고, 쉰 뒤 첫 칸부터 다시
   const cells = Math.max(1, Math.ceil(length / period));
-  const step = (index) => {
-    lead.setAttribute('stroke-dashoffset', String(-index * period));
-    if (index === 0) button.classList.remove('facility--arrived');
-    if (index < cells - 1) {
-      mapState.facilityLinkTimer = setTimeout(() => step(index + 1), FACILITY_LINK_STEP_MS);
-      return;
-    }
-    button.classList.add('facility--arrived');
-    mapState.facilityLinkTimer = setTimeout(() => step(0), FACILITY_LINK_STEP_MS + FACILITY_LINK_PAUSE_MS);
+  const speed = Math.min(Math.max(meters * FACILITY_LINK_SPEED_PER_M, FACILITY_LINK_SPEED_MIN), FACILITY_LINK_SPEED_MAX);
+  const cellMs = (period * 1000) / speed;
+  const step = () => {
+    button.classList.remove('facility--arrived');
+    const start = performance.now();
+    let shown = -1;
+    const move = (now) => {
+      // 먼 시설은 한 칸이 한 화면 갱신보다 짧을 수 있어, 지난 시간으로 지금 칸을 계산한다 (칸을 건너뛸 수 있게)
+      const index = Math.min(Math.floor((now - start) / cellMs), cells - 1);
+      if (index !== shown) {
+        lead.setAttribute('stroke-dashoffset', String(-index * period));
+        shown = index;
+      }
+      if (index < cells - 1) {
+        mapState.facilityLinkFrame = requestAnimationFrame(move);
+        return;
+      }
+      button.classList.add('facility--arrived');
+      mapState.facilityLinkTimer = setTimeout(step, cellMs + FACILITY_LINK_PAUSE_MS);
+    };
+    move(start);
   };
 
   // 이 아파트와 시설을 처음 잇는 것이면 먼저 점선이 뻗어 간다. 아니면 바로 굵은 칸 되풀이
   const pair = `${apartment.id}:${facilityOpen.placeId}`;
   if (mapState.facilityLinkGrown === pair) {
-    step(0);
+    step();
     return;
   }
   mapState.facilityLinkGrown = pair;
@@ -940,7 +1030,7 @@ function drawFacilityLink() {
     button.classList.add('facility--arrived');
     mapState.facilityLinkTimer = setTimeout(() => {
       box.classList.remove('facility-link--grow'); // 점선이 흐려지고 굵은 칸이 나온다
-      step(0);
+      step();
     }, FACILITY_LINK_GROW_PAUSE_MS);
   };
   reach(0);
@@ -1181,6 +1271,7 @@ function renderMarkers() {
   mapState.markers = [];
   mapState.mode = markerMode();
   mapState.level = map.getLevel();
+  renderPickedPin(); // 동 표시 · 구 표시 수준이면 고른 아파트를 빨간 위치 표시로
   renderRegionName();
   if ((mapState.mode === 'gu') !== Boolean(mapState.listCity)) renderList(); // 구 표시 수준을 드나들면 목록을 광주 전체 ↔ 지역으로
   if (mapState.mode === 'gu') {
@@ -1573,6 +1664,12 @@ function onZoomChanged() {
 // 말풍선을 누르면 openApartment가 이것을 부르고 아래 창 30%(P-06 ⑥)를 연다.
 function selectMarker(id) {
   mapState.selectedId = id;
+  if (id !== null) {
+    // 넓게 보아 말풍선이 없어져도 위치를 보여 줄 수 있게 기억한다 (renderPickedPin). 풀 때(null)는 그대로 둔다
+    const picked = mapState.data && mapState.data.apartments.find((apartment) => apartment.id === id && hasCoord(apartment));
+    if (picked) mapState.pickedApartment = picked;
+    renderPickedPin();
+  }
   // 고른 아파트가 묶음 뒤에 가려져 있으면 다시 그려 앞으로 꺼낸다 (shownApartments가 고른 아파트를 앞에 둔다)
   const hidden = id !== null && mapState.mode === 'apartment' && !mapState.markers.some((overlay) => overlay.apartmentId === id);
   if (hidden && mapState.data && mapState.data.apartments.some((a) => a.id === id && hasCoord(a))) renderMarkers();
@@ -1584,6 +1681,60 @@ function selectMarker(id) {
     overlay.setZIndex(overlay.apartmentId === id ? 3 : 2);
   });
   drawFacilityLink(); // 고른 아파트가 바뀌거나 풀리면 점선도 바뀐다
+}
+
+// ───────── 넓게 볼 때 고른 아파트 (2026-10-20 세환) ─────────
+// 동 표시로 바뀌는 수준(5)부터는 말풍선이 없어지고 아파트 창도 닫힌다(onZoomChanged). 그래도 마지막으로 연 아파트의 자리를
+// 빨간 위치 표시로 남겨, 가장 넓게(광주 전체) 보아도 어디였는지 알 수 있게 한다. 누르면 그 아파트의 창을 다시 연다.
+// ✕나 지도 누르기로 닫았으면 남기지 않는다 (forgetPicked). 말풍선이 보이는 수준에서는 말풍선이 그 자리를 보여 주므로 숨긴다.
+function renderPickedPin() {
+  const { map, pickedApartment: apartment } = mapState;
+  if (!map) return;
+  const show = Boolean(apartment) && mapState.mode !== 'apartment';
+  if (!show) {
+    if (mapState.pickedPin) mapState.pickedPin.setMap(null);
+    return;
+  }
+  if (!mapState.pickedPin) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'picked-pin';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 32');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'picked-pin__shape');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', PICKED_PIN_PATH);
+    svg.appendChild(path);
+    button.appendChild(svg);
+    button.addEventListener('click', reopenPicked);
+    mapState.pickedPin = new kakao.maps.CustomOverlay({
+      content: button,
+      xAnchor: 0.5,
+      yAnchor: 1, // 핀의 아래 끝이 아파트 자리
+      zIndex: 6, // 동 · 구 표시(말풍선 자리)보다 위
+      clickable: true,
+    });
+  }
+  const button = mapState.pickedPin.getContent();
+  button.setAttribute('aria-label', `선택한 아파트 ${apartment.name}. 누르면 아파트 정보를 다시 엽니다`);
+  mapState.pickedPin.setPosition(toLatLng(apartment));
+  mapState.pickedPin.setMap(map);
+}
+
+// 위치 표시를 누름: 그 아파트의 창을 다시 연다 (지도의 확대 수준은 그대로)
+function reopenPicked() {
+  const picked = mapState.pickedApartment;
+  if (!picked) return;
+  const apartment = (mapState.data && mapState.data.apartments.find((item) => item.id === picked.id)) || picked;
+  aptPanel.show(apartment, 0);
+  selectMarker(hasCoord(apartment) ? apartment.id : null);
+  sheet.show('30', 'apartment');
+}
+
+function forgetPicked() {
+  mapState.pickedApartment = null;
+  renderPickedPin();
 }
 
 // ───────── 아래 창 ─────────
@@ -2126,6 +2277,7 @@ function bindEvents() {
     // ✕로 닫으면 지도는 그 아파트로 옮기되 말풍선은 푼다 (onSheetChange). 뒤로 가기·끌어 내리기로 닫으면 골라진 채로 둔다
     onClose: () => {
       mapState.dropOnClose = true;
+      forgetPicked(); // ✕로 닫으면 넓게 보아도 위치 표시를 남기지 않는다
       sheet.close();
     },
     onUnitChange: () => {
@@ -2538,6 +2690,10 @@ async function moveToRegion({ gu, dong }) {
 
 // 지도 위에 뜬 창을 모두 닫는다 (지도나 빈 곳을 눌렀을 때)
 function closeOverlays() {
+  // 열려 있던 아파트 창이나 고른 말풍선을 지도를 눌러 닫으면, 넓게 보아도 위치 표시를 남기지 않는다.
+  // 넓게 본 채(창이 닫혀 있고 고른 말풍선이 없음)로 지도를 누른 것은 그대로 둔다
+  const apartmentOpen = sheet.mode === 'apartment' && sheet.phase !== 'closed';
+  if (apartmentOpen || mapState.selectedId !== null) forgetPicked();
   if (sheet.phase !== 'closed') {
     selectMarker(null);
     sheet.close();

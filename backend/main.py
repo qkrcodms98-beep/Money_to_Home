@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import FRONTEND_DIR
 from backend.errors import register_error_handlers
-from backend.routers import apartment_detail, apartments, auth, loans, plans, profile, saved_results, scenario, system
+from backend.routers import apartment_detail, apartments, auth, bus_stops, loans, plans, profile, saved_results, scenario, system
 from backend.services import auth as auth_service
 
 app = FastAPI(title="머니 to 홈", version="0.1.0")
@@ -43,6 +43,7 @@ app.include_router(plans.router)
 app.include_router(profile.router)
 app.include_router(apartments.router)
 app.include_router(apartment_detail.router)
+app.include_router(bus_stops.router)
 app.include_router(scenario.router)
 app.include_router(auth.router)
 app.include_router(saved_results.router)

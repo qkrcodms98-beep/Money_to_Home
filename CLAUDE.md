@@ -75,7 +75,7 @@
 
 | 담당 | 파일 |
 | --- | --- |
-| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 아홉 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py`, `schemas/plan.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `css/region.css`, `css/new-style.css`, `css/scenario-charts.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js`, `js/region.js`, `js/scenario-charts.js` |
+| 김해원 (입력과 공통) | `backend/main.py`, `config.py`, `database.py`, `deps.py`, `errors.py`, `routers/profile.py`, `routers/plans.py`, `routers/system.py`, `models/`의 열 파일, `services/profile.py`, `schemas/common.py`, `schemas/profile.py`, `schemas/plan.py`, `frontend/index.html`, `profile.html`, `plan.html`, `css/common.css`, `css/region.css`, `css/new-style.css`, `css/scenario-charts.css`, `js/api.js`, `store.js`, `format.js`, `guard.js`, `layout.js`, `js/region.js`, `js/scenario-charts.js` |
 | 박채은 (대출과 계산) | `backend/services/calc.py`, `routers/loans.py`, `routers/scenario.py`, `services/loan_product.py`, `schemas/loan.py`, `tests/test_calc.py`, `db/seed_loan_products.sql`, `frontend/loan.html`, `js/loan.js`, `css/loan.css`, `js/scenario.js`, `css/scenario.css`, `js/splash.js`, `img/logo.svg`, `img/logo-splash.svg` |
 | 김목산 (자료와 탐색) | `backend/routers/apartments.py`, `services/apartment.py`, `schemas/apartment.py`, `data/collect_trades.py`, `data/load_trades.py`, `frontend/js/list.js`, `css/list.css`, `frontend/share.html`, `js/share.js`, `js/share-page.js`, `css/share.css`, `css/share-page.css` |
 | 안세환 (지도와 아파트 창) | `backend/routers/apartment_detail.py`, `services/apartment_detail.py`, `schemas/apartment_detail.py`, `data/geocode.py`, `data/geocoded.csv`, `data/load_facilities.py`, `data/facilities.csv`, `frontend/map.html`, `js/map-view.js`, `sheet.js`, `apartment.js`, 지도와 아래 창의 CSS |
@@ -90,7 +90,7 @@
 ### 서버
 
 - 층을 지킨다 (강사님의 구조).
-  - `models/` : DB의 표를 옮긴 클래스. 표 하나에 클래스 하나. **이미 아홉 개가 다 있다 (2026-10-19 `apartment_facility.py` 더함). 새로 만들지 않는다.**
+  - `models/` : DB의 표를 옮긴 클래스. 표 하나에 클래스 하나. **이미 열 개가 다 있다 (2026-10-19 `apartment_facility.py`, 2026-10-20 `bus_stop.py` 더함). 새로 만들지 않는다.**
   - `schemas/` : 요청과 응답의 모양, 값의 범위 (Pydantic)
   - `services/` : DB를 읽고 쓰는 함수와 계산. `select(...)`는 여기에만 쓴다.
   - `routers/` : 주소를 받는 곳. `schemas`로 검사하고 `services`를 부르고 응답을 만든다. DB를 다루는 코드와 계산식을 쓰지 않는다.

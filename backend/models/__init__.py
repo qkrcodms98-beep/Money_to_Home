@@ -8,6 +8,7 @@
 from backend.models.apartment import Apartment
 from backend.models.apartment_facility import ApartmentFacility
 from backend.models.apartment_price import ApartmentPrice
+from backend.models.bus_stop import BusStop
 from backend.models.data_collection import DataCollection
 from backend.models.loan_product import LoanProduct
 from backend.models.profile import Profile
@@ -19,6 +20,7 @@ __all__ = [
     "Apartment",
     "ApartmentFacility",
     "ApartmentPrice",
+    "BusStop",
     "DataCollection",
     "LoanProduct",
     "Profile",

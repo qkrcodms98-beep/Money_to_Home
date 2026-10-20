@@ -15,8 +15,9 @@ from backend.errors import ApiError
 from backend.models import Apartment, ApartmentFacility, ApartmentPrice, DataCollection
 
 MSG_NOT_FOUND = "아파트를 찾을 수 없습니다."  # API 명세서 3.1 A-06
-# 주변 시설을 주는 순서. 화면의 다섯 줄(지하철역 · 학교 · 대형마트 · 편의점 · 병원) 뒤에 학교 종류별 네 줄
-FACILITY_ORDER = ["subway", "school", "mart", "convenience", "hospital", "elementary", "middle", "high", "university"]
+# 주변 시설을 주는 순서. 화면의 다섯 줄(지하철역 · 학교 · 대형마트 · 편의점 · 병원) 뒤에 학교 종류별 네 줄,
+# 맨 뒤에 버스정류장 (2026-10-20 더함. 정보 탭 줄은 아니고 지도에서 역세권이 아닌 아파트의 대중교통으로 쓴다)
+FACILITY_ORDER = ["subway", "school", "mart", "convenience", "hospital", "elementary", "middle", "high", "university", "bus"]
 
 
 def find(db: Session, apartment_id: int) -> Apartment:
