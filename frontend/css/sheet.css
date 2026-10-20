@@ -402,9 +402,20 @@
   padding: 4px 0;
   overflow-x: auto;
   scrollbar-width: none;
-  /* 오른쪽 끝을 흐리게 해 면적이 더 있다는 것을 보인다. 끝까지 밀면 아래 빈자리(::after)가 흐린 곳에 와서 마지막 면적이 다 보인다 */
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  /* 넘길 면적이 남은 쪽 끝을 흐리게 해 면적이 더 있다는 것을 보인다 (apartment.js의 markAreaEdges, 2026-10-20 양쪽으로).
+     끝까지 밀면 아래 빈자리(::after)가 흐린 곳에 와서 마지막 면적이 다 보인다 */
+  --area-fade-left: 0px;
+  --area-fade-right: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--area-fade-left), #000 calc(100% - var(--area-fade-right)), transparent);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--area-fade-left), #000 calc(100% - var(--area-fade-right)), transparent);
+}
+
+.apt__area-list--more-left {
+  --area-fade-left: 28px;
+}
+
+.apt__area-list--more-right {
+  --area-fade-right: 28px;
 }
 
 .apt__area-list::after {

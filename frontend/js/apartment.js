@@ -285,6 +285,10 @@ const aptPanel = {
 
     // 면적 칩. "111㎡ (전용 84㎡)", 공급면적을 모르면 "전용 49㎡"
     const areaList = document.getElementById('apt-areas');
+    const sameApartment = areaList.dataset.apartment === String(apartment.id);
+    const keepScroll = sameApartment ? areaList.scrollLeft : 0; // 다시 그려도 보던 자리에서 미끄러지게
+    areaList.dataset.apartment = String(apartment.id);
+    aptPanel.watchAreaList(areaList);
     areaList.replaceChildren(...apartment.areas.map((item, i) => {
       const chip = document.createElement('button');
       chip.type = 'button';
@@ -297,6 +301,12 @@ const aptPanel = {
       });
       return chip;
     }));
+
+    // 고른 면적이 칸 가운데에 오게 옆으로 미끄러진다 (2026-10-20 팀장 결정). 그래서 누르면 그 옆 면적도 보인다.
+    // 같은 아파트에서 면적을 바꿨으면 부드럽게, 새 아파트를 열었으면 바로 둔다
+    // 창을 처음 열 때는 아직 숨겨져 있어 폭을 잴 수 없으므로 창이 보인 뒤(다음 차례)에 맞춘다
+    areaList.scrollLeft = keepScroll;
+    setTimeout(() => aptPanel.centerArea(areaList, areaIndex, sameApartment), 0);
 
     document.querySelectorAll('.apt__unit-option').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.unit === unit));
@@ -573,6 +583,37 @@ const aptPanel = {
   //   { name: "전남고등학교", meters: 130(직선), item }. 지하철역은 { name, exit, meters, item } (출구 번호를 노란 상자로)
   //   출구를 못 찾은 역은 exit 없이 { name: "상무역 광주1호선", meters, item }
   // item(A-06의 시설 하나)은 줄을 누르면 지도에서 그 시설을 찾아 보여 주려고 같이 둔다
+  // 면적 칸에 한 번만 단다: 마우스 휠(위아래)로도 옆으로 넘기고, 넘길 것이 남은 쪽 끝을 흐리게 한다 (sheet.css)
+  watchAreaList(list) {
+    if (list.dataset.watched) return;
+    list.dataset.watched = 'true';
+    list.addEventListener('wheel', (event) => {
+      if (list.scrollWidth <= list.clientWidth || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      event.preventDefault(); // 창이 위아래로 스크롤되지 않게
+      list.scrollLeft += event.deltaY;
+    }, { passive: false });
+    list.addEventListener('scroll', () => aptPanel.markAreaEdges(list), { passive: true });
+  },
+
+  // index번째 면적이 칸 가운데에 오게 옆으로 민다. 끝 쪽 면적이면 끝까지만
+  centerArea(list, index, smooth) {
+    const picked = list.children[index];
+    if (picked && list.clientWidth) {
+      const chip = picked.getBoundingClientRect();
+      const box = list.getBoundingClientRect();
+      const left = list.scrollLeft + (chip.left - box.left) - (list.clientWidth - chip.width) / 2;
+      list.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
+    }
+    aptPanel.markAreaEdges(list);
+  },
+
+  // 왼쪽 · 오른쪽에 더 볼 면적이 있는가 (sheet.css의 흐린 끝)
+  markAreaEdges(list) {
+    const max = list.scrollWidth - list.clientWidth;
+    list.classList.toggle('apt__area-list--more-left', list.scrollLeft > 2);
+    list.classList.toggle('apt__area-list--more-right', list.scrollLeft < max - 2);
+  },
+
   nearValue(item) {
     if (!item.place_name) return APT_NEAR_NONE;
     const meters = Number(item.distance);
