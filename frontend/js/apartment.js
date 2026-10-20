@@ -67,7 +67,7 @@ const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 
 //     앞 사진 위로 서서히 나타나게 한다 (sheet.css .apt-roadview__view--on). 사진이 바뀌는 모습이나 빈 화면이 보이지 않는다
 const APT_ROADVIEW_PREFETCH_MAX = 80; // 한 번에 미리 찾는 아파트 수의 상한
 const APT_ROADVIEW_PREFETCH_AT_ONCE = 4; // 동시에 찾는 수
-const APT_ROADVIEW_SETTLE_MS = 250; // 새 사진을 띄우고 돌린 뒤 나타나게 하기까지 기다리는 시간 (사진 조각이 채워지는 동안)
+const APT_ROADVIEW_SETTLE_MS = 200; // 새 사진의 방향 변경 신호가 이만큼 더 오지 않으면(움직임이 멈추면) 나타나게 한다
 const APT_ROADVIEW_REVEAL_MAX_MS = 1500; // 신호가 안 와도 이만큼 지나면 나타나게 한다
 const APT_ROADVIEW_FADE_MS = 400; // 새 사진이 앞 사진 위로 나타나는 시간 (sheet.css의 transition과 같다)
 const APT_ROADVIEW_TILT = -20; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
@@ -498,6 +498,10 @@ const aptPanel = {
       };
       kakao.maps.event.addListener(rv, 'init', ready);
       kakao.maps.event.addListener(rv, 'panoid_changed', ready);
+      // 지점을 바꾸면 카카오 로드뷰가 스스로 옮겨 가는 움직임(방향이 바뀜)을 넣는다. 움직이는 동안은 신호가 계속 온다 (rv.onMove)
+      kakao.maps.event.addListener(rv, 'viewpoint_changed', () => {
+        if (rv.onMove) rv.onMove();
+      });
     }
     let shown = false;
     const reveal = () => {
@@ -510,9 +514,22 @@ const aptPanel = {
       // 다 나타난 뒤 앞 사진은 투명하게 둔다 (다음에 뒤의 화면으로 쓴다)
       aptPanel.roadviewTimers.push(setTimeout(() => other.classList.remove('apt-roadview__view--on'), APT_ROADVIEW_FADE_MS));
     };
+    // 움직임이 멈출 때까지 기다렸다가 보여 준다 (2026-10-20). 예전에는 신호 뒤 0.25초에 보여 줘서,
+    // 카카오의 옮겨 가는 움직임이 끝나기 전에 나타나 사진이 옆으로 밀렸다가 자리 잡는 것이 보였다.
+    // 방향 변경 신호가 APT_ROADVIEW_SETTLE_MS 동안 더 오지 않으면 멈춘 것으로 본다
+    let settle = null;
+    const waitStill = () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        rv.onMove = null;
+        reveal();
+      }, APT_ROADVIEW_SETTLE_MS);
+      aptPanel.roadviewTimers.push(settle);
+    };
     rv.onReady = () => {
       aptPanel.aimRoadview(rv, position);
-      aptPanel.roadviewTimers.push(setTimeout(reveal, APT_ROADVIEW_SETTLE_MS));
+      rv.onMove = waitStill;
+      waitStill();
     };
     const samePano = typeof rv.getPanoId === 'function' && rv.getPanoId() === panoId;
     rv.setPanoId(panoId, position);
