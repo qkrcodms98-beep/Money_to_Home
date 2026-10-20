@@ -950,8 +950,7 @@ function setFacilityShown(code, shown) {
 // 창을 30%로 내리고, 다 내려오면 고른 아파트와 그 시설이 둘 다 보이게 지도를 맞춘 뒤 점선을 잇는다.
 const FACILITY_SCHOOL_KINDS = ['elementary', 'middle', 'high', 'university'];
 function showFacilityOnMap(kindName, item) {
-  const base = FACILITY_SCHOOL_KINDS.includes(kindName) ? 'school' : kindName;
-  const kind = typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((entry) => entry.kind === base) : null;
+  const kind = facilityKindOf(kindName); // 버스정류장도 (지하철역이 근처에 없을 때 그 줄에 나온다, 2026-10-20)
   const apartment = selectedApartment();
   const place = facilityPlace(item);
   if (!mapState.map || !kind || !place || !apartment) return;
