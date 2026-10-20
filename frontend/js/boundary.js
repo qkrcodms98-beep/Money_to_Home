@@ -27,7 +27,7 @@
 //   7 ~ 9  (구 표시)        구 경계
 //   고른 구·동의 강조는 확대 수준과 상관없이 select가 정한다
 //   경계 밖은 늘 반투명하게 덮는다 (구멍 뚫린 다각형, 화면 설계서 9.3).
-//   바깥 경계는 선으로 따로 긋지 않는다. 덮개의 가장자리가 경계를 보여 준다 (2026-10-15 결정)
+//   바깥 경계는 덮개와 같은 색의 불투명한 선으로 긋는다. 덮개가 경계를 살짝 덮는 느낌 (2026-10-20 팀장. 예전에는 긋지 않았다)
 //
 // 겹치는 순서: 지도 그림 < 경계 선과 면 < 말풍선·동 표시 < 아래 창과 지도 위 창
 //   카카오맵은 선과 면(Polyline, Polygon)을 지도 그림 위의 한 층에 SVG로 그리고,
@@ -45,12 +45,14 @@ const BOUNDARY_WORLD = { south: 33.0, west: 124.5, north: 37.5, east: 129.5 };
 // 굵기(px)와 불투명도. 색은 CSS에서 읽는다
 const BOUNDARY_STYLE = {
   mask: { fillOpacity: 0.16 },
+  // 광주 바깥 테두리: 경계 밖 덮개를 지도 바탕에 얹은 색(map.css --boundary-outline)과 같게, 불투명하게. 덮개가 경계를 살짝 덮는 느낌 (2026-10-20 팀장)
+  outline: { strokeWeight: 3, strokeOpacity: 1 },
   gu: { strokeWeight: 2, strokeOpacity: 0.45 }, // 남색 회색 #5b6b8c (map.css) 45% (2026-10-20 팀장)
   hdong: { strokeWeight: 1, strokeOpacity: 0.9 },
   pickedGu: { strokeWeight: 2.5, strokeOpacity: 0.9, fillOpacity: 0.04 },
   pickedDong: { strokeWeight: 2.5, strokeOpacity: 1, fillOpacity: 0.06 }, // 남색 (2026-10-19). 칠을 옅게 해 아래 이름과 길이 보이게
 };
-const BOUNDARY_Z = { mask: 1, fill: 2, hdong: 3, gu: 4, picked: 6 };
+const BOUNDARY_Z = { mask: 1, fill: 2, hdong: 3, gu: 4, outline: 5, picked: 6 };
 
 const mapBoundary = (() => {
   let map = null;
@@ -167,6 +169,7 @@ const mapBoundary = (() => {
     });
     shapes = {
       mask: area(maskPaths(data.outline), BOUNDARY_STYLE.mask, '--boundary-mask', BOUNDARY_Z.mask),
+      outline: lines(data.outline, BOUNDARY_STYLE.outline, '--boundary-outline', BOUNDARY_Z.outline),
       gu: [...data.gu.values()].flatMap((geometry) => innerLines(geometry, data.outline, BOUNDARY_STYLE.gu, '--boundary-gu', BOUNDARY_Z.gu)),
       hdong: data.hdong.flatMap((geometry) => lines(geometry, BOUNDARY_STYLE.hdong, '--boundary-dong', BOUNDARY_Z.hdong)),
       // 고른 지역: 조각마다 면 하나, 고리마다 선 하나. 고를 때마다 새로 만들지 않고 모양만 바꾼다 (모자랄 때만 만든다)
@@ -176,6 +179,7 @@ const mapBoundary = (() => {
       pickedFill: (paths) => area(paths, BOUNDARY_STYLE.pickedDong, '--boundary-picked', BOUNDARY_Z.fill),
     };
     shapes.mask.setMap(map);
+    shapes.outline.forEach((shape) => shape.setMap(map));
     shapes.gu.forEach((shape) => shape.setMap(map));
   }
 

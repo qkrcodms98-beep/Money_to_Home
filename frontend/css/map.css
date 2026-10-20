@@ -29,6 +29,7 @@
   --boundary-dong: var(--color-line-strong); /* 행정동 경계. 연한 회색, 가까이 볼 때만 */
   --boundary-picked: var(--color-dong); /* 고른 구·동의 선과 반투명 칠 */
   --boundary-mask: var(--color-dim); /* 경계 밖을 덮는 반투명 면 */
+  --boundary-outline: #cdcac5; /* 광주 바깥 테두리. 지도 바탕(#f4f1ec쯤)에 덮개(검정 16%)를 얹은 색 (2026-10-20) */
 
   /* 말풍선의 꼬리 끝(아파트의 자리)이 말풍선 왼쪽 위에서 떨어진 거리.
      꼬리(15 × 10)는 왼쪽에서 1px, 위에서 47px에 있고 끝은 그 가운데 아래다. */
