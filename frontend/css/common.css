@@ -699,7 +699,7 @@ dialog {
 }
 
 /* 스크롤바 (2026-10-20 팀장): 브라우저 스크롤바는 자리를 차지하므로 숨긴다.
-   대신 js/scrollbar.js가 스크롤하는 상자의 오른쪽 가장자리 위에 얇은 반투명 손잡이를 겹쳐 띄우고, 1초 동안 가만히 있으면 사라지게 한다 */
+   대신 js/scrollbar.js가 스크롤하는 상자의 오른쪽 가장자리 위에 얇은 반투명 손잡이를 겹쳐 띄우고, 5초 동안 가만히 있으면 사라지게 한다 */
 * {
   scrollbar-width: none;
 }
@@ -713,7 +713,7 @@ dialog {
   z-index: 2147483647;
   width: 5px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.32);
+  background: rgba(0, 0, 0, 0.22);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease, width 0.15s ease;
@@ -728,7 +728,7 @@ dialog {
 .scrollbar-thumb:hover,
 .scrollbar-thumb--drag {
   width: 7px;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.34);
 }
 
 .scrollbar-thumb--gone {
