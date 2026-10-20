@@ -124,11 +124,10 @@ const FACILITY_KAKAO_GLYPHS = {
 const FACILITY_BUS_KIND = { kind: 'bus', code: 'BUS', label: '버스정류장' };
 // 넓게 볼 때 고른 아파트의 위치 표시 (24 × 32). 아래 끝이 아파트 자리
 const PICKED_PIN_PATH = 'M12 1C6 1 1.5 5.4 1.5 11.2 1.5 18.6 12 31 12 31s10.5-12.4 10.5-19.8C22.5 5.4 18 1 12 1zm0 14.3a4.1 4.1 0 1 1 0-8.2 4.1 4.1 0 0 1 0 8.2z';
-// 역세권: 가장 가까운 지하철 출구가 이 거리(직선, m) 안이면 지하철역을, 아니면 버스정류장을 그 아파트의 대중교통으로 띄운다
+// 역세권: 가장 가까운 지하철 출구가 이 거리(직선, m) 안이면 그 아파트의 지하철역을 띄운다.
+// 버스정류장은 역세권과 상관없이 화면 안의 정류장을 모두 띄운다 (2026-10-20 세환. 정류장 표 bus_stops + A-28).
+// 예전에는 아파트마다 가장 가까운 한 곳, 그다음에는 역세권이 아닌 아파트 500m 안만 띄워 카카오맵보다 정류장이 적게 보였다
 const FACILITY_STATION_AREA_M = 500;
-// 역세권이 아닌 아파트에서 이 거리(직선, m) 안의 버스정류장을 모두 띄운다 (2026-10-20 세환. 정류장 표 bus_stops + A-28).
-// 예전에는 아파트마다 가장 가까운 한 곳만 띄워 카카오맵보다 정류장이 훨씬 적게 보였다
-const FACILITY_BUS_NEAR_M = 500;
 // A-28로 정류장을 받는 칸의 크기(위도 · 경도의 도, 약 2km). 지도를 조금 옮길 때마다 부르지 않게 칸 단위로 받아 둔다
 const BUS_TILE_DEG = 0.02;
 // 이름표 둘째 줄의 걷는 사람 그림 (24 × 24)
@@ -501,7 +500,7 @@ function renderScale() {
 // 축척 100m 이하에서 화면 안 아파트들의 주변 시설을 아이콘으로 단다 (2026-10-20 세환. C안 위에서 장소 검색 없이 다시 살림).
 // 시설과 자리는 A-06 facilities(아파트마다 종류별로 가장 가까운 곳과 좌표)다. 카카오 장소 검색을 부르지 않는다 (CLAUDE.md 9번).
 // 그래서 그 동네의 모든 편의점이 아니라, 화면 안 아파트 어느 한 곳에서 가장 가까운 시설들이 뜬다. 같은 시설은 한 번만 단다.
-// 버스정류장만은 정류장 표(A-28)에서 역세권이 아닌 아파트 500m 안의 정류장을 모두 단다 (2026-10-20).
+// 버스정류장만은 정류장 표(A-28)에서 화면 근처의 정류장을 모두 단다 (2026-10-20).
 // 아파트 창의 주변 시설 줄을 눌러 띄운 시설(facilityPin)은 넓게 보아도 남긴다. 아이콘은 아파트 말풍선보다 아래(zIndex 1).
 // A-06 facilities의 kind로 지도 아이콘의 종류 { kind, code, label, icon }. 학교 종류별은 학교, bus는 버스정류장
 function facilityKindOf(kindName) {
@@ -552,19 +551,16 @@ function renderFacilities() {
     if (seq !== mapState.facilitySeq || map.getLevel() > FACILITY_LEVEL || mapState.mode !== 'apartment') return;
     const want = new Map(); // 시설 id → { kind, place }
     const stations = new Map(); // 역 이름 → { kind, exits: Map(출구 id → [위도, 경도]) }
-    const offStation = []; // 역세권이 아닌 아파트의 [위도, 경도]. 이 근처의 버스정류장을 띄운다
     const inside = (place) => place.y >= area.south && place.y <= area.north && place.x >= area.west && place.x <= area.east;
     details.forEach((detail) => {
       const items = (detail && detail.facilities) || [];
-      // 대중교통은 아파트마다 하나를 고른다 (2026-10-20 세환): 역세권(지하철 출구가 500m 안)이면 지하철역, 아니면 버스정류장
+      // 지하철역은 역세권(지하철 출구가 500m 안)인 아파트만 띄운다 (2026-10-20 세환).
+      // 정류장 목록을 못 받았을 때만, 역세권이 아닌 아파트의 가장 가까운 버스정류장(A-06)을 대신 띄운다
       const subway = items.find((item) => item.kind === 'subway');
       const nearStation = Boolean(subway && subway.place_name && Number(subway.distance) <= FACILITY_STATION_AREA_M);
-      if (detail && !nearStation && detail.latitude !== null && detail.longitude !== null) {
-        offStation.push([Number(detail.latitude), Number(detail.longitude)]);
-      }
       items.forEach((item) => {
         if ((item.kind === 'subway' && !nearStation) || (item.kind === 'bus' && nearStation)) return;
-        // 정류장 목록을 받았으면 버스는 아래에서 근처 정류장을 모두 단다. 못 받았을 때만 A-06의 가장 가까운 한 곳을 단다
+        // 정류장 목록을 받았으면 버스는 아래에서 화면 근처 정류장을 모두 단다. 못 받았을 때만 A-06의 가장 가까운 한 곳을 단다
         if (item.kind === 'bus' && stops) return;
         const kind = facilityKindOf(item.kind);
         const place = facilityPlace(item);
@@ -592,12 +588,10 @@ function renderFacilities() {
       };
       if (inside(place)) want.set(place.id, { kind, place });
     });
-    // 역세권이 아닌 아파트에서 FACILITY_BUS_NEAR_M 안의 정류장. 길 건너편 정류장은 이름이 같아 정류장 번호로 구분한다
+    // 화면 근처(area)의 버스정류장 모두. 길 건너편 정류장은 이름이 같아 정류장 번호로 구분한다
     (stops || []).forEach((stop) => {
       const place = { id: `bus:${stop.stop_id}`, place_name: stop.name, y: stop.latitude, x: stop.longitude };
-      if (!inside(place)) return;
-      const near = offStation.some(([lat, lng]) => roughMeters(lat, lng, place.y, place.x) <= FACILITY_BUS_NEAR_M);
-      if (near) want.set(place.id, { kind: FACILITY_BUS_KIND, place });
+      if (inside(place)) want.set(place.id, { kind: FACILITY_BUS_KIND, place });
     });
     keepOnlyFacilities(want);
     ensureFacilityPin();
@@ -630,13 +624,6 @@ function busTile(south, west) {
     mapState.busTiles.set(key, loading);
   }
   return mapState.busTiles.get(key);
-}
-
-// 두 좌표 사이의 대략의 직선거리(m). 정류장이 아파트에서 500m 안인지 가리는 데만 쓴다 (짧은 거리라 평면으로 어림)
-function roughMeters(lat1, lng1, lat2, lng2) {
-  const y = (lat2 - lat1) * 111320;
-  const x = (lng2 - lng1) * 111320 * Math.cos((lat1 * Math.PI) / 180);
-  return Math.hypot(x, y);
 }
 
 // 아파트 한 곳의 A-06 응답. 아파트 창이 받아 둔 것이 있으면 그것을 쓴다. 실패하면 null (그 아파트의 시설만 빠진다)
