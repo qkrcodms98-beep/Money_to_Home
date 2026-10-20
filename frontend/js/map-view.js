@@ -2498,8 +2498,8 @@ function renderLackSwitch() {
 }
 
 function renderLegend() {
-  // 처음에는 접어 둔다 (2026-10-20 팀장 결정. 지도를 덜 가리게). 펼친 사람은 기억해 둔 대로 연다
-  const open = store.get('map').legend_open === true;
+  // 처음에는 펼쳐 둔다 (2026-10-20 팀장 결정: 말풍선 구분과 시설 체크 칸까지 다 보이게). 접은 사람은 기억해 둔 대로 접는다
+  const open = store.get('map').legend_open !== false;
   const button = document.getElementById('legend-toggle');
   button.setAttribute('aria-expanded', String(open));
   button.setAttribute('aria-label', open ? '표시 · 시설 접기' : '표시 · 시설 펴기 (말풍선 구분과 주변 시설)');
@@ -2521,7 +2521,7 @@ function bindEvents() {
 
   // 범례 접고 펴기
   document.getElementById('legend-toggle').addEventListener('click', () => {
-    store.set('map', { legend_open: store.get('map').legend_open !== true });
+    store.set('map', { legend_open: store.get('map').legend_open === false });
     renderLegend();
   });
 
@@ -3178,6 +3178,7 @@ async function initMap() {
   renderChips();
   renderLoginLink();
   renderLegend();
+  renderFacilityFilter(false); // 시설 체크 칸을 처음부터 채운다 (지도가 멈춘 뒤에야 채워져 구 표시 수준에서는 비어 보였다)
   sheet.init();
   bindEvents();
   kakaoReady().catch(() => {}); // 지역 목록을 받는 동안 카카오맵도 받는다. 실패는 startKakaoMap이 알린다
