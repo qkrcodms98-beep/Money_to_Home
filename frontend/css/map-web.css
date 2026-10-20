@@ -494,7 +494,9 @@
     border-right: 0;
   }
 
-  /* 넓게 볼 때 선택한 아파트 카드: 지도 왼쪽 아래 (2026-10-20). 카카오 로고(맨 왼쪽 아래)는 가리지 않게 띄운다 */
+  /* 넓게 볼 때 선택한 아파트 카드: 지도 왼쪽 아래 (2026-10-20). 카카오 로고(맨 왼쪽 아래)는 가리지 않게 띄운다.
+     그림자 없이 옅은 선 하나. 글자와 간격은 아파트 정보 탭과 같다 (new-style.css의 .apt-info: 이름 13 회색 108 폭 → 여기는 80,
+     값 14 #333, 줄 위아래 7px, 구분선 #e5e5e5) */
   .picked-card {
     position: absolute;
     bottom: 34px;
@@ -503,10 +505,11 @@
     display: block;
     box-sizing: border-box;
     width: 300px;
-    padding: 16px 16px 14px;
-    border-radius: 16px;
+    padding: 16px 20px 18px;
+    border: 1px solid var(--new-sheet-line, var(--color-line));
+    border-radius: 12px;
     background: var(--color-bg);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+    line-height: var(--line-height);
   }
 
   .picked-card[hidden] {
@@ -515,9 +518,10 @@
 
   .picked-card__head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
-    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--new-sheet-line, var(--color-line));
   }
 
   .picked-card__badge {
@@ -525,28 +529,28 @@
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--color-primary-soft);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--color-bg-sub);
   }
 
   .picked-card__badge svg {
-    width: 24px;
-    height: 24px;
-    fill: var(--color-primary);
+    width: 20px;
+    height: 20px;
+    fill: var(--color-text-sub);
   }
 
   .picked-card__titles {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 2px;
     min-width: 0;
   }
 
   .picked-card__title {
-    font-size: var(--text-body);
+    color: var(--new-sheet-name, var(--color-text));
+    font-size: var(--text-label);
     font-weight: var(--font-bold);
   }
 
@@ -559,20 +563,20 @@
   }
 
   .picked-card__name {
-    color: var(--color-text-hint);
+    color: var(--color-text-sub);
   }
 
   .picked-card__close {
     flex: none;
     width: 28px;
     height: 28px;
-    margin: -4px -4px 0 0;
+    margin-right: -6px;
     padding: 0;
     border: 0;
     border-radius: 999px;
     background: transparent;
     color: var(--color-text-sub);
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
   }
 
@@ -581,23 +585,21 @@
   }
 
   .picked-card__rows {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 0 0 14px;
-    padding: 12px 0 0;
-    border-top: 1px solid var(--color-line);
+    margin: 8px 0 14px;
+    padding: 0;
   }
 
   .picked-card__row {
-    display: grid;
-    grid-template-columns: 72px 1fr;
+    display: flex;
     align-items: center;
-    font-size: var(--text-help);
+    padding: 7px 0;
   }
 
   .picked-card__row dt {
+    flex-shrink: 0;
+    width: 80px;
     color: var(--color-text-sub);
+    font-size: var(--text-help);
   }
 
   .picked-card__row dd {
@@ -606,7 +608,8 @@
     gap: 6px;
     min-width: 0;
     margin: 0;
-    color: var(--color-text);
+    color: var(--new-sheet-value, var(--color-text));
+    font-size: var(--text-label);
     font-weight: var(--font-medium);
   }
 
@@ -615,11 +618,11 @@
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
     color: #ffffff;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: var(--font-bold);
   }
 
@@ -639,9 +642,9 @@
   .picked-card__go {
     display: block;
     width: 100%;
-    height: 42px;
+    height: 44px;
     border: 0;
-    border-radius: 10px;
+    border-radius: var(--radius-card, 12px);
     background: var(--color-primary);
     color: var(--color-on-primary);
     font-family: inherit;

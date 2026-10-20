@@ -1326,12 +1326,12 @@
 }
 
 .picked-pin__shape {
-  width: 26px;
-  height: 35px;
-  fill: #e5355c; /* 범례의 '선택한 아파트'(.map-key__marks의 --map-key-pin)와 같은 시안 색 */
-  stroke: var(--color-bg);
-  stroke-width: 1.5px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 37px;
+  /* 색은 map-view.js의 그라데이션(빨강, 왼쪽 위가 밝다). 흰 테두리는 뺐다 (2026-10-20 팀장 결정) */
+  filter: drop-shadow(0 2px 1.5px rgba(120, 10, 35, 0.35));
 }
 
 /* 핀과 말풍선 상자. 상자의 아래 가운데가 아파트 자리 (renderPickedPin의 yAnchor 1) */
@@ -1341,38 +1341,50 @@
   justify-content: center;
 }
 
-/* 핀을 누르면 나오는 말풍선 (2026-10-20). 핀 오른쪽 위에 붙는다. 누르면 그 아파트의 창을 다시 연다 */
+/* 핀을 누르면 나오는 말풍선 (2026-10-20). 핀 위에 붙는다. 누르면 그 아파트의 창을 다시 연다.
+   그림자 없이 옅은 선 하나, 글자는 아파트 정보 탭과 같게 (이름 13 굵게 #1b1b1b, 그 밑 13 회색) */
 .picked-pin__bubble {
   position: absolute;
-  bottom: calc(100% - 6px);
+  bottom: calc(100% + 2px);
   left: 50%;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 150px;
-  max-width: 230px;
-  padding: 8px 10px 8px 12px;
-  border: 0;
-  border-radius: 12px;
+  gap: 12px;
+  min-width: 160px;
+  max-width: 240px;
+  padding: 10px 14px;
+  border: 1px solid var(--new-sheet-line, var(--color-line));
+  border-radius: 10px;
   background: var(--color-bg);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
-  color: var(--color-text);
+  color: var(--new-sheet-name, var(--color-text));
   font-family: inherit;
+  line-height: var(--line-height);
   text-align: left;
   cursor: pointer;
-  transform: translateX(-12px);
+  transform: translateX(-16px);
 }
 
 .picked-pin__bubble[hidden] {
   display: none;
 }
 
-.picked-pin__bubble::after { /* 꼬리 */
+/* 꼬리: 선 색 삼각형 위에 흰 삼각형을 1px 올려 선이 이어져 보이게 */
+.picked-pin__bubble::before,
+.picked-pin__bubble::after {
   content: '';
   position: absolute;
-  top: 100%;
-  left: 10px;
+  left: 11px;
   border: 6px solid transparent;
+}
+
+.picked-pin__bubble::before {
+  top: 100%;
+  border-top-color: var(--new-sheet-line, var(--color-line));
+}
+
+.picked-pin__bubble::after {
+  top: calc(100% - 1px);
   border-top-color: var(--color-bg);
 }
 
@@ -1388,31 +1400,66 @@
   font-weight: var(--font-bold);
 }
 
-.picked-pin__title::before { /* 앞의 작은 빨간 핀 */
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 5px;
-  border-radius: 50% 50% 50% 0;
-  background: #e5355c;
-  transform: rotate(-45deg);
-  vertical-align: 1px;
-}
-
 .picked-pin__place {
   overflow: hidden;
   color: var(--color-text-sub);
-  font-size: var(--text-badge);
+  font-size: var(--text-help);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .picked-pin__icon {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   fill: var(--color-text-sub);
+}
+
+/* 핀 아래 끝(아파트 자리)에서 퍼지는 빨간 파동. 내 위치(new-style.css의 .my-location)와 같은 움직임, 색만 빨강 (2026-10-20) */
+.picked-pin-wrap::before,
+.picked-pin-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -7px; /* 가운데가 핀 끝(아파트 자리)에 온다 */
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.picked-pin-wrap::before {
+  background: #e5355c;
+  opacity: 0.35;
+  animation: picked-pin-pulse 2s ease-out infinite;
+}
+
+.picked-pin-wrap::after {
+  animation: picked-pin-ring 2s ease-out 1s infinite;
+}
+
+@keyframes picked-pin-pulse {
+  to {
+    opacity: 0;
+    transform: scale(4);
+  }
+}
+
+@keyframes picked-pin-ring {
+  from {
+    box-shadow: 0 0 0 0 rgba(229, 53, 92, 0.35);
+  }
+  to {
+    box-shadow: 0 0 0 24px rgba(229, 53, 92, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picked-pin-wrap::before,
+  .picked-pin-wrap::after {
+    display: none;
+  }
 }
 
 /* ───────── 넓게 볼 때 선택한 아파트 카드 (웹만, map-view.js의 renderPickedCard) ───────── */
