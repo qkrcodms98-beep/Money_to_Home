@@ -168,6 +168,7 @@ def search(
     sort: str = "category",
     keyword: str | None = None,
     bounds=None,
+    everywhere: bool = False,
 ) -> dict:
     """A-05 아파트 찾기. 계산은 services/calc.py의 함수만 부른다 (NFR-13).
 
@@ -175,6 +176,7 @@ def search(
       gu와 dong : 그 구와 동 (dong이 없으면 구 전체)
       bounds    : 지도에 보이는 영역. 위도가 south ~ north, 경도가 west ~ east인 아파트 (양 끝 포함, FR-MAP-01, 22)
       keyword   : 광주 5개 구 전체에서 이름에 그 글자가 든 아파트
+      everywhere: 광주 5개 구 전체 (where.all)
     - 평균가가 있는 아파트만 낸다. 좌표가 없는 아파트도 빼지 않는다. 다만 bounds로 찾을 때는 나오지 않는다 (명세서 Q-8).
     - filters: 면적대와 평균가는 면적마다, 준공 연도는 아파트마다 본다 (FR-APT-03, 09, 10).
       조건에 맞는 면적이 하나도 없는 아파트는 빠진다. 준공 연도 조건이 있으면 준공 연도를 모르는 아파트는 빠진다.
@@ -182,6 +184,8 @@ def search(
     - 순서 (sort)
       category  : 지금 가능 → 기간 내 가능 → 자금 부족. 같은 구분 안에서는 평균가가 목표 가능 가격에 가까운 순.
       price_asc : 첫째 면적의 평균가가 낮은 순. price_desc: 높은 순 (FR-APT-06, 와이어프레임 B2).
+      area_desc : 첫째 면적의 전용면적이 넓은 순. households_desc: 세대수가 많은 순. newest: 준공 연도가 최근인 순.
+                  세대수나 준공 연도를 모르면 맨 뒤 (2026-10-20).
       값이 같으면 아파트 번호 순이다. areas의 순서(평균가 낮은 순)는 sort와 상관없이 같다.
     - counts는 아파트 단위로 센다. 자금이 부족한 아파트도 항상 준다.
     """
@@ -189,7 +193,9 @@ def search(
     target = basis["target"]
 
     query = select(Apartment).options(selectinload(Apartment.prices))
-    if keyword is not None:
+    if everywhere:
+        pass  # DB에는 광주 5개 구의 아파트만 있다
+    elif keyword is not None:
         # %와 _도 글자 그대로 찾는다 (autoescape)
         query = query.where(Apartment.name.contains(keyword, autoescape=True))
     elif bounds is not None:
@@ -209,6 +215,12 @@ def search(
         items.sort(key=lambda a: (a["areas"][0]["avg_price"], a["id"]))
     elif sort == "price_desc":
         items.sort(key=lambda a: (-a["areas"][0]["avg_price"], a["id"]))
+    elif sort == "area_desc":
+        items.sort(key=lambda a: (-a["areas"][0]["exclusive_area"], a["id"]))
+    elif sort == "households_desc":
+        items.sort(key=lambda a: (a["households"] is None, -(a["households"] or 0), a["id"]))
+    elif sort == "newest":
+        items.sort(key=lambda a: (a["built_year"] is None, -(a["built_year"] or 0), a["id"]))
     else:
         items.sort(key=lambda a: (CATEGORY_ORDER[a["category"]], abs(a["areas"][0]["avg_price"] - target), a["id"]))
     counts = _counts(a["category"] for a in items)
