@@ -129,7 +129,9 @@
 
   window.addEventListener('resize', place);
   // 접기 · 펴기는 html이나 패널의 속성(class · hidden · data-*)을 바꾼다. 바뀌는 즉시 맞춘다 (프레임을 기다리지 않는다)
-  new MutationObserver(() => {
+  // 손잡이 자신의 class가 바뀐 것은 무시한다. 무시하지 않으면 place()가 class를 바꾸고 → 다시 불리는 것이 끝없이 돌아 화면이 멈춘다
+  new MutationObserver((records) => {
+    if (records.every((record) => record.target === thumb)) return;
     if (thumb.classList.contains('scrollbar-thumb--on')) place();
   }).observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['class', 'hidden', 'data-map-web-fold', 'data-map-web-apt-fold', 'data-map-web-panel', 'data-sheet', 'data-stage'] });
   document.addEventListener('transitionend', () => {
