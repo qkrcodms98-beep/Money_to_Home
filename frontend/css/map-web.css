@@ -78,7 +78,7 @@
     display: block;
     height: var(--map-web-bar);
     /* 파랑 머리 줄 (2026-10-20 팀장 결정). 왼쪽 rgb(42, 110, 193)에서 오른쪽 끝 rgb(120, 182, 240)까지 밝아지는 그라데이션 */
-    background: linear-gradient(90deg, rgb(42, 110, 193) 0%, rgb(101, 159, 225) 55%, rgb(120, 182, 240) 100%);
+    background-color : rgb(1, 16, 68);
   }
 
   /* 로고. 모양은 입력 화면과 같다 (common.css의 .header__home, .header__logo, .header__name, .header__to) */
@@ -707,21 +707,23 @@
     content: '‹';
   }
 
-  /* 접혀 있으면 손잡이가 남색 탭 "표시 · 시설"이 된다 (2026-10-20 팀장 결정. 글자 11px, 그림 없음). 지도 왼쪽 끝에 붙는다 */
+  /* 접혀 있으면 손잡이가 남색 탭 + 흰 눈 그림이 된다 (2026-10-20 팀장 결정. 예전 글자 "표시 · 시설"을 그림으로 바꿈). 지도 왼쪽 끝에 붙는다 */
   .facility-tab__button[aria-expanded='false'] {
-    width: auto;
+    width: 34px;
     height: 30px;
-    padding: 0 10px 0 9px;
+    padding: 0;
     border: 0;
     background: var(--new-chip-on, #043870);
     color: #ffffff;
-    white-space: nowrap;
   }
 
   .facility-tab__button[aria-expanded='false']::before {
-    content: '표시 · 시설';
-    font-size: 11px;
-    font-weight: var(--font-bold);
+    content: '';
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5C6.5 5 2.4 8.6 1 12c1.4 3.4 5.5 7 11 7s9.6-3.6 11-7c-1.4-3.4-5.5-7-11-7zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5C6.5 5 2.4 8.6 1 12c1.4 3.4 5.5 7 11 7s9.6-3.6 11-7c-1.4-3.4-5.5-7-11-7zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'/%3E%3C/svg%3E") center / contain no-repeat;
   }
 
   .facility-tab__button[aria-expanded='false']:hover {
