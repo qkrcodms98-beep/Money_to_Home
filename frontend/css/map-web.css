@@ -848,7 +848,7 @@
      목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 16 × 76, 흰 바탕에 옅은 그림자. 마우스를 올리면 조금 진해진다 */
   .map-web-fold {
     position: absolute;
-    top: calc(var(--map-web-top) + (100vh / var(--page-zoom, 1) - var(--map-web-top)) / 2); /* 조건 줄 아래 목록 · 지도 높이의 가운데 */
+    top: calc(var(--map-web-top) + (100vh / var(--page-zoom, 1) - var(--map-web-top)) / 2 - 20px); /* 조건 줄 아래 목록 · 지도 높이의 가운데에서 20 위 (2026-10-20 팀장) */
     left: var(--map-web-list);
     z-index: 4;
     display: flex;
