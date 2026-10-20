@@ -17,6 +17,7 @@
 // html에 다는 표시 (map-web.css가 쓴다)
 //   data-map-web-panel = "list" | "apartment"   패널에 지금 보이는 것. 창이 닫혀 있으면 없다
 //   data-map-web-fold                           목록 패널을 접었다
+//   data-map-web-apt-fold                       아파트 패널을 접었다
 
 const MAP_WEB_QUERY = window.matchMedia('(min-width: 1024px)'); // css/map-web.css의 @media와 같은 폭
 const MAP_WEB_STAGE = '30';
@@ -81,7 +82,13 @@ const mapWeb = {
   wrapSheet() {
     const { base } = mapWeb;
 
-    sheet.show = (stage, mode) => base.show(mapWeb.isOn() ? MAP_WEB_STAGE : stage, mode);
+    sheet.show = (stage, mode) => {
+      if (mode === 'apartment' && mapWeb.aptFolded) {
+        mapWeb.aptFolded = false; // 아파트를 새로 열면 접어 둔 아파트 패널을 편다
+        mapWeb.renderFold();
+      }
+      base.show(mapWeb.isOn() ? MAP_WEB_STAGE : stage, mode);
+    };
 
     sheet.setStage = (stage) => {
       if (!mapWeb.isOn()) base.setStage(stage);
@@ -224,7 +231,9 @@ const mapWeb = {
 
     // 실거래 기준일 (A-13). 받지 못하면 비워 둔다
     api.get('/api/data-status').then((data) => {
-      if (data && data.trades_base_date) document.getElementById('map-web-base').textContent = `실거래 ${data.trades_base_date} 기준`;
+      if (!data || !data.trades_base_date) return;
+      const [year, month, day] = data.trades_base_date.split('-'); // "2026-10-12" → "2026년 10월 12일" (다른 화면과 같은 모양)
+      document.getElementById('map-web-base').textContent = `실거래 ${year}년 ${Number(month)}월 ${Number(day)}일 기준`;
     }).catch(() => {});
   },
 
@@ -262,36 +271,54 @@ const mapWeb = {
   // 접은 상태는 이 화면을 보는 동안만 기억한다 (mapWeb.folded). 새로 열면 목록이 펼쳐져 있다
   folded: false,
 
+  // 아파트 패널도 접을 수 있다 (mapWeb.aptFolded). 접어도 고른 아파트는 그대로 두고, 다른 아파트를 열면 다시 편다
+  aptFolded: false,
+
   initFold() {
     const button = document.getElementById('map-web-fold');
-    if (!button) return;
+    const aptButton = document.getElementById('map-web-apt-fold');
+    if (!button || !aptButton) return;
     store.set('map', { web_fold: null }); // 예전에 저장해 둔 접기 값을 지운다
-    const render = () => {
-      const { folded } = mapWeb;
-      document.documentElement.toggleAttribute('data-map-web-fold', folded);
-      button.setAttribute('aria-expanded', String(!folded));
-      button.setAttribute('aria-label', folded ? '목록 펴기' : '목록 접기');
-      button.querySelector('.map-web-fold__icon').textContent = folded ? '›' : '‹';
+    const mark = (target, folded, name) => {
+      target.setAttribute('aria-expanded', String(!folded));
+      target.setAttribute('aria-label', `${name} ${folded ? '펴기' : '접기'}`);
+      target.querySelector('.map-web-fold__icon').textContent = folded ? '›' : '‹';
+    };
+    mapWeb.renderFold = () => {
+      const root = document.documentElement;
+      root.toggleAttribute('data-map-web-fold', mapWeb.folded);
+      root.toggleAttribute('data-map-web-apt-fold', mapWeb.aptFolded);
+      mark(button, mapWeb.folded, '목록');
+      mark(aptButton, mapWeb.aptFolded, '아파트 창');
     };
     button.addEventListener('click', () => {
       mapWeb.folded = !mapWeb.folded;
-      render();
+      mapWeb.renderFold();
     });
-    render();
+    aptButton.addEventListener('click', () => {
+      mapWeb.aptFolded = !mapWeb.aptFolded;
+      mapWeb.renderFold();
+    });
+    mapWeb.renderFold();
   },
+
+  renderFold() {}, // initFold가 채운다
 
   // ───────── 패널 폭이 바뀌면 지도에 알린다 ─────────
   // 카카오맵은 상자의 크기가 바뀐 것을 모른다. relayout()을 불러야 새 크기로 그린다.
   // 아파트 패널이 열리고 닫히거나 목록을 접으면 지도의 폭이 바뀐다. 고른 아파트가 있으면 줄어든 지도의 가운데로 옮긴다.
+  // 고른 아파트가 없으면 보던 가운데를 그대로 둔다. relayout()은 왼쪽 위를 붙잡아 두므로, 창을 줄이거나 모바일로 바꾸면
+  // 보던 곳이 오른쪽으로 밀려나 구 표시가 엉뚱한 자리에 있는 것처럼 보였다 (2026-10-20).
   watchMapSize() {
     const box = document.getElementById('kakao-map');
     if (!box || typeof ResizeObserver === 'undefined') return;
     new ResizeObserver(() => {
       if (!mapState.map || box.clientWidth === mapWeb.mapWidth) return;
       mapWeb.mapWidth = box.clientWidth;
+      const center = mapState.map.getCenter(); // relayout 전에는 아직 예전 크기의 가운데
       mapState.map.relayout();
       mapState.mapHeight = box.clientHeight;
-      if (mapWeb.isOn()) centerSelected();
+      if (!(mapWeb.isOn() && centerSelected())) mapState.map.setCenter(center);
     }).observe(box);
   },
 };
