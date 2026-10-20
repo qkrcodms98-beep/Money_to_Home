@@ -10,7 +10,7 @@
 
 /* 진행 바가 없어도 같은 높이를 쓴다. 가입 완료 화면에는 ‹ 줄도 없다 */
 .auth-done {
-  min-height: calc(100vh - var(--top-space));
+  min-height: calc(100vh / var(--page-zoom, 1) - var(--top-space));
 }
 
 .auth__head {

@@ -79,7 +79,7 @@
 /* ───────── 공유 창 ───────── */
 .share {
   width: min(calc(100vw - 2 * var(--page-padding)), 360px);
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh / var(--page-zoom, 1) - 48px);
   padding: 24px 22px 22px;
   border: 0;
   border-radius: 24px;

@@ -61,7 +61,7 @@
 .start-layout {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--top-space));
+  min-height: calc(100vh / var(--page-zoom, 1) - var(--top-space));
 }
 
 .start-layout .page {

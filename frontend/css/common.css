@@ -377,7 +377,7 @@ dialog {
 .form-page {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--top-space) - var(--progress-height));
+  min-height: calc(100vh / var(--page-zoom, 1) - var(--top-space) - var(--progress-height));
 }
 
 .form-page .page {
@@ -682,5 +682,18 @@ dialog {
     color: var(--color-brand-gold); /* 로고 동전과 같은 금색 */
     font-size: var(--text-button);
     vertical-align: baseline;
+  }
+}
+
+/* 웹(1024px 이상)은 화면 전체를 90%로 그린다 (2026-10-20 팀장: 브라우저 90%로 볼 때가 가장 깔끔했다).
+   글자 · 여백 · 지도까지 한꺼번에 줄어든다. 100vh를 쓰는 곳은 calc(100vh / var(--page-zoom))로 화면 높이를 다 채운다. 모바일은 100% 그대로 */
+:root {
+  --page-zoom: 1;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-zoom: 0.9;
+    zoom: 0.9;
   }
 }
