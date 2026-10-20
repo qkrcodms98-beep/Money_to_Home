@@ -9,6 +9,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 :root {
+  color-scheme: only light; /* 늘 밝은 화면 (2026-10-20). 브라우저가 강제로 어둡게 바꾸지 않게. 각 화면의 <meta name="color-scheme">와 같다 */
   /* 바탕과 선 */
   --color-bg: #ffffff;
   --color-bg-sub: #f2f2f7;
