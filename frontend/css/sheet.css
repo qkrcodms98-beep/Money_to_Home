@@ -174,9 +174,29 @@
   display: none;
 }
 
+/* 로드뷰 자리 두 개를 겹쳐 두고 번갈아 쓴다 (apartment.js의 showPano, 2026-10-20 크로스페이드).
+   새 사진이 든 쪽이 위(--top)에서 투명하게 준비되었다가 서서히 나타난다(--on) */
 .apt-roadview__view {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  isolation: isolate; /* 카카오 로드뷰 안의 쌓임을 이 안에 가둔다 */
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.apt-roadview__view--top {
+  z-index: 1;
+}
+
+.apt-roadview__view--on {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apt-roadview__view {
+    transition: none;
+  }
 }
 
 /* 로드뷰가 없을 때의 기본 이미지: 가운데에 집 그림(44)과 문장, 사이 8 (C6b) */
@@ -402,9 +422,29 @@
   padding: 4px 0;
   overflow-x: auto;
   scrollbar-width: none;
-  /* 오른쪽 끝을 흐리게 해 면적이 더 있다는 것을 보인다. 끝까지 밀면 아래 빈자리(::after)가 흐린 곳에 와서 마지막 면적이 다 보인다 */
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  /* 넘길 면적이 남은 쪽 끝을 흐리게 해 면적이 더 있다는 것을 보인다 (apartment.js의 markAreaEdges, 2026-10-20 양쪽으로).
+     끝까지 밀면 아래 빈자리(::after)가 흐린 곳에 와서 마지막 면적이 다 보인다 */
+  --area-fade-left: 0px;
+  --area-fade-right: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--area-fade-left), #000 calc(100% - var(--area-fade-right)), transparent);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--area-fade-left), #000 calc(100% - var(--area-fade-right)), transparent);
+}
+
+/* 마우스로 잡아 끄는 동안 (apartment.js의 watchAreaList). 글자가 선택되지 않고 손 모양 */
+.apt__area-list--dragging {
+  cursor: grabbing;
+}
+
+.apt__area-list--dragging .apt__area {
+  pointer-events: none;
+}
+
+.apt__area-list--more-left {
+  --area-fade-left: 28px;
+}
+
+.apt__area-list--more-right {
+  --area-fade-right: 28px;
 }
 
 .apt__area-list::after {

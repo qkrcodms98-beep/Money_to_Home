@@ -60,6 +60,16 @@ const APT_NO_COORD = '위치 없음';
 const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 표시하지 못했습니다. 지도는 그대로 두었습니다.';
 // 로드뷰 (목업 C6, C6b)
 const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 가장 가까운 로드뷰를 쓴다
+// 로드뷰를 바꿀 때 (2026-10-20 팀장: 아파트를 넘길 때마다 사진이 빠르게 바뀌는 모습이 보기 싫다)
+//   - 동을 받으면 그 동 아파트들의 로드뷰 지점(panoId)을 미리 찾아 둔다 (prefetchRoadviews). 넘길 때 찾느라 기다리지 않는다.
+//     카카오 로드뷰는 한 번에 한 장만 띄울 수 있고 사진을 미리 받아 두는 기능이 없어, 지점까지만 미리 찾는다.
+//   - 로드뷰 화면을 두 개 두고 번갈아 쓴다 (크로스페이드, 2026-10-20 팀장 결정). 새 사진은 뒤의 화면에 띄워 아파트 쪽으로 돌린 뒤,
+//     앞 사진 위로 서서히 나타나게 한다 (sheet.css .apt-roadview__view--on). 사진이 바뀌는 모습이나 빈 화면이 보이지 않는다
+const APT_ROADVIEW_PREFETCH_MAX = 80; // 한 번에 미리 찾는 아파트 수의 상한
+const APT_ROADVIEW_PREFETCH_AT_ONCE = 4; // 동시에 찾는 수
+const APT_ROADVIEW_SETTLE_MS = 250; // 새 사진을 띄우고 돌린 뒤 나타나게 하기까지 기다리는 시간 (사진 조각이 채워지는 동안)
+const APT_ROADVIEW_REVEAL_MAX_MS = 1500; // 신호가 안 와도 이만큼 지나면 나타나게 한다
+const APT_ROADVIEW_FADE_MS = 400; // 새 사진이 앞 사진 위로 나타나는 시간 (sheet.css의 transition과 같다)
 const APT_ROADVIEW_TILT = -20; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
 const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보인다 (-3 ~ 3)
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
@@ -84,6 +94,7 @@ const APT_NEAR_SCHOOLS = [
   { kind: 'high', label: '고등학교' },
   { kind: 'university', label: '대학교' },
 ];
+const APT_AREA_SLIDE_MS = 380; // 면적 칸이 고른 면적으로 미끄러지는 시간 (slideArea)
 const APT_NEAR_MORE = '학교 종류별로 보기';
 const APT_NEAR_LESS = '학교 종류별 접기';
 const APT_NEAR_NONE = '근처에 없음'; // 반경 안에 없을 때
@@ -154,6 +165,12 @@ const aptPanel = {
   listPlace: null,
   handlers: {},
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
+  panoIds: new Map(), // 아파트 번호 → 가장 가까운 로드뷰 지점(panoId). 없으면 null. 찾은 것만 둔다
+  roadviews: [null, null], // 번갈아 쓰는 로드뷰 두 개 (kakao.maps.Roadview). 만든 것만
+  roadviewFront: 0, // 지금 보이는 쪽 (0 또는 1). aptPanel.roadview는 이쪽이다
+  roadviewTimers: [],
+  areaOnly: false, // 지금 다시 그리는 것이 면적 칩을 눌러서인가 (render 동안만 true)
+  similarTimer: null, // 면적 칸이 다 미끄러진 뒤 비슷한 아파트를 받는 타이머
   loading: new Set(), // 받는 중인 아파트 번호
   failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
   roadview: null, // 카카오 로드뷰 (처음 보일 때 한 번 만든다)
@@ -285,18 +302,39 @@ const aptPanel = {
 
     // 면적 칩. "111㎡ (전용 84㎡)", 공급면적을 모르면 "전용 49㎡"
     const areaList = document.getElementById('apt-areas');
-    areaList.replaceChildren(...apartment.areas.map((item, i) => {
+    const sameApartment = areaList.dataset.apartment === String(apartment.id);
+    // 같은 아파트에서 면적만 바꿨으면 칩을 다시 만들지 않고 고른 표시만 옮긴다. 다시 만들면 미끄러지던 칸이 끊겼다
+    const sameChips = sameApartment && areaList.dataset.unit === unit && areaList.children.length === apartment.areas.length;
+    areaList.dataset.apartment = String(apartment.id);
+    areaList.dataset.unit = unit;
+    aptPanel.watchAreaList(areaList);
+    if (sameChips) {
+      [...areaList.children].forEach((chip, i) => chip.setAttribute('aria-pressed', String(i === areaIndex)));
+    } else areaList.replaceChildren(...apartment.areas.map((item, i) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'apt__area';
       chip.textContent = format.area(item.supply_area, item.exclusive_area, unit);
       chip.setAttribute('aria-pressed', String(i === areaIndex));
       chip.addEventListener('click', () => {
+        if (areaList.dataset.dragged) return; // 잡아 끈 뒤 놓은 것은 누름이 아니다
         aptPanel.areaIndex = i;
-        aptPanel.render();
+        // 면적만 바꿨다: 같은 아파트라 로드뷰는 그대로 두고, 비슷한 아파트는 칸이 다 미끄러진 뒤에 받는다 (2026-10-20, 덜 끊기게)
+        aptPanel.areaOnly = true;
+        try {
+          aptPanel.render();
+        } finally {
+          aptPanel.areaOnly = false;
+        }
       });
       return chip;
     }));
+
+    // 고른 면적이 칸 가운데에 오게 옆으로 미끄러진다 (2026-10-20 팀장 결정). 그래서 누르면 그 옆 면적도 보인다.
+    // 같은 아파트에서 면적을 바꿨으면 미끄러지게, 새 아파트를 열었으면 맨 앞에서 바로 둔다
+    // 창을 처음 열 때는 아직 숨겨져 있어 폭을 잴 수 없으므로 창이 보인 뒤(다음 차례)에 맞춘다
+    if (!sameChips) areaList.scrollLeft = 0;
+    setTimeout(() => aptPanel.centerArea(areaList, areaIndex, sameChips), 0);
 
     document.querySelectorAll('.apt__unit-option').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.unit === unit));
@@ -311,7 +349,7 @@ const aptPanel = {
 
     aptPanel.renderInfo();
     aptPanel.renderScenario();
-    aptPanel.renderRoadview();
+    if (!aptPanel.areaOnly) aptPanel.renderRoadview(); // 면적만 바꿨으면 로드뷰는 바뀔 것이 없다 (다시 맞추는 데 약 12ms)
   },
 
   // ───────── 좌표가 없는 아파트 (P-06 ⑱) ─────────
@@ -357,9 +395,13 @@ const aptPanel = {
     box.id = 'apt-roadview';
     box.className = 'apt-roadview';
     box.hidden = true;
-    const view = document.createElement('div');
-    view.className = 'apt-roadview__view';
-    view.hidden = true;
+    // 번갈아 쓰는 로드뷰 자리 두 개 (크로스페이드)
+    const views = [0, 1].map(() => {
+      const view = document.createElement('div');
+      view.className = 'apt-roadview__view';
+      view.hidden = true;
+      return view;
+    });
     const empty = document.createElement('div');
     empty.className = 'apt-roadview__empty';
     empty.hidden = true;
@@ -371,7 +413,7 @@ const aptPanel = {
     text.className = 'apt-roadview__text';
     text.textContent = APT_NO_ROADVIEW;
     empty.append(icon, text);
-    box.append(view, empty);
+    box.append(...views, empty);
     const handle = document.getElementById('sheet-handle');
     handle.parentElement.insertBefore(box, handle);
     return box;
@@ -380,7 +422,10 @@ const aptPanel = {
   // 'view' 로드뷰, 'empty' 기본 이미지, null 아무것도 (찾는 중)
   roadviewShow(which) {
     const box = aptPanel.roadviewBox();
-    box.querySelector('.apt-roadview__view').hidden = which !== 'view';
+    box.querySelectorAll('.apt-roadview__view').forEach((view) => {
+      view.hidden = which !== 'view';
+      if (which !== 'view') view.classList.remove('apt-roadview__view--on', 'apt-roadview__view--top');
+    });
     box.querySelector('.apt-roadview__empty').hidden = which !== 'empty';
   },
 
@@ -405,40 +450,111 @@ const aptPanel = {
       aptPanel.roadviewShow('empty');
       return;
     }
-    aptPanel.roadviewShow(null);
     const id = apartment.id;
     const position = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
     try {
-      new kakao.maps.RoadviewClient().getNearestPanoId(position, APT_ROADVIEW_RADIUS, (panoId) => {
+      aptPanel.findPano(apartment, (panoId) => {
         if (aptPanel.roadviewFor !== id) return; // 찾는 사이에 다른 아파트로 넘겼다
         if (panoId === null || panoId === undefined) {
           aptPanel.roadviewShow('empty');
           return;
         }
-        aptPanel.roadviewShow('view');
-        const view = aptPanel.roadviewBox().querySelector('.apt-roadview__view');
-        if (!aptPanel.roadview) {
-          aptPanel.roadview = new kakao.maps.Roadview(view);
-          // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 아파트 쪽을 바라보게 돌린다
-          kakao.maps.event.addListener(aptPanel.roadview, 'init', aptPanel.aimRoadview);
-          kakao.maps.event.addListener(aptPanel.roadview, 'panoid_changed', aptPanel.aimRoadview);
-        }
-        aptPanel.roadviewTarget = position;
-        aptPanel.roadview.setPanoId(panoId, position);
-        aptPanel.roadview.relayout();
+        aptPanel.showPano(panoId, position, id);
       });
     } catch (error) {
       aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
     }
   },
 
+  // 새 사진을 뒤의 화면에 띄우고, 아파트 쪽으로 돌린 뒤 앞 사진 위로 서서히 나타나게 한다 (크로스페이드).
+  // 지금 보이는 사진이 없으면(처음, 기본 이미지 뒤) 앞 화면에 그대로 띄워 나타나게 한다
+  showPano(panoId, position, id) {
+    const box = aptPanel.roadviewBox();
+    const views = box.querySelectorAll('.apt-roadview__view');
+    const front = aptPanel.roadviewFront;
+    const showing = views[front].classList.contains('apt-roadview__view--on') && !views[front].hidden;
+    const slot = showing ? 1 - front : front;
+    const view = views[slot];
+    const other = views[1 - slot];
+    aptPanel.roadviewTimers.forEach(clearTimeout);
+    aptPanel.roadviewTimers = [];
+    box.querySelector('.apt-roadview__empty').hidden = true;
+    views.forEach((item) => { item.hidden = false; });
+    view.classList.remove('apt-roadview__view--on'); // 투명한 채로 맨 위에 둔다
+    view.classList.add('apt-roadview__view--top');
+    other.classList.remove('apt-roadview__view--top');
+    if (!showing) other.classList.remove('apt-roadview__view--on');
+
+    let rv = aptPanel.roadviews[slot];
+    if (!rv) {
+      rv = new kakao.maps.Roadview(view);
+      aptPanel.roadviews[slot] = rv;
+      // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 기다리던 일을 한다
+      const ready = () => {
+        const next = rv.onReady;
+        rv.onReady = null;
+        if (next) next();
+      };
+      kakao.maps.event.addListener(rv, 'init', ready);
+      kakao.maps.event.addListener(rv, 'panoid_changed', ready);
+    }
+    let shown = false;
+    const reveal = () => {
+      if (shown || aptPanel.roadviewFor !== id) return;
+      shown = true;
+      view.classList.add('apt-roadview__view--on'); // 서서히 나타난다
+      aptPanel.roadviewFront = slot;
+      aptPanel.roadview = rv;
+      aptPanel.roadviewTarget = position;
+      // 다 나타난 뒤 앞 사진은 투명하게 둔다 (다음에 뒤의 화면으로 쓴다)
+      aptPanel.roadviewTimers.push(setTimeout(() => other.classList.remove('apt-roadview__view--on'), APT_ROADVIEW_FADE_MS));
+    };
+    rv.onReady = () => {
+      aptPanel.aimRoadview(rv, position);
+      aptPanel.roadviewTimers.push(setTimeout(reveal, APT_ROADVIEW_SETTLE_MS));
+    };
+    const samePano = typeof rv.getPanoId === 'function' && rv.getPanoId() === panoId;
+    rv.setPanoId(panoId, position);
+    rv.relayout();
+    if (samePano && rv.onReady) rv.onReady(); // 같은 지점이면 바뀌었다는 신호가 오지 않는다
+    aptPanel.roadviewTimers.push(setTimeout(reveal, APT_ROADVIEW_REVEAL_MAX_MS)); // 신호가 안 와도 언젠가는 보인다
+  },
+
+  // 아파트의 가장 가까운 로드뷰 지점. 찾아 둔 것이 있으면 바로, 없으면 카카오에 물어 기억해 둔다
+  findPano(apartment, done) {
+    if (aptPanel.panoIds.has(apartment.id)) {
+      done(aptPanel.panoIds.get(apartment.id));
+      return;
+    }
+    const position = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
+    new kakao.maps.RoadviewClient().getNearestPanoId(position, APT_ROADVIEW_RADIUS, (panoId) => {
+      aptPanel.panoIds.set(apartment.id, panoId ?? null);
+      done(panoId);
+    });
+  },
+
+  // 동을 받으면(map-view.js의 loadData) 그 아파트들의 로드뷰 지점을 미리 찾아 둔다. 몇 개씩 차례로, 찾은 것은 다시 찾지 않는다
+  prefetchRoadviews(apartments) {
+    const kakaoReady = typeof kakao !== 'undefined' && kakao.maps && typeof kakao.maps.RoadviewClient === 'function';
+    if (!kakaoReady) return;
+    const todo = apartments.filter((a) => aptHasCoord(a) && !aptPanel.panoIds.has(a.id)).slice(0, APT_ROADVIEW_PREFETCH_MAX);
+    const next = () => {
+      const apartment = todo.shift();
+      if (!apartment) return;
+      try {
+        aptPanel.findPano(apartment, next);
+      } catch (error) {
+        next();
+      }
+    };
+    for (let i = 0; i < APT_ROADVIEW_PREFETCH_AT_ONCE; i += 1) next();
+  },
+
   // 로드뷰가 아파트를 바라보게 한다 (2026-10-18). 카카오는 바라보는 방향을 정해 주지 않아 길 방향으로 열린다.
   // 촬영 지점(로드뷰의 자리)에서 아파트 좌표로 가는 방위각(북쪽 0도, 시계 방향)을 구해 시점의 좌우 각도(pan)로 둔다.
   // 위아래(tilt)는 살짝 위(-20도, 카카오는 음수가 위), 확대(zoom)는 가장 넓게(-3). 아파트 건물이 위층까지 들어온다
   roadviewTarget: null,
-  aimRoadview() {
-    const rv = aptPanel.roadview;
-    const target = aptPanel.roadviewTarget;
+  aimRoadview(rv = aptPanel.roadview, target = aptPanel.roadviewTarget) {
     if (!rv || !target) return;
     const from = rv.getPosition();
     if (!from) return;
@@ -469,6 +585,13 @@ const aptPanel = {
 
   // 아파트 정보 탭이 보일 때 부른다. 아파트, 면적, 조건이 지난번과 같으면 다시 부르지 않는다
   renderSimilar() {
+    // 면적만 바꿨으면 칸이 미끄러지는 동안(약 0.4초)은 기다렸다가 받는다. 도중에 카드를 다시 그리면 움직임이 걸렸다.
+    // 기다린 뒤에는 그때의 아파트 · 면적으로 다시 본다 (그사이 바뀌었어도 맞는 것을 받는다)
+    clearTimeout(aptPanel.similarTimer);
+    if (aptPanel.areaOnly) {
+      aptPanel.similarTimer = setTimeout(() => aptPanel.renderSimilar(), APT_AREA_SLIDE_MS + 40);
+      return;
+    }
     const { apartment } = aptPanel;
     const box = aptPanel.similarBox();
     if (!box || !apartment || !aptPanel.infoVisible()) return;
@@ -573,6 +696,104 @@ const aptPanel = {
   //   { name: "전남고등학교", meters: 130(직선), item }. 지하철역은 { name, exit, meters, item } (출구 번호를 노란 상자로)
   //   출구를 못 찾은 역은 exit 없이 { name: "상무역 광주1호선", meters, item }
   // item(A-06의 시설 하나)은 줄을 누르면 지도에서 그 시설을 찾아 보여 주려고 같이 둔다
+  // 면적 칸에 한 번만 단다: 마우스 휠(위아래)로도 옆으로 넘기고, 넘길 것이 남은 쪽 끝을 흐리게 한다 (sheet.css)
+  // 네이버 지도처럼 끊김 없이 (2026-10-20): 움직임은 브라우저의 smooth 대신 직접 그린다 (slideArea, 감속 곡선).
+  //   휠: 굴린 만큼 목표를 더해 그쪽으로 미끄러진다 (빠르게 여러 번 굴려도 이어서 간다)
+  //   마우스로 잡아 끌기: 손을 따라 움직이고, 놓으면 그 빠르기로 조금 더 미끄러지다 멈춘다 (터치는 브라우저 기본 그대로)
+  watchAreaList(list) {
+    if (list.dataset.watched) return;
+    list.dataset.watched = 'true';
+    const max = () => Math.max(0, list.scrollWidth - list.clientWidth);
+    list.addEventListener('wheel', (event) => {
+      if (max() === 0 || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      event.preventDefault(); // 창이 위아래로 스크롤되지 않게
+      const from = list.slide ? list.slide.to : list.scrollLeft;
+      aptPanel.slideArea(list, from + event.deltaY, 260);
+    }, { passive: false });
+    list.addEventListener('scroll', () => aptPanel.markAreaEdges(list), { passive: true });
+
+    let drag = null;
+    list.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0 || max() === 0) return;
+      aptPanel.stopArea(list);
+      drag = { x: event.clientX, left: list.scrollLeft, moved: false, samples: [[event.timeStamp, event.clientX]] };
+    });
+    window.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      const dx = event.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) < 4) return; // 조금 흔들린 것은 누름으로 둔다
+      if (!drag.moved) list.classList.add('apt__area-list--dragging');
+      drag.moved = true;
+      list.scrollLeft = drag.left - dx;
+      drag.samples.push([event.timeStamp, event.clientX]);
+      if (drag.samples.length > 5) drag.samples.shift();
+    });
+    window.addEventListener('pointerup', () => {
+      if (!drag) return;
+      const { moved, samples } = drag;
+      drag = null;
+      list.classList.remove('apt__area-list--dragging');
+      if (!moved) return;
+      list.dataset.dragged = 'true'; // 바로 뒤에 오는 click을 막는다
+      setTimeout(() => delete list.dataset.dragged, 0);
+      // 놓기 직전의 빠르기(px/ms)로 관성. 0.3초 동안 그 빠르기의 약 1/3만큼 더 간다
+      const [t0, x0] = samples[0];
+      const [t1, x1] = samples[samples.length - 1];
+      const speed = t1 > t0 ? (x1 - x0) / (t1 - t0) : 0;
+      if (Math.abs(speed) > 0.1) aptPanel.slideArea(list, list.scrollLeft - speed * 120, 420);
+    });
+  },
+
+  // 면적 칸을 left까지 ms 동안 미끄러뜨린다. 처음 빠르고 끝에 천천히 멈춘다 (easeOutCubic).
+  // 움직이는 중에 다시 부르면 지금 자리에서 새 목표로 이어 간다
+  slideArea(list, left, ms = APT_AREA_SLIDE_MS) {
+    const to = Math.max(0, Math.min(left, list.scrollWidth - list.clientWidth));
+    aptPanel.stopArea(list);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      list.scrollLeft = to;
+      return;
+    }
+    const from = list.scrollLeft;
+    const start = performance.now();
+    const slide = { to, frame: 0 };
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      list.scrollLeft = from + (to - from) * (1 - (1 - t) ** 3);
+      if (t < 1) slide.frame = requestAnimationFrame(step);
+      else list.slide = null;
+    };
+    list.slide = slide;
+    slide.frame = requestAnimationFrame(step);
+  },
+
+  stopArea(list) {
+    if (list.slide) cancelAnimationFrame(list.slide.frame);
+    list.slide = null;
+  },
+
+  // index번째 면적이 칸 가운데에 오게 옆으로 민다. 끝 쪽 면적이면 끝까지만
+  centerArea(list, index, smooth) {
+    const picked = list.children[index];
+    if (picked && list.clientWidth) {
+      const chip = picked.getBoundingClientRect();
+      const box = list.getBoundingClientRect();
+      const left = list.scrollLeft + (chip.left - box.left) - (list.clientWidth - chip.width) / 2;
+      if (smooth) aptPanel.slideArea(list, left);
+      else {
+        aptPanel.stopArea(list);
+        list.scrollLeft = Math.max(0, left);
+      }
+    }
+    aptPanel.markAreaEdges(list);
+  },
+
+  // 왼쪽 · 오른쪽에 더 볼 면적이 있는가 (sheet.css의 흐린 끝)
+  markAreaEdges(list) {
+    const max = list.scrollWidth - list.clientWidth;
+    list.classList.toggle('apt__area-list--more-left', list.scrollLeft > 2);
+    list.classList.toggle('apt__area-list--more-right', list.scrollLeft < max - 2);
+  },
+
   nearValue(item) {
     if (!item.place_name) return APT_NEAR_NONE;
     const meters = Number(item.distance);
