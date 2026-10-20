@@ -17,6 +17,7 @@
 /* 웹 전용 요소 (머리 줄, 로고, 목록 접기 단추)는 모바일에서 숨긴다 */
 .map-web-bar,
 .map-web-logo,
+.map-web-filter,
 .map-web-fold {
   display: none;
 }
@@ -25,6 +26,8 @@
   .map-body {
     --sheet-duration: 0s; /* 패널은 움직이지 않고 바로 바뀐다. sheet.js도 이 값을 읽는다 */
     --map-web-bar: 64px; /* 머리 줄 높이 */
+    --map-web-filter: 44px; /* 조건 줄 높이 (머리 줄 바로 아래, 2026-10-20) */
+    --map-web-top: calc(var(--map-web-bar) + var(--map-web-filter)); /* 목록 · 지도가 시작하는 높이 */
     /* 패널 폭은 창 폭에 비례한다 (2026-10-20). 1440px에서 400 · 420, 1200px에서 약 334 · 350, 1024px에서 300 · 320 (지도 약 400).
        넓은 화면에서도 이보다 커지지 않는다 */
     --map-web-list: clamp(300px, 27.8vw, 400px); /* 목록 패널 폭 */
@@ -159,10 +162,155 @@
     height: var(--touch-size);
   }
 
+  /* 내 조건 문장과 수정은 목록 맨 위의 내 조건 상자(list.js, 김목산)로 옮겼다. 머리 줄에는 로그인만 남는다 (2026-10-20) */
+  .condition-bar__text,
+  .condition-bar__link--edit {
+    display: none;
+  }
+
+  /* ───────── 조건 줄: 머리 줄 바로 아래 (2026-10-20, 김목산) ─────────
+     [조건] · (구·동을 고르면) 지역 칩 | 넣은 조건 칩(.chip-row, map-web.js가 옮겨 온다) ······ 실거래 기준일 · 안내(!) */
+  .map-web-filter {
+    position: absolute;
+    top: var(--map-web-bar);
+    right: 0;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    height: var(--map-web-filter);
+    padding: 0 24px;
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-bg);
+  }
+
+  .map-web-filter__button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 5px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--text-help);
+    font-weight: var(--font-bold);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .map-web-filter__button:hover {
+    border-color: var(--color-text-sub);
+  }
+
+  .map-web-filter__button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+
+  /* 지역 칩: 구·동을 고르면 [조건] 옆으로 미끄러져 나온다 */
+  .map-web-filter__region {
+    max-width: 240px;
+    overflow: hidden;
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    animation: map-web-region-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .map-web-filter__region svg {
+    flex: none;
+  }
+
+  @keyframes map-web-region-in {
+    from {
+      max-width: 0;
+      padding-right: 0;
+      padding-left: 0;
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      max-width: 240px;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .map-web-filter__sep {
+    flex: none;
+    width: 1px;
+    height: 20px;
+    margin: 0 4px;
+    background: var(--color-line);
+  }
+
+  .map-web-filter__tags {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 옮겨 온 칩 줄: 지도 위에 떠 있던 자리를 풀고 줄 안에 놓는다 */
+  .map-web-filter .chip-row {
+    position: static;
+    flex: 1;
+    min-width: 0;
+    margin: 0 !important; /* 아래 "접기 단추만큼 띄우기"는 지도 위에 있을 때의 것이다 */
+    padding: 0;
+  }
+
+  .map-web-filter .filter-chip {
+    height: 30px;
+    box-shadow: none;
+    font-size: var(--text-badge);
+  }
+
+  .map-web-filter__end {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .map-web-filter__base {
+    color: var(--color-text-hint);
+    font-size: var(--text-badge);
+    white-space: nowrap;
+  }
+
+  /* 옮겨 온 안내(!): 말풍선은 아래 오른쪽으로 연다 */
+  .map-web-filter .info-tip {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0 !important;
+  }
+
+  .map-web-filter .info-tip__text {
+    top: 32px;
+    right: 0;
+    bottom: auto;
+    left: auto;
+    z-index: 9;
+  }
+
+  /* 조건 줄의 [조건]과 같은 일이라 검색 줄 오른쪽의 조건 아이콘은 웹에서 숨긴다 */
+  .search-filter {
+    display: none;
+  }
+
   /* ───────── 지도: 머리 줄 아래, 패널 오른쪽 ───────── */
   .map-area {
     position: absolute;
-    top: var(--map-web-bar);
+    top: var(--map-web-top);
     right: 0;
     bottom: 0;
     left: var(--map-web-panel);
@@ -232,7 +380,7 @@
 
   /* ───────── 왼쪽 패널 (아래 창) ───────── */
   .sheet {
-    top: var(--map-web-bar);
+    top: var(--map-web-top);
     right: auto;
     bottom: 0;
     left: 0;
@@ -368,7 +516,7 @@
      목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 16 × 76, 흰 바탕에 옅은 그림자. 마우스를 올리면 조금 진해진다 */
   .map-web-fold {
     position: absolute;
-    top: calc(var(--map-web-bar) + (100vh - var(--map-web-bar)) / 2);
+    top: calc(var(--map-web-top) + (100vh - var(--map-web-top)) / 2); /* 조건 줄 아래 목록 · 지도 높이의 가운데 */
     left: var(--map-web-list);
     z-index: 4;
     display: flex;
