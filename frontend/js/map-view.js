@@ -1832,22 +1832,9 @@ function renderPickedPin() {
     svg.setAttribute('viewBox', '0 0 24 32');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('class', 'picked-pin__shape');
-    // 입체로 보이게 (2026-10-20): 왼쪽 위가 밝고 오른쪽 아래가 어두운 빨강, 왼쪽 위에 옅은 빛. 흰 테두리는 없다
-    svg.innerHTML = `<defs>
-        <linearGradient id="picked-pin-fill" x1="0.15" y1="0" x2="0.85" y2="1">
-          <stop offset="0" stop-color="#ff6b86"/><stop offset="0.55" stop-color="#e5355c"/><stop offset="1" stop-color="#b3173d"/>
-        </linearGradient>
-        <radialGradient id="picked-pin-shine" cx="0.35" cy="0.25" r="0.5">
-          <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
-        </radialGradient>
-      </defs>`;
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', PICKED_PIN_PATH);
-    path.setAttribute('fill', 'url(#picked-pin-fill)');
-    const shine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    shine.setAttribute('d', PICKED_PIN_PATH);
-    shine.setAttribute('fill', 'url(#picked-pin-shine)');
-    svg.append(path, shine);
+    svg.appendChild(path);
     button.appendChild(svg);
     button.addEventListener('click', () => {
       bubble.hidden = !bubble.hidden;

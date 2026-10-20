@@ -1330,8 +1330,8 @@
   z-index: 1;
   width: 28px;
   height: 37px;
-  /* 색은 map-view.js의 그라데이션(빨강, 왼쪽 위가 밝다). 흰 테두리는 뺐다 (2026-10-20 팀장 결정) */
-  filter: drop-shadow(0 2px 1.5px rgba(120, 10, 35, 0.35));
+  /* 평평한 한 가지 빨강. 흰 테두리와 그림자 없이 (2026-10-20 팀장 결정) */
+  fill: #e5355c; /* 범례의 '선택한 아파트'(.map-key__marks의 --map-key-pin)와 같은 시안 색 */
 }
 
 /* 핀과 말풍선 상자. 상자의 아래 가운데가 아파트 자리 (renderPickedPin의 yAnchor 1) */
