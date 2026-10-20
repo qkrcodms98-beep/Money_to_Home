@@ -92,12 +92,38 @@ function listViewToggle(current, onPick) {
   });
   return box;
 }
-// 목록에 보이는 구분 (칩으로 켜고 끈다). 처음에는 셋 다
+// 웹(가로 1024px 이상, css/map-web.css와 같은 폭)에서는 구분을 칩 대신 탭 네 칸(전체 · 지금 가능 · 기간 내 가능 · 자금 부족)으로 하나만 고른다 (2026-10-20)
+const LIST_WEB_QUERY = window.matchMedia('(min-width: 1024px)');
+const LIST_ALL_CATS = ['now', 'within', 'lack'];
+
+// 목록에 보이는 구분 (모바일은 칩으로 켜고 끈다). 처음에는 셋 다.
+// 웹의 탭은 하나만 고르므로, 모바일에서 둘을 켜 둔 채 넓히면 웹에서는 '전체'로 본다
 const listShownCats = () => {
   const saved = store.get('map').list_cats;
-  const keys = Array.isArray(saved) ? saved.filter((k) => ['now', 'within', 'lack'].includes(k)) : [];
-  return keys.length > 0 ? keys : ['now', 'within', 'lack'];
+  const keys = Array.isArray(saved) ? saved.filter((k) => LIST_ALL_CATS.includes(k)) : [];
+  if (keys.length === 0) return LIST_ALL_CATS;
+  if (LIST_WEB_QUERY.matches && keys.length !== 1) return LIST_ALL_CATS;
+  return keys;
 };
+
+// 웹의 구분 탭. 개수는 늘 서버가 준 전체 개수다. 고르면 store의 map.list_cats에 그 구분 하나(전체면 셋)를 둔다
+function listTabs(counts, shown, onPick) {
+  const tabs = listEl('div', 'list__tabs');
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', '구분');
+  const current = shown.length === 1 ? shown[0] : 'all';
+  [{ key: 'all', badge: '전체', count: counts.total }, ...LIST_GROUPS.map((g) => ({ ...g, count: counts[g.key] }))].forEach((t) => {
+    const tab = listEl('button', `list__tab list__tab--${t.key}`);
+    tab.type = 'button';
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', String(t.key === current));
+    tab.disabled = t.count === 0; // 0곳인 구분은 고를 수 없다 (고르면 목록이 비기만 한다)
+    tab.append(listEl('b', 'list__tab-count', format.comma(t.count)), listEl('span', 'list__tab-label', t.badge));
+    tab.addEventListener('click', () => { if (t.key !== current) onPick(t.key === 'all' ? LIST_ALL_CATS : [t.key]); });
+    tabs.append(tab);
+  });
+  return tabs;
+}
 const listViewMode = () => (store.get('map').list_view === 'gauge' ? 'gauge' : 'basic');
 
 const LIST_TEXT = {
@@ -260,6 +286,7 @@ function listHead(result, options) {
 
   // 오른쪽: 정렬 "구분순 ▾" (닫기 바로 옆). 보기 방식 아이콘(기본 | 게이지)은 칩 줄 오른쪽에 있다
   const side = listEl('div', 'list__side');
+  if (LIST_WEB_QUERY.matches && options.onView) side.append(listViewToggle(listViewMode(), options.onView)); // 웹: 칩 줄이 없어 머리로 옮긴다 (1200px 이상에서만 보인다)
   if (options.onSort) side.append(listSortMenu(options.sort || LIST_DEFAULT_SORT, options.onSort));
   if (side.children.length > 0) head.append(side);
 
@@ -374,6 +401,8 @@ function listEmpty(title, help, buttons = []) {
 }
 
 const listView = {
+  last: null, // 마지막으로 그린 { container, result, options }. 웹 ↔ 모바일이 바뀌면 칩 · 탭을 바꿔 다시 그린다
+
   // A-05를 불러 그리고, 받은 결과를 돌려준다. 조건은 guard.conditions()가 만든다.
   async load(container, where, handlers = {}) {
     const sort = store.get('map').sort || LIST_DEFAULT_SORT;
@@ -459,6 +488,7 @@ const listView = {
       listView.render(container, full, options);
     };
     options = { ...options, onView };
+    listView.last = { container, result: full, options };
     const root = listEl('section', `list list--${listViewMode()}`);
     root.append(listHead(result, options));
 
@@ -474,7 +504,16 @@ const listView = {
 
     // 칩: 지금 / 기간 내 / 부족. 누르면 그 구분을 목록에서 켜고 끈다 (2026-10-18). 하나는 늘 켜져 있다.
     // 고른 것은 store의 map.list_cats에 둔다. 개수는 늘 서버가 준 전체 개수다. 오른쪽 끝에 보기 방식 "기본 ▾"
-    const shown = listShownCats();
+    // 웹은 칩 대신 탭 네 칸 (listTabs). 보기 방식은 머리의 정렬 옆에 있다
+    let shown = listShownCats();
+    // 웹의 탭으로 고른 구분이 조건이 바뀌어 0곳이 되었으면 '전체'로 본다
+    if (LIST_WEB_QUERY.matches && shown.length === 1 && result.counts[shown[0]] === 0) shown = LIST_ALL_CATS;
+    if (LIST_WEB_QUERY.matches) {
+      root.append(listTabs(result.counts, shown, (next) => {
+        store.set('map', { list_cats: next });
+        listView.render(container, full, options);
+      }));
+    }
     const chips = listEl('div', 'list__chips');
     LIST_GROUPS.forEach((g) => {
       const chip = listEl('button', `chip chip--${g.key}`, `${g.chip} ${format.comma(result.counts[g.key])}`);
@@ -489,6 +528,8 @@ const listView = {
       chips.append(chip);
     });
     chips.append(listViewToggle(listViewMode(), options.onView));
+    // 웹은 칩을 숨기고 보기 방식만 남긴 줄을 둔다. 목록이 좁은 웹(1024 ~ 1199px)에서만 보인다 (넓으면 머리에 있다. list.css)
+    if (LIST_WEB_QUERY.matches) chips.classList.add('list__chips--web');
     root.append(chips);
     result = { ...result, apartments: result.apartments.filter((a) => shown.includes(a.category)) };
     if (listViewMode() === 'gauge' && full.apartments.length > 0) root.append(listGaugeNote(full.apartments));
@@ -519,3 +560,9 @@ const listView = {
     container.replaceChildren(root);
   },
 };
+
+// 창 폭이 1024px을 넘나들면 구분 칩(모바일) ↔ 탭(웹)을 바꿔 같은 응답으로 다시 그린다
+LIST_WEB_QUERY.addEventListener('change', () => {
+  const last = listView.last;
+  if (last && last.container.isConnected) listView.render(last.container, last.result, last.options);
+});
