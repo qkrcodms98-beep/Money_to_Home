@@ -49,6 +49,12 @@ const LIST_SORTS = [
 ];
 const LIST_DEFAULT_SORT = 'category';
 
+// 카드가 많으면(광주 전체 1,055곳) 한 번에 다 만들면 화면이 0.3초쯤 멈췄다 (2026-10-20 측정).
+// 그래서 처음 LIST_FIRST_CARDS장만 바로 그리고, 나머지는 LIST_CHUNK_CARDS장씩 다음 차례에 이어 붙인다.
+// 순서와 내용은 같다. 그사이 목록을 다시 그리면 앞의 이어 붙이기는 멈춘다
+const LIST_FIRST_CARDS = 60;
+const LIST_CHUNK_CARDS = 150;
+
 // 보기 방식 (2026-10-18). 칩 줄 오른쪽 끝의 아이콘 두 개로 고른다. store의 map.list_view에 둔다
 //   basic: 이름, 면적·거래, 평균가 · 여유/부족
 //   gauge: 위에 더해 막대 하나. 쓸 수 있는 자금이 집값의 몇 %인지 (200% 이상이면 가득).
@@ -452,6 +458,8 @@ function listEmpty(title, help, buttons = []) {
 }
 
 const listView = {
+  renderSeq: 0, // 목록을 그린 차례. 나눠 붙이는 중에 다시 그리면 앞의 것을 멈춘다
+
   lastTarget: null, // 마지막으로 받은 A-05의 target_price. 불러오는 중 화면의 내 조건 상자에 쓴다
   last: null, // 마지막으로 그린 { container, result, options }. 웹 ↔ 모바일이 바뀌면 칩 · 탭을 바꿔 다시 그린다
 
@@ -597,23 +605,36 @@ const listView = {
     }
 
     // 구분순이 아니면(가격 · 면적 · 세대수 · 준공 순) 구분별 제목 없이 서버가 준 순서로 잇는다. 구분은 카드의 배지로만 보인다 (B2)
+    // 카드는 [넣을 칸, 아파트]의 줄로 모았다가 앞에서부터 그린다 (listFill)
+    const cards = [];
     if (options.sort && options.sort !== 'category') {
       const section = listEl('div', 'list__group');
-      result.apartments.forEach((a) => section.append(listCard(a, options)));
+      result.apartments.forEach((a) => cards.push([section, a]));
       root.append(section);
-      container.replaceChildren(root);
-      return;
+    } else {
+      LIST_GROUPS.forEach((g) => {
+        const apartments = result.apartments.filter((a) => a.category === g.key);
+        if (apartments.length === 0) return;
+        const section = listEl('div', 'list__group');
+        section.append(listEl('h3', 'list__group-title', `${g.title} · ${format.comma(apartments.length)}`));
+        apartments.forEach((a) => cards.push([section, a]));
+        root.append(section);
+      });
     }
-
-    LIST_GROUPS.forEach((g) => {
-      const apartments = result.apartments.filter((a) => a.category === g.key);
-      if (apartments.length === 0) return;
-      const section = listEl('div', 'list__group');
-      section.append(listEl('h3', 'list__group-title', `${g.title} · ${format.comma(apartments.length)}`));
-      apartments.forEach((a) => section.append(listCard(a, options)));
-      root.append(section);
-    });
+    listView.fill(cards, options, LIST_FIRST_CARDS); // 처음 몇 장은 화면에 붙이기 전에
     container.replaceChildren(root);
+    const seq = ++listView.renderSeq;
+    const more = () => {
+      if (seq !== listView.renderSeq || cards.length === 0) return;
+      listView.fill(cards, options, LIST_CHUNK_CARDS);
+      if (cards.length > 0) setTimeout(more, 0);
+    };
+    if (cards.length > 0) setTimeout(more, 0);
+  },
+
+  // 모아 둔 카드 줄에서 앞의 count장을 만들어 각자의 칸에 붙인다
+  fill(cards, options, count) {
+    cards.splice(0, count).forEach(([section, apartment]) => section.append(listCard(apartment, options)));
   },
 };
 

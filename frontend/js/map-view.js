@@ -159,8 +159,10 @@ const mapState = {
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
   city: null, // 광주 전체 목록의 A-05 응답 { key, data } (renderCityList)
   citySeq: 0, // 광주 전체를 받는 요청의 번호
+  cityLoading: null, // 광주 전체를 받는 중인 요청 { key, request }. 같은 조건이면 함께 기다린다
   listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
-  idleTimer: null, // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
+  idleTimer: null,
+  sdk: null, // 카카오맵 키와 SDK를 받는 Promise (kakaoReady) // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
   cityStart: false, // 광주 전체(구 표시)로 열었는가. 지역을 정해 열면 false (initMap)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
@@ -222,9 +224,10 @@ function loadKakaoSdk(key) {
 
 const toLatLng = ({ latitude, longitude }) => new kakao.maps.LatLng(latitude, longitude);
 
-function createMap(center) {
+function createMap(center, level = DEFAULT_LEVEL) {
   const container = document.getElementById('kakao-map');
-  const map = new kakao.maps.Map(container, { center: toLatLng(center), level: DEFAULT_LEVEL });
+  // 처음부터 보여 줄 수준으로 만든다. 예전에는 4로 만들었다가 바로 바꿔서, 쓰지 않는 수준 4의 지도 조각을 먼저 받았다 (2026-10-20)
+  const map = new kakao.maps.Map(container, { center: toLatLng(center), level });
   map.setMinLevel(MIN_LEVEL);
   map.setMaxLevel(MAX_LEVEL);
   mapState.mapWidth = container.clientWidth;
@@ -1726,9 +1729,17 @@ async function renderCityList() {
   }
   const mine = ++mapState.citySeq;
   listView.renderLoading(list, { where: options.where, onClose: options.onClose });
+  // 같은 조건으로 이미 받는 중이면 그 응답을 같이 기다린다. 처음 열 때 목록을 두 번 그리면서 똑같이 두 번 받았다 (2026-10-20)
+  if (!mapState.cityLoading || mapState.cityLoading.key !== key) {
+    const request = api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where: { all: true }, sort: currentSort() }));
+    mapState.cityLoading = { key, request };
+    request.catch(() => {}).finally(() => {
+      if (mapState.cityLoading && mapState.cityLoading.request === request) mapState.cityLoading = null;
+    });
+  }
   let data;
   try {
-    data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where: { all: true }, sort: currentSort() }));
+    data = await mapState.cityLoading.request;
   } catch (error) {
     if (mine !== mapState.citySeq || !mapState.listCity) return;
     listView.renderError(list, { message: error.status === 422 ? error.detail : MSG.dataFail, onRetry: renderCityList, onClose: options.onClose });
@@ -2612,9 +2623,14 @@ function showCity() {
   if (!map) return;
   quietZoom(500);
   mapState.focus = null;
-  const web = typeof mapWeb !== 'undefined' ? mapWeb.isOn() : window.matchMedia('(min-width: 1024px)').matches;
-  map.setLevel(web ? CITY_LEVEL.web : CITY_LEVEL.mobile);
+  map.setLevel(cityLevel());
   map.setCenter(toLatLng(CITY_CENTER));
+}
+
+// 광주 전체를 처음 보여 줄 수준. 웹 8, 모바일 9
+function cityLevel() {
+  const web = typeof mapWeb !== 'undefined' ? mapWeb.isOn() : window.matchMedia('(min-width: 1024px)').matches;
+  return web ? CITY_LEVEL.web : CITY_LEVEL.mobile;
 }
 
 // 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
@@ -2706,12 +2722,25 @@ async function zoomToRegion({ gu, dong }) {
 
 // 카카오맵을 띄우고 보고 있는 지역으로 옮긴다.
 // 실패하면 지도 자리에 안내와 "다시 시도"를 둔다 (P-05 ⑰). 목록을 전체 화면으로 바꾸는 것은 목록이 생긴 뒤에 한다.
+// 카카오맵 키와 SDK는 지역 목록(A-02)을 기다리지 않고 화면을 열자마자 받기 시작한다 (initMap, 2026-10-20).
+// 실패하면 다음에 "다시 시도"할 때 처음부터 다시 받는다
+function kakaoReady() {
+  if (!mapState.sdk) {
+    mapState.sdk = loadKakaoKey().then(loadKakaoSdk);
+    mapState.sdk.catch(() => { mapState.sdk = null; });
+  }
+  return mapState.sdk;
+}
+
 async function startKakaoMap() {
   setMapMessage('지도를 불러오는 중입니다.');
   try {
-    const key = await loadKakaoKey();
-    await loadKakaoSdk(key);
-    if (!mapState.map) mapState.map = createMap(mapState.cityStart ? CITY_CENTER : regionCenter(mapState.region) || DEFAULT_CENTER);
+    await kakaoReady();
+    if (!mapState.map) {
+      mapState.map = mapState.cityStart
+        ? createMap(CITY_CENTER, cityLevel())
+        : createMap(regionCenter(mapState.region) || DEFAULT_CENTER);
+    }
     mapState.mapHeight = document.getElementById('kakao-map').clientHeight;
   } catch (error) {
     console.error('[map]', error.message); // 키 값은 찍지 않는다
@@ -2753,6 +2782,7 @@ async function initMap() {
   renderLegend();
   sheet.init();
   bindEvents();
+  kakaoReady().catch(() => {}); // 지역 목록을 받는 동안 카카오맵도 받는다. 실패는 startKakaoMap이 알린다
 
   // 구와 동의 목록 (A-02). 못 받아도 처음 지역으로 아파트는 받아 본다.
   try {
