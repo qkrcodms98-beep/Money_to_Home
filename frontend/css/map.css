@@ -868,7 +868,7 @@
 .facility--cs2 { --facility-color: #dcab21; }
 .facility--hp8 { --facility-color: #ce5364; }
 /* 버스정류장 (2026-10-20 세환): 카카오 지도 바탕의 버스정류장 아이콘과 같은 파랑, 둥근 네모. 지도 화면에서 뽑은 값이다 */
-.facility--bus { --facility-color: #222222; } /* 검정 (2026-10-20). 카카오의 파란 정류장 아이콘, 지하철(청록)과 구별되게. 초록은 지하철과 겹쳐 보여 바꿨다 */
+.facility--bus { --facility-color: #2b3a8c; } /* 남색 (2026-10-20 시안 2). 카카오의 파란 정류장 아이콘, 지하철(청록)과 구별되게. 초록은 지하철과 겹쳐 보였고 검정은 너무 무거웠다 */
 
 .facility__dot {
   display: flex;
