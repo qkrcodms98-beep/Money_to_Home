@@ -9,6 +9,8 @@
 //   - 목록은 늘 열려 있다. 아파트 창을 닫으면(✕, 뒤로 가기, 다른 지역 고르기) 창을 닫지 않고 목록만 남긴다. 목록의 스크롤 자리는 그대로 둔다.
 //   - 지도는 창에 가리지 않으므로 고른 아파트는 지도의 가운데에 둔다. 패널 폭이 바뀌면 카카오맵에 알린다 (relayout).
 //   - 목록 패널을 접고 펼 수 있다. 접은 상태는 저장하지 않는다: 지도 화면을 열면 늘 목록이 펼쳐진 채로 시작한다 (2026-10-20 팀장 결정).
+//   - 조건 줄(머리 줄 바로 아래): [조건] · 구·동을 고르면 지역 칩 · 넣은 조건 칩 · 실거래 기준일 · 안내(!) (2026-10-20, 김목산).
+//     칩 줄(.chip-row)과 안내(.info-tip)는 웹일 때만 이 줄로 옮기고 모바일이면 제자리로 돌린다. id와 동작은 그대로다.
 //   - 로드뷰는 아파트 패널 맨 위에 늘 보인다 (아파트 정보 탭 · 시나리오 탭 모두, 2026-10-20 팀장 결정).
 //     모바일은 창 맨 위(손잡이 앞)에 두고 전체 단계에서만 보이지만, 웹에는 단계가 없으므로 자리를 아파트 패널 안으로 옮긴다.
 //
@@ -43,6 +45,7 @@ const mapWeb = {
 
   init() {
     mapWeb.wrapSheet();
+    mapWeb.initFilterBar();
     mapWeb.initFold();
     mapWeb.watchMapSize();
 
@@ -68,6 +71,7 @@ const mapWeb = {
       }
       sheet.apply(); // 표시를 다시 단다 (모바일이면 sheet.js의 원래 표시로 돌아간다)
       mapWeb.placeRoadview();
+      mapWeb.placeFilterBar();
       aptPanel.renderRoadview();
     };
     MAP_WEB_QUERY.addEventListener('change', onModeChange);
@@ -192,6 +196,75 @@ const mapWeb = {
     selectMarker(null);
     sheet.mode = 'list';
     sheet.apply();
+  },
+
+  // ───────── 조건 줄 (2026-10-20, 김목산) ─────────
+  // 지역 칩은 이 화면에서 조건 창으로 구·동을 골라 적용한 뒤에만 보인다 (처음에는 [조건] 하나).
+  // 글자는 map-view.js가 쓰는 지역 이름(#region-name)과 같다: "서구 치평동", "서구 전체"
+  regionPicked: false,
+  home: null, // 칩 줄 · 안내의 원래 자리 { chip: [부모, 다음 형제], info: [...] }. 모바일로 돌아갈 때 쓴다
+
+  initFilterBar() {
+    const open = document.getElementById('map-web-filter-open');
+    const region = document.getElementById('map-web-region');
+    if (!open || !region) return;
+    open.addEventListener('click', () => openFilters());
+    region.addEventListener('click', () => openFilters());
+
+    const chip = document.querySelector('.chip-row');
+    const info = document.querySelector('.info-tip');
+    mapWeb.home = {
+      chip: chip && [chip.parentElement, chip.nextSibling],
+      info: info && [info.parentElement, info.nextSibling],
+    };
+    mapWeb.placeFilterBar();
+
+    // 조건 창의 '적용'에서 지역을 바꿨는지 본다. map-view.js의 applyFilters를 감싼다 (조건 창은 부를 때마다 이 이름을 찾는다)
+    const baseApply = applyFilters;
+    applyFilters = (filters, extra = {}) => { // eslint-disable-line no-global-assign
+      if (extra.region) mapWeb.regionPicked = true;
+      baseApply(filters, extra);
+      mapWeb.renderRegion();
+    };
+    const name = document.getElementById('region-name');
+    if (name) new MutationObserver(() => mapWeb.renderRegion()).observe(name, { childList: true, characterData: true, subtree: true });
+
+    // 실거래 기준일 (A-13). 받지 못하면 비워 둔다
+    api.get('/api/data-status').then((data) => {
+      if (!data || !data.trades_base_date) return;
+      const [year, month, day] = data.trades_base_date.split('-'); // "2026-10-12" → "2026년 10월 12일" (다른 화면과 같은 모양)
+      document.getElementById('map-web-base').textContent = `실거래 ${year}년 ${Number(month)}월 ${Number(day)}일 기준`;
+    }).catch(() => {});
+  },
+
+  // 웹이면 칩 줄과 안내를 조건 줄로, 모바일이면 원래 자리로
+  placeFilterBar() {
+    const { home } = mapWeb;
+    if (!home) return;
+    const tags = document.getElementById('map-web-filter-tags');
+    const end = document.getElementById('map-web-filter-end');
+    const chip = document.querySelector('.chip-row');
+    const info = document.querySelector('.info-tip');
+    if (mapWeb.isOn()) {
+      if (chip && chip.parentElement !== tags) tags.append(chip);
+      if (info && info.parentElement !== end) end.append(info);
+    } else {
+      if (chip && home.chip && chip.parentElement !== home.chip[0]) home.chip[0].insertBefore(chip, home.chip[1]);
+      if (info && home.info && info.parentElement !== home.info[0]) home.info[0].insertBefore(info, home.info[1]);
+    }
+  },
+
+  renderRegion() {
+    const region = document.getElementById('map-web-region');
+    const name = document.getElementById('region-name');
+    if (!region || !name) return;
+    const text = name.textContent.trim();
+    region.hidden = !mapWeb.regionPicked || !text;
+    if (region.hidden || region.dataset.text === text) return;
+    region.dataset.text = text;
+    region.textContent = text;
+    region.insertAdjacentHTML('beforeend', '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+    region.setAttribute('aria-label', `지역 ${text}, 조건 창 열기`);
   },
 
   // ───────── 목록 패널 접기 ─────────
