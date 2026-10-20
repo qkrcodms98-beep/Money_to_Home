@@ -1388,3 +1388,8 @@
 .apt__top:has(.apt__back:not([hidden])) {
   justify-content: space-between;
 }
+
+/* 넓은 모바일 화면(태블릿, 줄인 PC 창)에서 로드뷰가 폭 비율대로 너무 커지지 않게 (2026-10-20). 휴대폰에서는 그대로 */
+.apt-roadview {
+  max-height: 40vh;
+}
