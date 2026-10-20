@@ -50,15 +50,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 16px; /* 22px에서 줄임 (2026-10-20 팀장). 누르는 영역은 아래 ::after로 44px */
+  height: 16px;
   padding: 0;
-  border: 1.5px solid var(--color-text);
+  /* 바탕은 목록 머리의 배경과 같게(비움), 테두리와 글자는 조금 옅은 검정 (2026-10-20 팀장).
+     #333333은 common.css에 없는 색이라 이 단추에서만 쓰는 변수로 둔다 */
+  --list-info-line: #333333;
+  border: 1.2px solid var(--list-info-line);
   border-radius: var(--radius-pill);
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: transparent;
+  color: var(--list-info-line);
   font-family: inherit;
-  font-size: var(--text-badge);
+  font-size: 10px;
   font-weight: var(--font-bold);
   cursor: pointer;
 }
@@ -67,7 +70,7 @@
 .list__info::after {
   content: '';
   position: absolute;
-  inset: calc((22px - var(--touch-size)) / 2);
+  inset: calc((16px - var(--touch-size)) / 2);
 }
 
 .list__tip {
@@ -260,12 +263,38 @@
   vertical-align: middle;
 }
 
-/* "상한 초과". 목업(P-06 ⑲)은 주황이지만 common.css에 주황 색 이름이 아직 없다.
-   빨강은 '자금 부족'과 헷갈리므로 쓰지 않고, 진한 글자로만 구별한다. 이름이 생기면 바꾼다. */
+/* "상한 초과" (P-06 ⑲의 주황, 2026-10-20 다듬음). 검은 테두리 상자 → 옅은 주황 알약 + 앞에 작은 "!" 동그라미.
+   빨강은 '자금 부족'과 헷갈리므로 쓰지 않는다. 주황은 이 표시에만 써서 여기 둔다.
+   마우스를 올리면 뜻이 나온다 (list.js, similar.js의 title) */
 .list-card__tag--cap {
-  border-color: var(--color-text);
-  color: var(--color-text);
+  --cap-text: #c2410c;
+  --cap-bg: #fff1e6;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px 1px 4px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--cap-bg);
+  color: var(--cap-text);
   font-weight: var(--font-bold);
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.list-card__tag--cap::before {
+  content: "!";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--cap-text);
+  color: #ffffff;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .list-card__gap {
@@ -610,18 +639,16 @@
     right: 20px;
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
-    padding: 0 12px;
-    border: 1px solid var(--color-line-strong);
-    border-radius: var(--radius-pill);
+    min-height: 30px; /* 누르는 자리는 그대로 두고 모양만 글자 링크로 (2026-10-20 팀장 결정) */
+    padding: 0 2px;
     color: var(--color-text-sub);
-    font-size: var(--text-badge);
+    font-size: var(--text-help);
     font-weight: var(--font-medium);
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .list__goal-edit:hover {
-    border-color: var(--color-text-sub);
     color: var(--color-text);
   }
 }

@@ -68,6 +68,11 @@ const MARKER_SIZE = { width: 72, height: 57, tipX: 8.5, tipY: 57 }; // 말풍선
 const ZOOM_MS = 600; // 동 표시를 눌렀을 때 그 동으로 확대되는 시간
 // 처음 보는 지역. 고른 적이 없을 때 쓴다. 목업의 지역과 같다.
 const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
+// 지도 화면을 그냥 열면 광주 5개 구 전체를 가장 넓게(구 표시) 보여 준다 (2026-10-20 팀장 결정. 예전에는 서구 치평동).
+// 저장한 결과 · 공유받은 화면의 "지도에서 보기"처럼 지역을 정해 열 때만(store의 map.open_region) 그 지역으로 연다
+const CITY_CENTER = { latitude: 35.1557, longitude: 126.8838 }; // 다섯 구 표시 자리(GU_MARKER_PLACES)의 가운데쯤
+// 웹은 가장 넓은 수준(MAX_LEVEL 9)에서 한 번 확대한 8, 모바일은 화면이 좁아 9 (2026-10-20 팀장 결정). 둘 다 구 표시다
+const CITY_LEVEL = { web: 8, mobile: 9 };
 const MIN_LEVEL = 1;
 const TAP_MOVE_PX = 6; // 누른 채 이만큼 넘게 움직였으면 누른 것이 아니라 끈 것이다
 const TAP_GUARD_MS = 400; // 말풍선을 누른 뒤 이 안에 오는 지도의 click은 말풍선의 것이다
@@ -158,6 +163,7 @@ const mapState = {
   summary: { dong: null, gu: null }, // 동마다, 구마다의 목표할 수 있는 아파트 수 (A-12). 처음 넓게 볼 때 한 번씩 받는다
   groupTurn: {}, // 같은 자리에 겹친 말풍선에서 지금 맨 위에 보이는 차례
   mapHeight: 0, // 카카오맵에 마지막으로 알린 지도의 높이(px). 아래 창이 지도를 줄이고 늘릴 때 쓴다
+  mapWidth: 0, // 카카오맵에 마지막으로 알린 지도의 폭(px). ensureMapSize가 상자의 폭과 비교한다
   loadedBounds: null, // 영역으로 받았을 때 서버에 보낸 영역 (보이는 영역보다 넓다). 이 안에서 움직이면 다시 받지 않는다
   preload: null, // 구·동으로 받은 뒤 주변을 미리 받아 둔 것 { bounds, data, key }. 지도를 끌기 시작하면 바로 쓴다
   byBounds: false, // 아파트를 지도에 보이는 영역으로 받고 있는가 (손으로 지도를 움직인 뒤). 아니면 구·동으로 받는다
@@ -172,6 +178,7 @@ const mapState = {
   citySeq: 0, // 광주 전체를 받는 요청의 번호
   listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
   idleTimer: null, // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
+  cityStart: false, // 광주 전체(구 표시)로 열었는가. 지역을 정해 열면 false (initMap)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
   facilities: [], // 지도 위 주변 시설 아이콘 (kakao.maps.CustomOverlay). 축척 100m 이하에서 화면 안 아파트들의 시설 + 아파트 창에서 띄운 시설
@@ -240,7 +247,10 @@ function createMap(center) {
   const map = new kakao.maps.Map(container, { center: toLatLng(center), level: DEFAULT_LEVEL });
   map.setMinLevel(MIN_LEVEL);
   map.setMaxLevel(MAX_LEVEL);
+  mapState.mapWidth = container.clientWidth;
+  mapState.mapHeight = container.clientHeight;
   guardWheel(container);
+  watchMapHealth(container);
   kakao.maps.event.addListener(map, 'zoom_changed', safely(() => {
     renderScale();
     onZoomChanged();
@@ -272,6 +282,7 @@ function createMap(center) {
 
 // 지도가 멈춘 뒤 (idle). 확대 수준이 바뀌면 말풍선끼리 겹치는 정도가 달라진다. 움직임이 끝난 뒤에 다시 묶는다.
 function onMapIdle(map) {
+  ensureMapSize(); // 멈출 때마다 상자 크기와 카카오맵이 아는 크기가 같은지 본다
   renderScale();
   hideKakaoScale();
   // 빠르게 확대 · 축소하면 앞 수준에서 받던 자료가 늦게 와서 표시가 지금 수준과 어긋난 채 남았다 (9인데 동 표시).
@@ -303,6 +314,74 @@ function guardWheel(container) {
     }
     last = now;
   }, { capture: true, passive: false });
+}
+
+// ───────── 지도 크기 맞추기 (2026-10-20) ─────────
+// 카카오맵은 지도 상자의 크기가 바뀐 것을 스스로 모른다. 알리지(relayout) 않으면 예전 크기만큼만 지도 조각을 그리고
+// 그 밖에서는 끌기 · 누르기가 먹지 않았다 (지도 일부만 그려진 채 커서가 움직이지 않음).
+// 창 크기를 바꿀 때, 웹 ↔ 모바일이 바뀔 때, 다른 탭에 갔다 돌아올 때, 페이지를 뒤로 가기로 다시 열 때 생겼다.
+// 그래서 아래 때마다 상자 크기와 마지막으로 알린 크기를 비교해 다르면 알린다.
+//   상자 크기가 바뀜(ResizeObserver, map-web.js) · 창 크기가 바뀜 · 지도를 누르기 시작함 · 지도가 멈춤(idle)
+//   다른 탭에서 돌아옴 · 뒤로 가기로 다시 열림 (이때는 크기가 같아도 다시 그리게 한다: force)
+// 폭이 바뀌면 보던 가운데를 그대로 둔다 (웹에서 고른 아파트가 있으면 그 아파트를 가운데로).
+// 높이만 바뀌면 왼쪽 위를 붙잡는다 (모바일 아래 창이 지도를 줄이고 늘리는 것과 같게. 창이 움직이는 동안은 fitMapToSheet가 맞춘다)
+function ensureMapSize({ force = false } = {}) {
+  const { map } = mapState;
+  if (!map) return false;
+  const box = document.getElementById('kakao-map');
+  const width = box.clientWidth;
+  const height = box.clientHeight;
+  if (!width || !height) return false; // 숨겨져 있다. 보일 때 다시 맞춘다
+  const widthChanged = width !== mapState.mapWidth;
+  const heightChanged = height !== mapState.mapHeight;
+  if (!force && !widthChanged && !heightChanged) return false;
+  if (!force && !widthChanged && sheet.moving) return false;
+  const center = map.getCenter(); // relayout 전에는 아직 예전 크기의 가운데
+  map.relayout();
+  mapState.mapWidth = width;
+  mapState.mapHeight = height;
+  if (widthChanged || force) {
+    const web = typeof mapWeb !== 'undefined' && mapWeb.isOn();
+    if (!(web && centerSelected())) map.setCenter(center);
+  }
+  renderScale();
+  return true;
+}
+
+function watchMapHealth(container) {
+  // 다시 보이게 된 직후에는 크기가 아직 0일 수 있어 한 번 미룬다 (requestAnimationFrame은 숨은 탭에서 멈추므로 setTimeout)
+  const later = (force) => setTimeout(safely(() => ensureMapSize({ force })), 50);
+  window.addEventListener('resize', safely(() => ensureMapSize()));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') later(true);
+  });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) later(true);
+  });
+  // 끌기를 시작하기 전에 맞춘다. 크기가 어긋나 있으면 끌어도 지도가 움직이지 않았다
+  container.addEventListener('pointerdown', safely(() => ensureMapSize()), { capture: true });
+  watchInputMode();
+}
+
+// 카카오맵은 처음 만들 때 터치용인지 마우스용인지 정하고, 나중에 바뀌어도 따라가지 않는다.
+// 개발자 도구의 휴대폰 보기 · 이 앱의 모바일 보기처럼 터치 ↔ 마우스가 바뀌면 지도를 끌어도 움직이지 않았다 (2026-10-20 재현).
+// 그래서 입력 방식이 바뀌면 화면을 다시 연다. 보던 지역과 조건은 store에 있어 그대로 이어진다.
+// 실제 휴대폰과 PC에서는 바뀌지 않으므로 이 일은 생기지 않는다.
+function touchMode() {
+  return navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+}
+
+function watchInputMode() {
+  const first = touchMode();
+  let timer = null;
+  const check = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (touchMode() !== first) location.reload();
+    }, 300); // 창 크기를 끌어 바꾸는 동안 여러 번 불려도 한 번만
+  };
+  window.matchMedia('(pointer: coarse)').addEventListener('change', check);
+  window.addEventListener('resize', check);
 }
 
 function safely(handler) {
@@ -1482,6 +1561,7 @@ function createAreaMarkerElement(group, name, className, onClick) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `${className}${group.target === 0 ? ' dong-marker--empty' : ''}`;
+  if (group.gu) button.dataset.gu = group.gu; // 구마다 색 (map.css). 동 표시도 그 동이 속한 구의 색
   button.setAttribute('aria-label', `${name}, 목표할 수 있는 아파트 ${group.target}곳`);
   const nameText = document.createElement('span');
   nameText.className = 'dong-marker__name';
@@ -1749,9 +1829,9 @@ const isOnMap = (apartment) =>
 const sheetOrder = (current) =>
   mapState.data ? mapState.data.apartments.filter((apartment) => apartment === current || isOnMap(apartment)) : [];
 
-// 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구
+// 목록의 머리와 "← ○○ 목록"에 쓰는 지역 이름. 동을 보고 있으면 동, 구 전체면 구.
+// 지도를 끌어 영역으로 받을 때도 지도 가운데에서 가장 가까운 동이다 (loadByBounds가 mapState.region을 nearestDong으로 바꾼다)
 const listPlace = () => {
-  if (mapState.byBounds) return '보이는 곳';
   return mapState.region ? mapState.region.dong || mapState.region.gu : '';
 };
 
@@ -1764,7 +1844,8 @@ function renderList() {
     return;
   }
   listView.render(document.getElementById('apt-list'), visibleData(), {
-    where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
+    // 머리의 이름. 영역으로 받을 때도 지도 가운데에서 가장 가까운 동(nearestDong, 지역 버튼과 같은 이름)으로 적는다 (2026-10-20 팀장)
+    where: mapState.region,
     sort: currentSort(),
     onSort: changeSort,
     onSelect: openApartmentFromList,
@@ -2105,6 +2186,7 @@ function fitMapToSheet() {
   if (after === before) return false;
   map.relayout();
   mapState.mapHeight = after;
+  mapState.mapWidth = box.clientWidth;
   const settled = sheet.phase === 'open' && !sheet.moving;
   if (settled) centerSelected();
   renderScale();
@@ -2341,7 +2423,6 @@ const BOUNDS_WAIT = 300;
 const BOUNDS_PAD = 1; // 보이는 영역의 위아래·좌우로 이만큼(화면의 배수) 더 받는다
 const BOUNDS_MARGIN = 0.5; // 받아 둔 영역의 가장자리까지 이만큼(화면의 배수)도 남지 않으면 새로 받는다
 const PRELOAD_WAIT = 1100; // 구·동으로 옮긴 뒤 지도의 움직임이 끝나기를 기다렸다가 주변을 미리 받는다
-const BOUNDS_NAME = '지도에 보이는 곳'; // 영역으로 받았을 때 목록의 머리에 적는 이름
 
 // 지도에 보이는 영역 { south, west, north, east }. 지도가 가려져 크기가 없으면 null
 function mapBounds() {
@@ -2498,7 +2579,7 @@ async function loadData() {
   // 지도를 끌어 영역으로 다시 받을 때는 그리지 않는다. 끌 때마다 목록이 깜빡이지 않게
   if (!mapState.byBounds || !mapState.data) {
     listView.renderLoading(document.getElementById('apt-list'), {
-      where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region,
+      where: mapState.region,
       onClose: () => sheet.close(),
     });
   }
@@ -2678,6 +2759,17 @@ function panToRegion() {
   map.setCenter(toLatLng(center));
 }
 
+// 광주 5개 구 전체를 가장 넓게 (구 표시). 고른 지역(경계 강조)은 없다. 목록은 광주 전체가 된다 (renderCityList)
+function showCity() {
+  const { map } = mapState;
+  if (!map) return;
+  quietZoom(500);
+  mapState.focus = null;
+  const web = typeof mapWeb !== 'undefined' ? mapWeb.isOn() : window.matchMedia('(min-width: 1024px)').matches;
+  map.setLevel(web ? CITY_LEVEL.web : CITY_LEVEL.mobile);
+  map.setCenter(toLatLng(CITY_CENTER));
+}
+
 // 구·동 선택에서 "이 지역으로 이동"을 눌렀을 때 (FR-APT-02)
 async function moveToRegion({ gu, dong }) {
   useRegion();
@@ -2772,7 +2864,7 @@ async function startKakaoMap() {
   try {
     const key = await loadKakaoKey();
     await loadKakaoSdk(key);
-    if (!mapState.map) mapState.map = createMap(regionCenter(mapState.region) || DEFAULT_CENTER);
+    if (!mapState.map) mapState.map = createMap(mapState.cityStart ? CITY_CENTER : regionCenter(mapState.region) || DEFAULT_CENTER);
     mapState.mapHeight = document.getElementById('kakao-map').clientHeight;
   } catch (error) {
     console.error('[map]', error.message); // 키 값은 찍지 않는다
@@ -2780,7 +2872,8 @@ async function startKakaoMap() {
     return;
   }
   setMapMessage(null);
-  panToRegion();
+  if (mapState.cityStart) showCity();
+  else panToRegion();
   renderMarkers();
   renderScale();
   refitWhenBdongArrives();
@@ -2790,7 +2883,7 @@ async function startKakaoMap() {
 // 법정동이 오면 그 동 전체에 다시 맞춘다. 그사이 사용자가 지도를 움직였거나 다른 지역을 골랐으면 그대로 둔다.
 function refitWhenBdongArrives() {
   const { map, region } = mapState;
-  if (!map || !region.dong || mapState.focus) return;
+  if (!map || !region.dong || mapState.focus || mapState.cityStart) return; // 광주 전체로 열었으면 동으로 옮기지 않는다
   const level = map.getLevel();
   const center = map.getCenter();
   mapBoundary.bdongReady().then((ok) => {
@@ -2821,6 +2914,8 @@ async function initMap() {
     mapState.regions = [];
   }
   mapState.region = restoreRegion();
+  mapState.cityStart = store.get('map').open_region !== true;
+  store.set('map', { open_region: null }); // 한 번만 쓴다. 새로 고치면 다시 광주 전체부터
   renderRegionName();
 
   // 지도와 아파트를 함께 받는다. 어느 쪽이 먼저 와도 말풍선이 그려진다.
