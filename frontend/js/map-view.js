@@ -194,6 +194,7 @@ const mapState = {
   facilityTabAllowed: false, // 시설 아이콘이 나오는 축척(100m 이하)인가. 체크 칸은 이와 상관없이 늘 보인다 (2026-10-20)
   pickedApartment: null, // 마지막으로 연 아파트. 넓게 보아 말풍선이 없어져도 빨간 위치 표시로 남긴다 (renderPickedPin)
   pickedPin: null, // 그 위치 표시 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
+  pickedCardClosed: null, // 웹 카드를 ✕로 닫은 아파트의 번호. 다른 아파트를 고르거나 핀을 누를 때까지 카드를 숨긴다
   facilityOpen: null, // 이름을 펼친 시설 아이콘
   facilityOpenId: null, // 이름을 펼친 시설의 id ("kind:이름")
   facilityLink: null, // 고른 아파트 → 펼친 시설의 점선 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
@@ -1803,9 +1804,27 @@ function renderPickedPin() {
   const show = Boolean(apartment) && mapState.mode !== 'apartment';
   if (!show) {
     if (mapState.pickedPin) mapState.pickedPin.setMap(null);
+    renderPickedCard(null);
     return;
   }
   if (!mapState.pickedPin) {
+    // 핀과 말풍선을 한 상자에 둔다. 핀을 누르면 말풍선이 나오고(2026-10-20), 말풍선을 누르면 그 아파트의 창을 다시 연다
+    const wrap = document.createElement('div');
+    wrap.className = 'picked-pin-wrap';
+    const bubble = document.createElement('button');
+    bubble.type = 'button';
+    bubble.className = 'picked-pin__bubble';
+    bubble.hidden = true;
+    const bubbleText = document.createElement('span');
+    bubbleText.className = 'picked-pin__text';
+    const bubbleTitle = document.createElement('strong');
+    bubbleTitle.className = 'picked-pin__title';
+    bubbleTitle.textContent = PICKED_TITLE;
+    const bubblePlace = document.createElement('span');
+    bubblePlace.className = 'picked-pin__place';
+    bubbleText.append(bubbleTitle, bubblePlace);
+    bubble.append(bubbleText, pickedBuildingIcon('picked-pin__icon'));
+    bubble.addEventListener('click', reopenPicked);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'picked-pin';
@@ -1817,19 +1836,135 @@ function renderPickedPin() {
     path.setAttribute('d', PICKED_PIN_PATH);
     svg.appendChild(path);
     button.appendChild(svg);
-    button.addEventListener('click', reopenPicked);
+    button.addEventListener('click', () => {
+      bubble.hidden = !bubble.hidden;
+      if (isWebLayout()) mapState.pickedCardClosed = null; // 웹: 닫아 둔 카드도 다시 연다
+      renderPickedCard(mapState.pickedApartment);
+    });
+    wrap.append(bubble, button);
     mapState.pickedPin = new kakao.maps.CustomOverlay({
-      content: button,
+      content: wrap,
       xAnchor: 0.5,
       yAnchor: 1, // 핀의 아래 끝이 아파트 자리
       zIndex: 6, // 동 · 구 표시(말풍선 자리)보다 위
       clickable: true,
     });
   }
-  const button = mapState.pickedPin.getContent();
-  button.setAttribute('aria-label', `선택한 아파트 ${apartment.name}. 누르면 아파트 정보를 다시 엽니다`);
+  const wrap = mapState.pickedPin.getContent();
+  const button = wrap.querySelector('.picked-pin');
+  const bubble = wrap.querySelector('.picked-pin__bubble');
+  button.setAttribute('aria-label', `선택한 아파트 ${apartment.name}. 누르면 이름표를 보입니다`);
+  if (wrap.dataset.apartment !== String(apartment.id)) {
+    wrap.dataset.apartment = String(apartment.id);
+    bubble.hidden = true; // 다른 아파트가 되면 접어 둔다
+  }
+  // 말풍선: 첫 줄은 아파트 이름, 둘째 줄은 "광산구 신가동 · 84㎡ (전용 59㎡)" (2026-10-20 팀장 결정). 면적은 창에서 보던 면적
+  const area = pickedArea(apartment);
+  const size = area ? format.area(area.supply_area, area.exclusive_area, store.get('map').area_unit || 'm2') : '';
+  const place = [`${apartment.gu} ${apartment.dong}`, size].filter(Boolean).join(' · ');
+  bubble.querySelector('.picked-pin__title').textContent = apartment.name;
+  bubble.querySelector('.picked-pin__place').textContent = place;
+  bubble.setAttribute('aria-label', `선택한 아파트 ${apartment.name}, ${place}. 누르면 아파트 정보를 다시 엽니다`);
   mapState.pickedPin.setPosition(toLatLng(apartment));
   mapState.pickedPin.setMap(map);
+  renderPickedCard(apartment);
+}
+
+// ───────── 넓게 볼 때 선택한 아파트 카드 (웹만, 2026-10-20 팀장 결정) ─────────
+// 웹(1024px 이상)에서 아파트를 고른 채 동 표시 · 구 표시 수준으로 넓게 보면, 지도 왼쪽 아래에 그 아파트의 요약을 띄운다.
+//   전용면적 · 매매가(고른 면적의 실거래 평균가) · 역세권(가장 가까운 지하철역이 500m 안이면 역 이름과 도보 시간) ·
+//   주변 교통(500m 안 버스정류장 수). 값은 받아 둔 자료(A-05, A-06, A-28)에서만 가져온다.
+// "아파트 다시 보기"를 누르면 그 아파트로 가까이 가서 창을 다시 연다. ✕로 닫으면 다른 아파트를 고르거나 핀을 누를 때까지 숨긴다.
+// 모바일에는 카드가 없고, 핀을 누르면 말풍선만 나온다 (renderPickedPin)
+const PICKED_TITLE = '선택한 아파트';
+const PICKED_TRANSIT_M = 500; // 역세권 · 주변 버스정류장을 보는 거리 (세환 #141의 역세권 기준과 같다)
+const PICKED_BUILDING_ICON = 'M4 21V5.5L12 3l8 2.5V21h-6v-4h-4v4H4zm3-13v2h2V8H7zm4 0v2h2V8h-2zm4 0v2h2V8h-2zM7 12v2h2v-2H7zm4 0v2h2v-2h-2zm4 0v2h2v-2h-2z';
+
+const isWebLayout = () => typeof mapWeb !== 'undefined' && mapWeb.isOn();
+
+function pickedBuildingIcon(className) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', className);
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', PICKED_BUILDING_ICON);
+  svg.appendChild(path);
+  return svg;
+}
+
+function renderPickedCard(apartment) {
+  const card = document.getElementById('picked-card');
+  if (!card) return;
+  const show = Boolean(apartment) && isWebLayout() && mapState.pickedCardClosed !== apartment.id;
+  card.hidden = !show;
+  if (!show) return;
+  // 머리: 첫 줄은 아파트 이름, 둘째 줄은 "광산구 신가동 · 84㎡ (전용 59㎡)" (말풍선과 같다, 2026-10-20 팀장 결정)
+  const area = pickedArea(apartment);
+  const unit = store.get('map').area_unit || 'm2';
+  const size = area ? format.area(area.supply_area, area.exclusive_area, unit) : '';
+  card.querySelector('[data-picked="name"]').textContent = apartment.name;
+  card.querySelector('[data-picked="place"]').textContent = [`${apartment.gu} ${apartment.dong}`, size].filter(Boolean).join(' · ');
+  card.querySelector('[data-picked="area"]').textContent = area
+    ? (unit === 'pyeong' ? `${format.pyeong(area.exclusive_area)}평` : format.exclusive(area.exclusive_area))
+    : '-';
+  card.querySelector('[data-picked="price"]').textContent = area ? format.won(area.avg_price) : '-';
+  if (card.dataset.apartment === String(apartment.id)) return; // 역세권 · 주변 교통은 아파트가 바뀔 때만 다시 본다
+  card.dataset.apartment = String(apartment.id);
+  const subway = card.querySelector('[data-picked="subway"]');
+  const bus = card.querySelector('[data-picked="bus"]');
+  subway.textContent = '확인하는 중';
+  bus.textContent = '확인하는 중';
+  const id = apartment.id;
+  // 역세권: A-06의 지하철역 줄 (가장 가까운 출구까지의 직선거리)
+  facilityDetail(apartment).then((detail) => {
+    if (card.dataset.apartment !== String(id)) return;
+    const item = detail && (detail.facilities || []).find((f) => f.kind === 'subway' && f.place_name);
+    const meters = item ? Number(item.distance) : null;
+    subway.textContent = item && meters <= PICKED_TRANSIT_M
+      ? `${item.place_name.replace(/ (광주)?\d*호선$/, '')} (${typeof aptWalk === 'function' ? aptWalk(meters).time : `${meters}m`})`
+      : '역세권 아님';
+    subway.classList.toggle('picked-card__value--off', !(item && meters <= PICKED_TRANSIT_M));
+  });
+  // 주변 교통: 500m 안 버스정류장 수 (A-28)
+  const lat = Number(apartment.latitude);
+  const lng = Number(apartment.longitude);
+  const dLat = PICKED_TRANSIT_M / 111000;
+  const dLng = PICKED_TRANSIT_M / (111000 * Math.cos((lat * Math.PI) / 180));
+  busStopsIn({ south: lat - dLat, west: lng - dLng, north: lat + dLat, east: lng + dLng }).then((stops) => {
+    if (card.dataset.apartment !== String(id)) return;
+    if (!stops) {
+      bus.textContent = '-';
+      return;
+    }
+    const near = stops.filter((stop) => pickedMeters(lat, lng, stop.latitude, stop.longitude) <= PICKED_TRANSIT_M);
+    bus.textContent = near.length > 0 ? `버스정류장 ${format.comma(near.length)}개` : '버스정류장 없음';
+  });
+}
+
+// 카드에 보일 면적: 아파트 창에서 보던 면적이 있으면 그것, 아니면 첫째 면적 (평균가가 가장 낮은 면적)
+function pickedArea(apartment) {
+  const areas = apartment.areas || [];
+  const same = aptPanel.apartment && aptPanel.apartment.id === apartment.id;
+  return areas[same ? aptPanel.areaIndex : 0] || areas[0] || null;
+}
+
+// 두 점 사이의 직선거리 (m)
+function pickedMeters(lat1, lng1, lat2, lng2) {
+  const rad = Math.PI / 180;
+  const x = (lng2 - lng1) * rad * Math.cos(((lat1 + lat2) / 2) * rad);
+  const y = (lat2 - lat1) * rad;
+  return Math.sqrt(x * x + y * y) * 6371000;
+}
+
+// 카드의 "아파트 다시 보기": 그 아파트로 가까이 가서(말풍선 수준) 창을 다시 연다
+function revisitPicked() {
+  const picked = mapState.pickedApartment;
+  if (!picked || !mapState.map || !hasCoord(picked)) return;
+  quietZoom(500);
+  mapState.map.setLevel(DONG_LEVEL);
+  mapState.map.setCenter(toLatLng(picked));
+  reopenPicked();
 }
 
 // 위치 표시를 누름: 그 아파트의 창을 다시 연다 (지도의 확대 수준은 그대로)
@@ -2323,6 +2458,16 @@ function bindEvents() {
   });
 
   // 확대·축소 (FR-MAP-25)
+  // 넓게 볼 때 선택한 아파트 카드 (웹)
+  const pickedCard = document.getElementById('picked-card');
+  if (pickedCard) {
+    pickedCard.querySelector('.picked-card__close').addEventListener('click', () => {
+      mapState.pickedCardClosed = mapState.pickedApartment ? mapState.pickedApartment.id : null;
+      pickedCard.hidden = true;
+    });
+    pickedCard.querySelector('.picked-card__go').addEventListener('click', revisitPicked);
+  }
+
   // 빠르게 여러 번 눌러도 애니메이션이 겹치지 않게 한 단계씩 차례로 (animateZoom)
   document.getElementById('zoom-in').addEventListener('click', () => zoomStep(-1));
   document.getElementById('zoom-out').addEventListener('click', () => zoomStep(1));

@@ -494,6 +494,165 @@
     border-right: 0;
   }
 
+  /* 넓게 볼 때 선택한 아파트 카드: 지도 왼쪽 아래 (2026-10-20). 카카오 로고(맨 왼쪽 아래)는 가리지 않게 띄운다.
+     그림자 없이 옅은 선 하나. 글자와 간격은 아파트 정보 탭과 같다 (new-style.css의 .apt-info: 이름 13 회색 108 폭 → 여기는 80,
+     값 14 #333, 줄 위아래 7px, 구분선 #e5e5e5) */
+  .picked-card {
+    position: absolute;
+    bottom: 34px;
+    left: 16px;
+    z-index: 5;
+    display: block;
+    box-sizing: border-box;
+    width: 300px;
+    padding: 16px 20px 18px;
+    border: 1px solid var(--new-sheet-line, var(--color-line));
+    border-radius: 12px;
+    background: var(--color-bg);
+    line-height: var(--line-height);
+  }
+
+  .picked-card[hidden] {
+    display: none;
+  }
+
+  .picked-card__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--new-sheet-line, var(--color-line));
+  }
+
+  .picked-card__badge {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--color-bg-sub);
+  }
+
+  .picked-card__badge svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--color-text-sub);
+  }
+
+  .picked-card__titles {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .picked-card__title {
+    color: var(--new-sheet-name, var(--color-text));
+    font-size: var(--text-label);
+    font-weight: var(--font-bold);
+  }
+
+  .picked-card__place {
+    overflow: hidden;
+    color: var(--color-text-sub);
+    font-size: var(--text-help);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .picked-card__close {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    margin-right: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-sub);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .picked-card__close:hover {
+    background: var(--color-bg-sub);
+  }
+
+  .picked-card__rows {
+    margin: 8px 0 14px;
+    padding: 0;
+  }
+
+  .picked-card__row {
+    display: flex;
+    align-items: center;
+    padding: 7px 0;
+  }
+
+  .picked-card__row dt {
+    flex-shrink: 0;
+    width: 80px;
+    color: var(--color-text-sub);
+    font-size: var(--text-help);
+  }
+
+  .picked-card__row dd {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    color: var(--new-sheet-value, var(--color-text));
+    font-size: var(--text-label);
+    font-weight: var(--font-medium);
+  }
+
+  .picked-card__chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: var(--font-bold);
+  }
+
+  .picked-card__chip--subway {
+    background: #2f6fb6;
+  }
+
+  .picked-card__chip--bus {
+    background: #2e9e5b;
+  }
+
+  .picked-card__value--off {
+    color: var(--color-text-hint);
+    font-weight: var(--font-regular);
+  }
+
+  .picked-card__go {
+    display: block;
+    width: 100%;
+    height: 44px;
+    border: 0;
+    border-radius: var(--radius-card, 12px);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-family: inherit;
+    font-size: var(--text-body);
+    font-weight: var(--font-bold);
+    cursor: pointer;
+  }
+
+  .picked-card__go:hover {
+    filter: brightness(1.06);
+  }
+
   /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 손잡이) */
   .list__close {
     display: none !important;
