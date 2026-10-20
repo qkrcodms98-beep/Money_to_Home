@@ -627,7 +627,7 @@
   }
 
   .picked-card__chip--bus {
-    background: #2e9e5b;
+    background: #1f9d55; /* 지도의 버스정류장 아이콘과 같은 초록 */
   }
 
   .picked-card__value--off {

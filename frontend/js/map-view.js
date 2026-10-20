@@ -632,14 +632,54 @@ function renderFacilities() {
       };
       if (inside(place)) want.set(place.id, { kind, place });
     });
-    // 화면 근처(area)의 버스정류장 모두. 길 건너편 정류장은 이름이 같아 정류장 번호로 구분한다
-    (stops || []).forEach((stop) => {
-      const place = { id: `bus:${stop.stop_id}`, place_name: stop.name, y: stop.latitude, x: stop.longitude };
+    // 화면 근처(area)의 버스정류장. 길 건너편 정류장(이름이 같고 가까운 두 곳)은 하나로 묶어 둘의 가운데에 띄운다 (2026-10-20 팀장 결정)
+    pairBusStops(stops || []).forEach((place) => {
       if (inside(place)) want.set(place.id, { kind: FACILITY_BUS_KIND, place });
     });
     keepOnlyFacilities(want);
     ensureFacilityPin();
   });
+}
+
+// 길 건너편 정류장 묶기. 정류장은 보통 길 양쪽에 같은 이름으로 한 쌍이 있다. 이름이 같고 BUS_PAIR_M 안에 있는 두 곳을
+// 가장 가까운 것끼리 짝지어 하나의 자리(두 곳의 가운데)로 만든다. 짝이 없는 정류장은 그 자리 그대로.
+// 돌려주는 자리: { id, place_name, y(위도), x(경도) }. 묶은 것의 id는 두 정류장 번호를 이은 것이라 다시 그려도 같다
+const BUS_PAIR_M = 150;
+
+function pairBusStops(stops) {
+  const byName = new Map();
+  stops.forEach((stop) => {
+    if (!byName.has(stop.name)) byName.set(stop.name, []);
+    byName.get(stop.name).push(stop);
+  });
+  const places = [];
+  byName.forEach((group) => {
+    const left = [...group].sort((a, b) => (a.stop_id < b.stop_id ? -1 : 1)); // 순서를 정해 두어 늘 같은 짝이 되게
+    while (left.length > 0) {
+      const stop = left.shift();
+      let best = -1;
+      let bestM = BUS_PAIR_M;
+      left.forEach((other, i) => {
+        const m = pickedMeters(stop.latitude, stop.longitude, other.latitude, other.longitude);
+        if (m <= bestM) {
+          best = i;
+          bestM = m;
+        }
+      });
+      if (best < 0) {
+        places.push({ id: `bus:${stop.stop_id}`, place_name: stop.name, y: stop.latitude, x: stop.longitude });
+        continue;
+      }
+      const [pair] = left.splice(best, 1);
+      places.push({
+        id: `bus:${stop.stop_id}+${pair.stop_id}`,
+        place_name: stop.name,
+        y: (stop.latitude + pair.latitude) / 2,
+        x: (stop.longitude + pair.longitude) / 2,
+      });
+    }
+  });
+  return places;
 }
 
 // 영역을 덮는 칸들의 버스정류장을 모아 준다 (A-28). 한 칸이라도 실패하면 null
