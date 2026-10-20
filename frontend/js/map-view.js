@@ -71,7 +71,8 @@ const DEFAULT_REGION = { gu: '서구', dong: '치평동' };
 // 지도 화면을 그냥 열면 광주 5개 구 전체를 가장 넓게(구 표시) 보여 준다 (2026-10-20 팀장 결정. 예전에는 서구 치평동).
 // 저장한 결과 · 공유받은 화면의 "지도에서 보기"처럼 지역을 정해 열 때만(store의 map.open_region) 그 지역으로 연다
 const CITY_CENTER = { latitude: 35.1557, longitude: 126.8838 }; // 다섯 구 표시 자리(GU_MARKER_PLACES)의 가운데쯤
-const CITY_LEVEL = 8; // 가장 넓은 수준(MAX_LEVEL 9)에서 한 번 확대한 것. 여전히 구 표시다 (2026-10-20 팀장 결정)
+// 웹은 가장 넓은 수준(MAX_LEVEL 9)에서 한 번 확대한 8, 모바일은 화면이 좁아 9 (2026-10-20 팀장 결정). 둘 다 구 표시다
+const CITY_LEVEL = { web: 8, mobile: 9 };
 const MIN_LEVEL = 1;
 const TAP_MOVE_PX = 6; // 누른 채 이만큼 넘게 움직였으면 누른 것이 아니라 끈 것이다
 const TAP_GUARD_MS = 400; // 말풍선을 누른 뒤 이 안에 오는 지도의 click은 말풍선의 것이다
@@ -2538,7 +2539,8 @@ function showCity() {
   if (!map) return;
   quietZoom(500);
   mapState.focus = null;
-  map.setLevel(CITY_LEVEL);
+  const web = typeof mapWeb !== 'undefined' ? mapWeb.isOn() : window.matchMedia('(min-width: 1024px)').matches;
+  map.setLevel(web ? CITY_LEVEL.web : CITY_LEVEL.mobile);
   map.setCenter(toLatLng(CITY_CENTER));
 }
 
