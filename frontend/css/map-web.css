@@ -6,12 +6,13 @@
      │ 목록 패널 400px │ 아파트 패널 420px (아파트를 열었을 때만) │ 지도        │  (1440px 기준. 창 폭에 비례해 줄어든다)
    - 아래 창(#sheet)이 왼쪽 패널이 된다. 30% · 80% · 전체 단계와 끌기가 없다 (js/map-web.js가 막는다).
    - 목록은 늘 열려 있고, 아파트를 열면 그 오른쪽에 아파트 패널이 붙고 지도가 그만큼 줄어든다.
-   - 목록 패널은 접을 수 있다 (패널 오른쪽 끝의 ‹ 단추). 접으면 아파트 패널만, 아파트도 닫혀 있으면 지도만 남는다.
+   - 목록 패널과 아파트 패널은 접을 수 있다 (각 패널 오른쪽 끝 가운데의 얇은 손잡이). 접은 패널만큼 지도가 넓어진다.
    - 조건 창은 아래에서 올라오지 않고 화면 가운데 창으로 뜬다.
 
    js/map-web.js가 html에 다는 표시
      data-map-web-panel="list" | "apartment"   패널에 지금 보이는 것
-     data-map-web-fold                          목록 패널을 접었다 */
+     data-map-web-fold                          목록 패널을 접었다
+     data-map-web-apt-fold                      아파트 패널을 접었다 */
 
 /* 웹 전용 요소 (머리 줄, 로고, 목록 접기 단추)는 모바일에서 숨긴다 */
 .map-web-bar,
@@ -340,7 +341,7 @@
     border-right: 0;
   }
 
-  /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 ‹ 단추) */
+  /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 손잡이) */
   .list__close {
     display: none !important;
   }
@@ -363,51 +364,64 @@
     display: none;
   }
 
-  /* 목록 접기 · 펴기 단추. 패널 오른쪽 끝(지도 왼쪽 끝)에 붙은 작은 탭 */
+  /* 패널 접기 · 펴기 손잡이 (2026-10-20 팀장 결정). 패널 오른쪽 끝의 세로 가운데에 붙은 얇은 탭.
+     목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 눈에 덜 띄게 옅게 두고, 마우스를 올리면 조금 진해진다 */
   .map-web-fold {
     position: absolute;
-    top: calc(var(--map-web-bar) + 16px);
-    left: var(--map-web-panel);
+    top: calc(var(--map-web-bar) + (100vh - var(--map-web-bar)) / 2);
+    left: var(--map-web-list);
     z-index: 4;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    min-width: 28px;
-    height: var(--touch-size);
-    padding: 0 8px;
+    width: 14px;
+    height: 56px;
+    padding: 0;
     border: 1px solid var(--color-line);
     border-left: 0;
-    border-radius: 0 10px 10px 0;
-    background: var(--color-bg);
-    box-shadow: var(--shadow-control);
-    color: var(--color-text);
+    border-radius: 0 8px 8px 0;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    color: var(--color-text-hint);
     font-family: inherit;
-    font-size: var(--text-help);
-    font-weight: var(--font-bold);
+    font-size: 13px;
+    line-height: 1;
     cursor: pointer;
+    transform: translateY(-50%);
+    transition: color 0.15s ease, background-color 0.15s ease;
   }
 
-  /* 패널이 하나도 없으면(목록 접음, 아파트 닫힘) 아이콘 대신 "목록" 글자를 함께 보인다 */
-  .map-web-fold__text {
+  .map-web-fold:hover,
+  .map-web-fold:focus-visible {
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /* 아파트 손잡이는 아파트 패널이 있을 때만. 접으면 목록 손잡이와 같은 자리에 오므로 그 아래로 비켜 둔다 */
+  .map-web-fold--apt {
     display: none;
+    left: var(--map-web-panel);
   }
 
-  html[data-map-web-fold]:not([data-map-web-panel="apartment"]) .map-web-fold__text {
-    display: inline;
+  html[data-map-web-panel="apartment"] .map-web-fold--apt {
+    display: flex;
   }
 
-  /* 지도 위의 칩 · 범례 · 안내가 접기 단추에 가리지 않게 단추 폭만큼 띄운다 */
-  .chip-row,
-  .legend,
-  .info-tip {
-    margin-left: 44px;
+  html[data-map-web-panel="apartment"][data-map-web-apt-fold] .map-web-fold--apt {
+    transform: translateY(calc(-50% + 64px));
   }
 
-  html[data-map-web-fold]:not([data-map-web-panel="apartment"]) .chip-row,
-  html[data-map-web-fold]:not([data-map-web-panel="apartment"]) .legend,
-  html[data-map-web-fold]:not([data-map-web-panel="apartment"]) .info-tip {
-    margin-left: 84px;
+  /* 아파트 패널을 접음: 고른 아파트는 그대로 두고 패널만 숨겨 지도를 넓힌다 */
+  html[data-map-web-panel="apartment"][data-map-web-apt-fold] .map-body {
+    --map-web-apt: 0px;
+  }
+
+  html[data-map-web-apt-fold] #apartment-panel {
+    display: none !important;
+  }
+
+  html[data-map-web-fold][data-map-web-apt-fold] .sheet {
+    border-right: 0;
   }
 
   /* ───────── 조건 창 · 지역 창: 화면 가운데 창 ───────── */

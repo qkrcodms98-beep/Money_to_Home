@@ -15,6 +15,7 @@
 // html에 다는 표시 (map-web.css가 쓴다)
 //   data-map-web-panel = "list" | "apartment"   패널에 지금 보이는 것. 창이 닫혀 있으면 없다
 //   data-map-web-fold                           목록 패널을 접었다
+//   data-map-web-apt-fold                       아파트 패널을 접었다
 
 const MAP_WEB_QUERY = window.matchMedia('(min-width: 1024px)'); // css/map-web.css의 @media와 같은 폭
 const MAP_WEB_STAGE = '30';
@@ -77,7 +78,13 @@ const mapWeb = {
   wrapSheet() {
     const { base } = mapWeb;
 
-    sheet.show = (stage, mode) => base.show(mapWeb.isOn() ? MAP_WEB_STAGE : stage, mode);
+    sheet.show = (stage, mode) => {
+      if (mode === 'apartment' && mapWeb.aptFolded) {
+        mapWeb.aptFolded = false; // 아파트를 새로 열면 접어 둔 아파트 패널을 편다
+        mapWeb.renderFold();
+      }
+      base.show(mapWeb.isOn() ? MAP_WEB_STAGE : stage, mode);
+    };
 
     sheet.setStage = (stage) => {
       if (!mapWeb.isOn()) base.setStage(stage);
@@ -191,23 +198,38 @@ const mapWeb = {
   // 접은 상태는 이 화면을 보는 동안만 기억한다 (mapWeb.folded). 새로 열면 목록이 펼쳐져 있다
   folded: false,
 
+  // 아파트 패널도 접을 수 있다 (mapWeb.aptFolded). 접어도 고른 아파트는 그대로 두고, 다른 아파트를 열면 다시 편다
+  aptFolded: false,
+
   initFold() {
     const button = document.getElementById('map-web-fold');
-    if (!button) return;
+    const aptButton = document.getElementById('map-web-apt-fold');
+    if (!button || !aptButton) return;
     store.set('map', { web_fold: null }); // 예전에 저장해 둔 접기 값을 지운다
-    const render = () => {
-      const { folded } = mapWeb;
-      document.documentElement.toggleAttribute('data-map-web-fold', folded);
-      button.setAttribute('aria-expanded', String(!folded));
-      button.setAttribute('aria-label', folded ? '목록 펴기' : '목록 접기');
-      button.querySelector('.map-web-fold__icon').textContent = folded ? '›' : '‹';
+    const mark = (target, folded, name) => {
+      target.setAttribute('aria-expanded', String(!folded));
+      target.setAttribute('aria-label', `${name} ${folded ? '펴기' : '접기'}`);
+      target.querySelector('.map-web-fold__icon').textContent = folded ? '›' : '‹';
+    };
+    mapWeb.renderFold = () => {
+      const root = document.documentElement;
+      root.toggleAttribute('data-map-web-fold', mapWeb.folded);
+      root.toggleAttribute('data-map-web-apt-fold', mapWeb.aptFolded);
+      mark(button, mapWeb.folded, '목록');
+      mark(aptButton, mapWeb.aptFolded, '아파트 창');
     };
     button.addEventListener('click', () => {
       mapWeb.folded = !mapWeb.folded;
-      render();
+      mapWeb.renderFold();
     });
-    render();
+    aptButton.addEventListener('click', () => {
+      mapWeb.aptFolded = !mapWeb.aptFolded;
+      mapWeb.renderFold();
+    });
+    mapWeb.renderFold();
   },
+
+  renderFold() {}, // initFold가 채운다
 
   // ───────── 패널 폭이 바뀌면 지도에 알린다 ─────────
   // 카카오맵은 상자의 크기가 바뀐 것을 모른다. relayout()을 불러야 새 크기로 그린다.
