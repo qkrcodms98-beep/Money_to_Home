@@ -917,7 +917,7 @@
     bottom: 0;
     left: 0;
     z-index: 6;
-    width: var(--map-web-list-open);
+    width: max(var(--map-web-list-open), var(--map-web-apt)); /* 목록을 접고 아파트 패널만 있으면 그 폭(420)에 맞춰 뒤의 패널이 삐져나오지 않게 (2026-10-20) */
     height: auto;
     max-height: none;
     border-radius: 0;
