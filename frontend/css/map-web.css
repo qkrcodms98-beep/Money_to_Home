@@ -365,7 +365,7 @@
   }
 
   /* 패널 접기 · 펴기 손잡이 (2026-10-20 팀장 결정). 패널 오른쪽 끝의 세로 가운데에 붙은 얇은 탭.
-     목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 22 × 76, 흰 바탕에 옅은 그림자. 마우스를 올리면 조금 진해진다 */
+     목록 손잡이는 목록 패널 끝에, 아파트 손잡이는 아파트 패널 끝(지도 왼쪽 끝)에. 16 × 76, 흰 바탕에 옅은 그림자. 마우스를 올리면 조금 진해진다 */
   .map-web-fold {
     position: absolute;
     top: calc(var(--map-web-bar) + (100vh - var(--map-web-bar)) / 2);
@@ -374,7 +374,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
+    width: 16px;
     height: 76px;
     padding: 0;
     border: 1px solid var(--color-line);
