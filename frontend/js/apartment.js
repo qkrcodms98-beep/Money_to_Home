@@ -60,6 +60,14 @@ const APT_NO_COORD = '위치 없음';
 const APT_NO_COORD_NOTICE = '이 아파트는 위치 정보가 없어 지도에 표시하지 못했습니다. 지도는 그대로 두었습니다.';
 // 로드뷰 (목업 C6, C6b)
 const APT_ROADVIEW_RADIUS = 100; // 아파트 좌표에서 이 거리(m) 안의 가장 가까운 로드뷰를 쓴다
+// 로드뷰를 바꿀 때 (2026-10-20 팀장: 아파트를 넘길 때마다 사진이 빠르게 바뀌는 모습이 보기 싫다)
+//   - 동을 받으면 그 동 아파트들의 로드뷰 지점(panoId)을 미리 찾아 둔다 (prefetchRoadviews). 넘길 때 찾느라 기다리지 않는다.
+//     카카오 로드뷰는 한 번에 한 장만 띄울 수 있고 사진을 미리 받아 두는 기능이 없어, 지점까지만 미리 찾는다.
+//   - 사진을 바꾸고 아파트 쪽으로 돌리는 동안은 덮개로 가렸다가, 다 되면 덮개를 천천히 걷는다 (sheet.css .apt-roadview--switching)
+const APT_ROADVIEW_PREFETCH_MAX = 80; // 한 번에 미리 찾는 아파트 수의 상한
+const APT_ROADVIEW_PREFETCH_AT_ONCE = 4; // 동시에 찾는 수
+const APT_ROADVIEW_SETTLE_MS = 250; // 사진을 바꾸고 돌린 뒤 덮개를 걷기까지 기다리는 시간 (사진 조각이 채워지는 동안)
+const APT_ROADVIEW_COVER_MAX_MS = 1500; // 신호가 안 와도 이만큼 지나면 덮개를 걷는다
 const APT_ROADVIEW_TILT = -20; // 처음 볼 때 위아래 각도. 카카오 로드뷰는 음수가 위다 (-90 ~ 90)
 const APT_ROADVIEW_ZOOM = -3; // 처음 볼 때 확대. -3이 가장 넓게 보인다 (-3 ~ 3)
 const APT_NO_ROADVIEW = '기본 이미지 (이 위치에는 로드뷰가 없습니다)'; // 목업 C6b의 문장 그대로
@@ -155,6 +163,8 @@ const aptPanel = {
   listPlace: null,
   handlers: {},
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
+  panoIds: new Map(), // 아파트 번호 → 가장 가까운 로드뷰 지점(panoId). 없으면 null. 찾은 것만 둔다
+  roadviewCoverTimer: null,
   areaOnly: false, // 지금 다시 그리는 것이 면적 칩을 눌러서인가 (render 동안만 true)
   similarTimer: null, // 면적 칸이 다 미끄러진 뒤 비슷한 아파트를 받는 타이머
   loading: new Set(), // 받는 중인 아파트 번호
@@ -429,31 +439,81 @@ const aptPanel = {
       aptPanel.roadviewShow('empty');
       return;
     }
-    aptPanel.roadviewShow(null);
     const id = apartment.id;
     const position = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
+    aptPanel.coverRoadview(true); // 앞 아파트의 사진은 덮어 두고 바꾼다
     try {
-      new kakao.maps.RoadviewClient().getNearestPanoId(position, APT_ROADVIEW_RADIUS, (panoId) => {
+      aptPanel.findPano(apartment, (panoId) => {
         if (aptPanel.roadviewFor !== id) return; // 찾는 사이에 다른 아파트로 넘겼다
         if (panoId === null || panoId === undefined) {
           aptPanel.roadviewShow('empty');
+          aptPanel.coverRoadview(false);
           return;
         }
         aptPanel.roadviewShow('view');
         const view = aptPanel.roadviewBox().querySelector('.apt-roadview__view');
         if (!aptPanel.roadview) {
           aptPanel.roadview = new kakao.maps.Roadview(view);
-          // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 아파트 쪽을 바라보게 돌린다
-          kakao.maps.event.addListener(aptPanel.roadview, 'init', aptPanel.aimRoadview);
-          kakao.maps.event.addListener(aptPanel.roadview, 'panoid_changed', aptPanel.aimRoadview);
+          // 촬영 지점이 정해지면(처음, 그리고 다른 지점으로 바뀔 때마다) 아파트 쪽을 바라보게 돌리고, 조금 뒤 덮개를 걷는다
+          const settle = () => {
+            aptPanel.aimRoadview();
+            clearTimeout(aptPanel.roadviewCoverTimer);
+            aptPanel.roadviewCoverTimer = setTimeout(() => aptPanel.coverRoadview(false), APT_ROADVIEW_SETTLE_MS);
+          };
+          kakao.maps.event.addListener(aptPanel.roadview, 'init', settle);
+          kakao.maps.event.addListener(aptPanel.roadview, 'panoid_changed', settle);
         }
         aptPanel.roadviewTarget = position;
+        const samePano = typeof aptPanel.roadview.getPanoId === 'function' && aptPanel.roadview.getPanoId() === panoId;
         aptPanel.roadview.setPanoId(panoId, position);
         aptPanel.roadview.relayout();
+        if (samePano) { // 같은 지점이면 바뀌었다는 신호가 오지 않는다. 방향만 돌리고 걷는다
+          aptPanel.aimRoadview();
+          aptPanel.roadviewCoverTimer = setTimeout(() => aptPanel.coverRoadview(false), APT_ROADVIEW_SETTLE_MS);
+        }
       });
     } catch (error) {
       aptPanel.roadviewShow('empty'); // 카카오맵이 로드뷰를 주지 못하면 기본 이미지
+      aptPanel.coverRoadview(false);
     }
+  },
+
+  // 로드뷰 덮개. 덮을 때는 바로, 걷을 때는 천천히 (sheet.css). 신호가 오지 않아도 APT_ROADVIEW_COVER_MAX_MS 뒤에는 걷는다
+  coverRoadview(on) {
+    const box = aptPanel.roadviewBox();
+    clearTimeout(aptPanel.roadviewCoverTimer);
+    box.classList.toggle('apt-roadview--switching', on);
+    if (on) aptPanel.roadviewCoverTimer = setTimeout(() => aptPanel.coverRoadview(false), APT_ROADVIEW_COVER_MAX_MS);
+  },
+
+  // 아파트의 가장 가까운 로드뷰 지점. 찾아 둔 것이 있으면 바로, 없으면 카카오에 물어 기억해 둔다
+  findPano(apartment, done) {
+    if (aptPanel.panoIds.has(apartment.id)) {
+      done(aptPanel.panoIds.get(apartment.id));
+      return;
+    }
+    const position = new kakao.maps.LatLng(Number(apartment.latitude), Number(apartment.longitude));
+    new kakao.maps.RoadviewClient().getNearestPanoId(position, APT_ROADVIEW_RADIUS, (panoId) => {
+      aptPanel.panoIds.set(apartment.id, panoId ?? null);
+      done(panoId);
+    });
+  },
+
+  // 동을 받으면(map-view.js의 loadData) 그 아파트들의 로드뷰 지점을 미리 찾아 둔다. 몇 개씩 차례로, 찾은 것은 다시 찾지 않는다
+  prefetchRoadviews(apartments) {
+    const kakaoReady = typeof kakao !== 'undefined' && kakao.maps && typeof kakao.maps.RoadviewClient === 'function';
+    if (!kakaoReady) return;
+    const todo = apartments.filter((a) => aptHasCoord(a) && !aptPanel.panoIds.has(a.id)).slice(0, APT_ROADVIEW_PREFETCH_MAX);
+    const next = () => {
+      const apartment = todo.shift();
+      if (!apartment) return;
+      try {
+        aptPanel.findPano(apartment, next);
+      } catch (error) {
+        next();
+      }
+    };
+    for (let i = 0; i < APT_ROADVIEW_PREFETCH_AT_ONCE; i += 1) next();
   },
 
   // 로드뷰가 아파트를 바라보게 한다 (2026-10-18). 카카오는 바라보는 방향을 정해 주지 않아 길 방향으로 열린다.

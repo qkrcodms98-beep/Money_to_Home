@@ -177,6 +177,30 @@
 .apt-roadview__view {
   position: absolute;
   inset: 0;
+  z-index: 0; /* 카카오 로드뷰 안의 쌓임을 이 안에 가둔다. 그래야 아래 덮개가 그 위에 온다 */
+}
+
+/* 아파트를 바꾸는 동안 덮개 (apartment.js의 coverRoadview, 2026-10-20). 덮을 때는 바로, 걷을 때는 천천히 */
+.apt-roadview::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--color-bg-sub);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.apt-roadview--switching::after {
+  opacity: 1;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apt-roadview::after {
+    transition: none;
+  }
 }
 
 /* 로드뷰가 없을 때의 기본 이미지: 가운데에 집 그림(44)과 문장, 사이 8 (C6b) */

@@ -2464,6 +2464,8 @@ async function loadData() {
   }
   renderCondition();
   renderMarkers();
+  // 동을 보고 있으면 그 동 아파트들의 로드뷰 지점을 미리 찾아 둔다 (apartment.js). 아파트를 넘길 때 기다리지 않게
+  if (mapState.region.dong && typeof aptPanel.prefetchRoadviews === 'function') aptPanel.prefetchRoadviews(mapState.data.apartments);
   // 아래 창: 목록은 받은 응답으로 다시 그리고, 열려 있는 아파트 창은 새 응답에 맞춘다.
   renderList();
   syncApartmentSheet();
