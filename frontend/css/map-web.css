@@ -78,7 +78,7 @@
     display: block;
     height: var(--map-web-bar);
     /* 파랑 머리 줄 (2026-10-20 팀장 결정). 왼쪽 rgb(42, 110, 193)에서 오른쪽 끝 rgb(120, 182, 240)까지 밝아지는 그라데이션 */
-    background: linear-gradient(90deg, rgb(42, 110, 193) 0%, rgb(101, 159, 225) 55%, rgb(120, 182, 240) 100%);
+    background-color : rgb(1, 16, 68);
   }
 
   /* 로고. 모양은 입력 화면과 같다 (common.css의 .header__home, .header__logo, .header__name, .header__to) */
@@ -499,15 +499,16 @@
      값 14 #333, 줄 위아래 7px, 구분선 #e5e5e5) */
   .picked-card {
     position: absolute;
-    bottom: 34px;
-    left: 16px;
+    top: 0; /* 지도 오른쪽 위 모서리에 딱 붙인다 (2026-10-20 팀장 결정. 예전에는 왼쪽 아래) */
+    right: 0;
     z-index: 5;
     display: block;
     box-sizing: border-box;
     width: 300px;
     padding: 16px 20px 18px;
-    border: 1px solid var(--new-sheet-line, var(--color-line));
-    border-radius: 12px;
+    border-bottom: 1px solid var(--new-sheet-line, var(--color-line));
+    border-left: 1px solid var(--new-sheet-line, var(--color-line));
+    border-radius: 0 0 0 12px; /* 모서리에 붙어 왼쪽 아래만 둥글게 */
     background: var(--color-bg);
     line-height: var(--line-height);
   }
@@ -627,7 +628,7 @@
   }
 
   .picked-card__chip--bus {
-    background: #2e9e5b;
+    background: #2b3a8c; /* 지도의 버스정류장 아이콘과 같은 남색 */
   }
 
   .picked-card__value--off {
@@ -635,22 +636,114 @@
     font-weight: var(--font-regular);
   }
 
+  /* "아파트 다시 보기": 꾸밈 없는 글자 단추 (2026-10-20 팀장 결정으로 파란 단추를 뺌. 모양은 시안을 정한 뒤 다시) */
   .picked-card__go {
     display: block;
     width: 100%;
-    height: 44px;
+    padding: 6px 0 0;
     border: 0;
-    border-radius: var(--radius-card, 12px);
-    background: var(--color-primary);
-    color: var(--color-on-primary);
+    background: none;
+    color: var(--color-primary);
     font-family: inherit;
-    font-size: var(--text-body);
+    font-size: var(--text-label);
     font-weight: var(--font-bold);
+    text-align: left;
     cursor: pointer;
   }
 
   .picked-card__go:hover {
-    filter: brightness(1.06);
+    text-decoration: underline;
+  }
+
+  /* 범례 + 시설 체크 (map.css의 .facility-tab): 지도 왼쪽 위 모서리에 붙인 상자. 접고 펼 때 왼쪽으로 미끄러진다 (2026-10-20 팀장 결정).
+     여닫는 것은 목록 · 아파트 패널과 같은 얇은 손잡이(상자 오른쪽 끝)다. 접어도 손잡이는 지도 왼쪽 끝에 남는다.
+     예전의 동그란 위치 단추와 반투명 흰 상자 · 흐림은 웹에서 쓰지 않는다 */
+  .facility-tab,
+  .facility-tab:has(.facility-tab__button[aria-expanded='true']) {
+    top: 14px;
+    bottom: auto;
+    left: 0;
+    padding: 6px 4px 6px 8px;
+    border: 1px solid var(--new-sheet-line, var(--color-line));
+    border-left: 0;
+    border-radius: 0 10px 10px 0;
+    background: var(--color-bg);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition: transform 0.25s ease;
+  }
+
+  .facility-tab--closed .map-key {
+    display: flex; /* 웹은 숨기지 않고 밀어 넣는다 */
+  }
+
+  .facility-tab--closed,
+  .facility-tab--closed:has(.facility-tab__button) {
+    transform: translateX(-100%);
+  }
+
+  .facility-tab__button,
+  .facility-tab:has(.facility-tab__button[aria-expanded='true']) .facility-tab__button {
+    position: absolute;
+    top: 10px;
+    left: 100%;
+    order: 0;
+    justify-content: center;
+    width: 16px;
+    height: 56px;
+    margin: 0 0 0 0;
+    border: 1px solid var(--new-sheet-line, var(--color-line));
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+    background: var(--color-bg);
+    color: var(--color-text-sub);
+    font-size: 16px;
+    font-weight: var(--font-bold);
+    line-height: 1;
+  }
+
+  .facility-tab__button::before {
+    content: '‹';
+  }
+
+  /* 접혀 있으면 손잡이가 남색 탭 + 흰 눈 그림이 된다 (2026-10-20 팀장 결정. 예전 글자 "표시 · 시설"을 그림으로 바꿈). 지도 왼쪽 끝에 붙는다 */
+  .facility-tab__button[aria-expanded='false'] {
+    width: 34px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: var(--new-chip-on, #043870);
+    color: #ffffff;
+  }
+
+  .facility-tab__button[aria-expanded='false']::before {
+    content: '';
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5C6.5 5 2.4 8.6 1 12c1.4 3.4 5.5 7 11 7s9.6-3.6 11-7c-1.4-3.4-5.5-7-11-7zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5C6.5 5 2.4 8.6 1 12c1.4 3.4 5.5 7 11 7s9.6-3.6 11-7c-1.4-3.4-5.5-7-11-7zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  .facility-tab__button[aria-expanded='false']:hover {
+    color: #ffffff;
+    filter: brightness(1.15);
+  }
+
+  .facility-tab__button:hover {
+    color: var(--color-text);
+  }
+
+  .facility-tab__round {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .facility-tab,
+    .facility-tab:has(.facility-tab__button[aria-expanded='true']) {
+      transition: none;
+    }
   }
 
   /* 목록의 ✕는 쓰지 않는다 (목록은 늘 열려 있다. 접기는 손잡이) */

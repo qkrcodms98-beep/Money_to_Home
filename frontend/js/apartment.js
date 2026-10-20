@@ -87,6 +87,12 @@ const APT_NEAR_KINDS = [
   { kind: 'convenience', code: 'CS2', label: '편의점', icon: 'M4 3h16l1.5 5a3 3 0 0 1-2.5 3.2V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8.8A3 3 0 0 1 2.5 8L4 3zm3 10v6h4v-4h2v4h4v-6H7zm-1.2-8L4.6 8.4a1 1 0 0 0 1 1.1h12.8a1 1 0 0 0 1-1.1L18.2 5H5.8z' },
   { kind: 'hospital', code: 'HP8', label: '병원', icon: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm4.5 4v3.5H7v3h3.5V17h3v-3.5H17v-3h-3.5V7h-3z' },
 ];
+// 근처(1km)에 지하철역이 없으면 지하철역 줄을 가장 가까운 버스정류장으로 바꿔 보인다 (2026-10-20 팀장 결정. A-06의 bus 줄)
+const APT_NEAR_BUS = {
+  kind: 'bus',
+  label: '버스정류장',
+  icon: 'M7 3h10a3 3 0 0 1 3 3v11a2 2 0 0 1-1.5 1.94v1.56a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V19h-7v1.5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1.56A2 2 0 0 1 4 17V6a3 3 0 0 1 3-3zM6.5 6.5v5h11v-5h-11zM8 14.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm8 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z',
+};
 // 학교 줄의 ⌄를 누르면 펼치는 종류별 학교
 const APT_NEAR_SCHOOLS = [
   { kind: 'elementary', label: '초등학교' },
@@ -683,13 +689,33 @@ const aptPanel = {
     box.dataset.apartmentId = String(apartment.id);
     const byKind = new Map(items.map((item) => [item.kind, item]));
     box.querySelectorAll('.apt-near__value').forEach((cell) => {
-      const item = byKind.get(cell.dataset.kind);
-      aptPanel.nearFill(cell, item ? aptPanel.nearValue(item) : APT_NEAR_NONE, cell.dataset.kind);
+      let kind = cell.dataset.kind;
+      let item = byKind.get(kind);
+      if (kind === 'subway') {
+        // 지하철역이 근처에 없고 버스정류장은 있으면 이 줄을 버스정류장으로 (이름 칸도 바꾼다). 아니면 지하철역 그대로
+        const bus = byKind.get(APT_NEAR_BUS.kind);
+        const useBus = !(item && item.place_name) && Boolean(bus && bus.place_name);
+        const base = APT_NEAR_KINDS[0];
+        aptPanel.nearLabel(cell, useBus ? APT_NEAR_BUS : base);
+        if (useBus) {
+          kind = APT_NEAR_BUS.kind;
+          item = bus;
+        }
+      }
+      aptPanel.nearFill(cell, item ? aptPanel.nearValue(item) : APT_NEAR_NONE, kind);
     });
     const [year, month, day] = (detail.facilities_base_date || '').split('-');
     box.querySelector('.apt-near__source').textContent = year
       ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준`
       : '';
+  },
+
+  // 줄의 이름 칸(그림 + 이름)을 바꾼다. 같은 것이면 그대로 둔다
+  nearLabel(cell, { label, icon }) {
+    const term = cell.previousElementSibling;
+    if (!term || term.dataset.label === label) return;
+    term.dataset.label = label;
+    term.replaceChildren(aptNearIcon(icon), document.createTextNode(label));
   },
 
   // 한 줄의 값. 화면에는 nearFill이 "전남고등학교" / "약 170m · 도보 약 3분" 두 줄로 적는다.

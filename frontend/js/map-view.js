@@ -632,13 +632,70 @@ function renderFacilities() {
       };
       if (inside(place)) want.set(place.id, { kind, place });
     });
-    // 화면 근처(area)의 버스정류장 모두. 길 건너편 정류장은 이름이 같아 정류장 번호로 구분한다
-    (stops || []).forEach((stop) => {
-      const place = { id: `bus:${stop.stop_id}`, place_name: stop.name, y: stop.latitude, x: stop.longitude };
+    // 화면 근처(area)의 버스정류장. 길 건너편 정류장(이름이 같고 가까운 두 곳)은 하나로 묶어 둘의 가운데에 띄운다 (2026-10-20 팀장 결정)
+    pairBusStops(stops || []).forEach((place) => {
       if (inside(place)) want.set(place.id, { kind: FACILITY_BUS_KIND, place });
     });
     keepOnlyFacilities(want);
     ensureFacilityPin();
+  });
+}
+
+// 길 건너편 정류장 묶기. 정류장은 보통 길 양쪽에 같은 이름으로 한 쌍이 있다. 이름이 같고 BUS_PAIR_M 안에 있는 두 곳을
+// 가장 가까운 것끼리 짝지어 하나의 자리(두 곳의 가운데)로 만든다. 짝이 없는 정류장은 그 자리 그대로.
+// 돌려주는 자리: { id, place_name, y(위도), x(경도) }. 묶은 것의 id는 두 정류장 번호를 이은 것이라 다시 그려도 같다
+const BUS_PAIR_M = 150;
+
+function pairBusStops(stops) {
+  const byName = new Map();
+  stops.forEach((stop) => {
+    if (!byName.has(stop.name)) byName.set(stop.name, []);
+    byName.get(stop.name).push(stop);
+  });
+  const places = [];
+  byName.forEach((group) => {
+    const left = [...group].sort((a, b) => (a.stop_id < b.stop_id ? -1 : 1)); // 순서를 정해 두어 늘 같은 짝이 되게
+    while (left.length > 0) {
+      const stop = left.shift();
+      let best = -1;
+      let bestM = BUS_PAIR_M;
+      left.forEach((other, i) => {
+        const m = pickedMeters(stop.latitude, stop.longitude, other.latitude, other.longitude);
+        if (m <= bestM) {
+          best = i;
+          bestM = m;
+        }
+      });
+      if (best < 0) {
+        places.push({ id: `bus:${stop.stop_id}`, place_name: stop.name, y: stop.latitude, x: stop.longitude });
+        continue;
+      }
+      const [pair] = left.splice(best, 1);
+      places.push({
+        id: `bus:${stop.stop_id}+${pair.stop_id}`,
+        place_name: stop.name,
+        y: (stop.latitude + pair.latitude) / 2,
+        x: (stop.longitude + pair.longitude) / 2,
+      });
+    }
+  });
+  return places;
+}
+
+// 정류장 하나(정보 탭의 가장 가까운 정류장)를 지도가 띄우는 자리로 바꾼다. 같은 이름의 짝과 묶였으면 그 가운데 자리,
+// 아니면 그대로. 거리(distance)는 정보 탭과 같은 숫자가 나오게 원래 값을 둔다. 정류장을 못 받으면 그대로
+function snapBusPlace(place) {
+  const dLat = (BUS_PAIR_M * 2) / 111000;
+  const dLng = dLat / Math.cos((place.y * Math.PI) / 180);
+  return busStopsIn({ south: place.y - dLat, west: place.x - dLng, north: place.y + dLat, east: place.x + dLng }).then((stops) => {
+    if (!stops) return place;
+    let best = null;
+    pairBusStops(stops).forEach((candidate) => {
+      if (candidate.place_name !== place.place_name) return;
+      const m = pickedMeters(place.y, place.x, candidate.y, candidate.x);
+      if (m <= BUS_PAIR_M && (!best || m < best.m)) best = { candidate, m };
+    });
+    return best ? { ...best.candidate, distance: place.distance } : place;
   });
 }
 
@@ -910,11 +967,23 @@ function setFacilityShown(code, shown) {
 // 창을 30%로 내리고, 다 내려오면 고른 아파트와 그 시설이 둘 다 보이게 지도를 맞춘 뒤 점선을 잇는다.
 const FACILITY_SCHOOL_KINDS = ['elementary', 'middle', 'high', 'university'];
 function showFacilityOnMap(kindName, item) {
-  const base = FACILITY_SCHOOL_KINDS.includes(kindName) ? 'school' : kindName;
-  const kind = typeof APT_NEAR_KINDS !== 'undefined' ? APT_NEAR_KINDS.find((entry) => entry.kind === base) : null;
+  const kind = facilityKindOf(kindName); // 버스정류장도 (지하철역이 근처에 없을 때 그 줄에 나온다, 2026-10-20)
   const apartment = selectedApartment();
   const place = facilityPlace(item);
   if (!mapState.map || !kind || !place || !apartment) return;
+  // 버스정류장은 지도가 길 건너편 한 쌍을 가운데 하나로 묶어 띄운다 (pairBusStops). 정보 탭의 정류장은 그 한쪽이라,
+  // 그대로 띄우면 묶은 아이콘 옆에 하나가 더 생겼다. 묶은 자리를 찾아 그 아이콘을 쓴다 (2026-10-20)
+  if (kind.code === FACILITY_BUS_KIND.code) {
+    snapBusPlace(place).then((snapped) => {
+      if (selectedApartment() === apartment) pinFacility(kind, snapped);
+    });
+    return;
+  }
+  pinFacility(kind, place);
+}
+
+// 시설 하나를 펼쳐 띄우고, 고른 아파트와 함께 보이게 창을 30%로 맞춘다
+function pinFacility(kind, place) {
   closeFacilityName(); // 앞에서 펼친 이름과 점선은 접는다. 화면 안 시설 아이콘은 그대로 둔다
   mapState.facilityPin = { kind, place };
   if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
@@ -2429,9 +2498,13 @@ function renderLackSwitch() {
 }
 
 function renderLegend() {
-  const open = store.get('map').legend_open !== false; // 처음부터 펼쳐 둔다
-  document.getElementById('legend-toggle').setAttribute('aria-expanded', String(open));
-  document.getElementById('legend-list').hidden = !open;
+  // 처음에는 펼쳐 둔다 (2026-10-20 팀장 결정: 말풍선 구분과 시설 체크 칸까지 다 보이게). 접은 사람은 기억해 둔 대로 접는다
+  const open = store.get('map').legend_open !== false;
+  const button = document.getElementById('legend-toggle');
+  button.setAttribute('aria-expanded', String(open));
+  button.setAttribute('aria-label', open ? '표시 · 시설 접기' : '표시 · 시설 펴기 (말풍선 구분과 주변 시설)');
+  // 접어도 문서에서 빼지 않고 표시만 단다. 모바일은 숨기고(map.css), 웹은 왼쪽으로 미끄러져 들어간다(map-web.css, 2026-10-20)
+  document.getElementById('facility-tab').classList.toggle('facility-tab--closed', !open);
 }
 
 // ───────── 동작 ─────────
@@ -3105,6 +3178,7 @@ async function initMap() {
   renderChips();
   renderLoginLink();
   renderLegend();
+  renderFacilityFilter(false); // 시설 체크 칸을 처음부터 채운다 (지도가 멈춘 뒤에야 채워져 구 표시 수준에서는 비어 보였다)
   sheet.init();
   bindEvents();
   kakaoReady().catch(() => {}); // 지역 목록을 받는 동안 카카오맵도 받는다. 실패는 startKakaoMap이 알린다
