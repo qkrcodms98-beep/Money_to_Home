@@ -1,7 +1,7 @@
-// 지도 화면의 웹 배치 (가로 1200px 이상). 담당: 박채은 (2026-10-20 팀장 결정: 웹 지도 시안 2 "두 패널")
+// 지도 화면의 웹 배치 (가로 1024px 이상. 2026-10-20 팀장 결정으로 1200 → 1024. 입력 화면은 1200 그대로). 담당: 박채은 (2026-10-20 팀장 결정: 웹 지도 시안 2 "두 패널")
 // 모양은 css/map-web.css. 이 파일은 웹에서만 아래 창(sheet.js)의 동작을 왼쪽 패널에 맞게 바꾼다.
 // sheet.js, map-view.js, apartment.js(안세환)는 고치지 않고, 그 객체의 함수를 웹일 때만 감싸 바꾼다.
-// 그래서 map.html에서 이 파일은 맨 마지막(map-view.js 다음)에 불러온다. 1199px 이하에서는 원래 함수 그대로 동작한다.
+// 그래서 map.html에서 이 파일은 맨 마지막(map-view.js 다음)에 불러온다. 1023px 이하에서는 원래 함수 그대로 동작한다.
 //
 // 웹에서 바뀌는 것
 //   - 단계가 없다. 창은 늘 30% 단계로 연다 (지도가 보이는 단계. 주변 시설 줄을 누르면 지도에 점선을 잇는 것도 이 단계에서 된다).
@@ -16,7 +16,7 @@
 //   data-map-web-panel = "list" | "apartment"   패널에 지금 보이는 것. 창이 닫혀 있으면 없다
 //   data-map-web-fold                           목록 패널을 접었다
 
-const MAP_WEB_QUERY = window.matchMedia('(min-width: 1200px)'); // common.css의 웹 배치와 같은 폭
+const MAP_WEB_QUERY = window.matchMedia('(min-width: 1024px)'); // css/map-web.css의 @media와 같은 폭
 const MAP_WEB_STAGE = '30';
 
 const mapWeb = {
@@ -37,7 +37,7 @@ const mapWeb = {
     roadviewBox: aptPanel.roadviewBox,
   },
 
-  wasOn: false, // 마지막으로 맞춘 배치가 웹이었는가 (창 폭이 1200px을 넘나드는 것을 알아챈다)
+  wasOn: false, // 마지막으로 맞춘 배치가 웹이었는가 (창 폭이 1024px을 넘나드는 것을 알아챈다)
   mapWidth: 0, // 지도의 폭. 바뀌었을 때만 relayout 한다 (높이가 바뀌는 것은 map-view.js의 fitMapToSheet가 맞춘다)
 
   init() {
@@ -50,7 +50,7 @@ const mapWeb = {
       if (mapWeb.isOn()) mapWeb.openList();
     });
 
-    // 창 폭이 1200px을 넘나들 때. 미디어 쿼리의 change만으로는 놓치는 브라우저가 있어 resize에서도 확인한다.
+    // 창 폭이 1024px을 넘나들 때. 미디어 쿼리의 change만으로는 놓치는 브라우저가 있어 resize에서도 확인한다.
     // 앞의 상태(mapWeb.wasOn)와 다를 때만 바꾼다
     mapWeb.wasOn = mapWeb.isOn();
     const onModeChange = () => {

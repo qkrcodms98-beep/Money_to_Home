@@ -1,4 +1,4 @@
-/* 지도 화면의 웹 배치 (가로 1200px 이상). 담당: 박채은 (2026-10-20 팀장 결정: 웹 지도 시안 2 "두 패널")
+/* 지도 화면의 웹 배치 (가로 1024px 이상. 2026-10-20 팀장 결정으로 1200 → 1024, 입력 화면은 1200 그대로). 담당: 박채은 (2026-10-20 팀장 결정: 웹 지도 시안 2 "두 패널")
    map.html에서 다른 CSS 뒤(new-style.css 다음)에 읽는다. 1199px 이하의 모양은 바꾸지 않는다.
 
    배치 (화면 설계서 "웹에서는 아래 창이 왼쪽 패널이 되고, 왼쪽부터 목록 패널, 아파트 패널, 지도의 순서다")
@@ -20,16 +20,17 @@
   display: none;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1024px) {
   .map-body {
     --sheet-duration: 0s; /* 패널은 움직이지 않고 바로 바뀐다. sheet.js도 이 값을 읽는다 */
     --map-web-bar: 64px; /* 머리 줄 높이 */
-    /* 패널 폭은 창 폭에 비례한다 (2026-10-20). 1440px에서 400 · 420, 1200px에서 약 333 · 350. 넓은 화면에서도 이보다 커지지 않는다 */
-    --map-web-list: clamp(320px, 27.8vw, 400px); /* 목록 패널 폭 */
-    --map-web-apt: 0px; /* 아파트 패널 폭. 아파트를 열면 clamp(340px, 29.2vw, 420px) */
+    /* 패널 폭은 창 폭에 비례한다 (2026-10-20). 1440px에서 400 · 420, 1200px에서 약 334 · 350, 1024px에서 300 · 320 (지도 약 400).
+       넓은 화면에서도 이보다 커지지 않는다 */
+    --map-web-list: clamp(300px, 27.8vw, 400px); /* 목록 패널 폭 */
+    --map-web-apt: 0px; /* 아파트 패널 폭. 아파트를 열면 clamp(320px, 29.2vw, 420px) */
     --map-web-panel: calc(var(--map-web-list) + var(--map-web-apt)); /* 왼쪽 패널 전체 폭 = 지도의 왼쪽 끝 */
     --map-web-search-left: 200px; /* 검색 줄의 왼쪽 (로고 오른쪽) */
-    --map-web-search-width: 480px;
+    --map-web-search-width: clamp(320px, 33vw, 480px); /* 좁은 웹에서는 줄어든다 (1024px에서 약 340) */
     --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.22); /* 가운데 창 */
 
     display: block;
@@ -42,7 +43,7 @@
   }
 
   html[data-map-web-panel="apartment"] .map-body {
-    --map-web-apt: clamp(340px, 29.2vw, 420px);
+    --map-web-apt: clamp(320px, 29.2vw, 420px);
   }
 
   html[data-map-web-fold] .map-body {
@@ -86,8 +87,37 @@
     height: var(--map-web-bar);
   }
 
+  /* 로고 모양은 입력 화면(common.css의 1200px 이상 .header__home)과 같다. 1024 ~ 1199px에서도 같게 여기 다시 적는다 */
   .map-web-logo .header__home {
+    position: relative;
     top: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch-size);
+    color: var(--color-text);
+    font-size: var(--text-amount);
+    font-weight: var(--font-bold);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+  }
+
+  .map-web-logo .header__logo {
+    display: block;
+    width: 28px;
+    height: 28px;
+  }
+
+  .map-web-logo .header__name {
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .map-web-logo .header__to {
+    margin: 0 2px;
+    color: var(--color-brand-gold);
+    font-size: var(--text-button);
+    vertical-align: baseline;
   }
 
   /* 검색 줄과 이름 검색 결과: 머리 줄 안 (지도 영역 밖이라 화면 기준으로 둔다) */
