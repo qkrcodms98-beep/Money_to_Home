@@ -14,13 +14,19 @@
   --shadow-control: 0 2px 8px rgba(0, 0, 0, 0.16); /* 지도 버튼, 범례 */
   --shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.3); /* 목록 보기 */
   --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.22); /* 말풍선 B */
-  --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라 */
+  --color-dong: #7d5fd3; /* 넓게 볼 때의 동 표시. 연보라. 구를 알면 아래 구 색을 쓴다 */
+  /* 구마다 색 (2026-10-20 팀장 결정). 구 · 동 표시와 고른 구 · 동의 경계(js/boundary.js)가 쓴다 */
+  --gu-gwangsan: #5b8fc9; /* 광산구 */
+  --gu-buk: #e98243; /* 북구 */
+  --gu-seo: #369ba5; /* 서구 */
+  --gu-dong: #e56670; /* 동구 */
+  --gu-nam: #ad8968; /* 남구 */
 
   /* 광주 5개 구 경계 (P-05 ⑪, FR-MAP-28). js/boundary.js가 읽어 카카오맵의 선과 면에 쓴다. 굵기와 불투명도는 boundary.js에 있다.
      경계는 지도를 이해시키는 보조 선이라 말풍선보다 눈에 띄지 않게 회색으로 두고, 고른 지역만 동 표시와 같은 연보라로 칠한다. */
   --boundary-gu: var(--color-text-sub); /* 구 경계 */
   --boundary-dong: var(--color-line-strong); /* 행정동 경계. 연한 회색, 가까이 볼 때만 */
-  --boundary-picked: var(--color-dong); /* 고른 구·동의 선과 반투명 칠 */
+  --boundary-picked: var(--color-dong); /* 고른 구·동의 선과 반투명 칠. 구를 알면 그 구의 색 (boundary.js) */
   --boundary-mask: var(--color-dim); /* 경계 밖을 덮는 반투명 면 */
 
   /* 말풍선의 꼬리 끝(아파트의 자리)이 말풍선 왼쪽 위에서 떨어진 거리.
@@ -252,11 +258,12 @@
 
 /* 구마다 색 (2026-10-20 팀장 결정). 구 표시와 동 표시 모두 그 구의 색이다.
    바탕 · 테두리는 위의 --color-dong을 쓰므로 색만 바꾼다. 글씨는 흰색 그대로 (map-view.js가 data-gu를 단다) */
-.dong-marker[data-gu="광산구"] { --color-dong: #5b8fc9; }
-.dong-marker[data-gu="북구"] { --color-dong: #e98243; }
-.dong-marker[data-gu="서구"] { --color-dong: #369ba5; }
-.dong-marker[data-gu="동구"] { --color-dong: #e56670; }
-.dong-marker[data-gu="남구"] { --color-dong: #ad8968; }
+/* 고른 동의 이름표(.dong-label)도 같은 색 */
+:is(.dong-marker, .dong-label)[data-gu="광산구"] { --color-dong: var(--gu-gwangsan); }
+:is(.dong-marker, .dong-label)[data-gu="북구"] { --color-dong: var(--gu-buk); }
+:is(.dong-marker, .dong-label)[data-gu="서구"] { --color-dong: var(--gu-seo); }
+:is(.dong-marker, .dong-label)[data-gu="동구"] { --color-dong: var(--gu-dong); }
+:is(.dong-marker, .dong-label)[data-gu="남구"] { --color-dong: var(--gu-nam); }
 
 /* 구 표시는 동 표시(78%)보다 진하게 (2026-10-20 팀장 결정). 목표할 곳이 없는 구(.dong-marker--empty)는 그대로 옅게 */
 .dong-marker--gu:not(.dong-marker--empty) {
