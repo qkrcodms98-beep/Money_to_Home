@@ -410,6 +410,15 @@
   mask-image: linear-gradient(to right, transparent 0, #000 var(--area-fade-left), #000 calc(100% - var(--area-fade-right)), transparent);
 }
 
+/* 마우스로 잡아 끄는 동안 (apartment.js의 watchAreaList). 글자가 선택되지 않고 손 모양 */
+.apt__area-list--dragging {
+  cursor: grabbing;
+}
+
+.apt__area-list--dragging .apt__area {
+  pointer-events: none;
+}
+
 .apt__area-list--more-left {
   --area-fade-left: 28px;
 }

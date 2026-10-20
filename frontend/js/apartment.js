@@ -286,16 +286,21 @@ const aptPanel = {
     // 면적 칩. "111㎡ (전용 84㎡)", 공급면적을 모르면 "전용 49㎡"
     const areaList = document.getElementById('apt-areas');
     const sameApartment = areaList.dataset.apartment === String(apartment.id);
-    const keepScroll = sameApartment ? areaList.scrollLeft : 0; // 다시 그려도 보던 자리에서 미끄러지게
+    // 같은 아파트에서 면적만 바꿨으면 칩을 다시 만들지 않고 고른 표시만 옮긴다. 다시 만들면 미끄러지던 칸이 끊겼다
+    const sameChips = sameApartment && areaList.dataset.unit === unit && areaList.children.length === apartment.areas.length;
     areaList.dataset.apartment = String(apartment.id);
+    areaList.dataset.unit = unit;
     aptPanel.watchAreaList(areaList);
-    areaList.replaceChildren(...apartment.areas.map((item, i) => {
+    if (sameChips) {
+      [...areaList.children].forEach((chip, i) => chip.setAttribute('aria-pressed', String(i === areaIndex)));
+    } else areaList.replaceChildren(...apartment.areas.map((item, i) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'apt__area';
       chip.textContent = format.area(item.supply_area, item.exclusive_area, unit);
       chip.setAttribute('aria-pressed', String(i === areaIndex));
       chip.addEventListener('click', () => {
+        if (areaList.dataset.dragged) return; // 잡아 끈 뒤 놓은 것은 누름이 아니다
         aptPanel.areaIndex = i;
         aptPanel.render();
       });
@@ -303,10 +308,10 @@ const aptPanel = {
     }));
 
     // 고른 면적이 칸 가운데에 오게 옆으로 미끄러진다 (2026-10-20 팀장 결정). 그래서 누르면 그 옆 면적도 보인다.
-    // 같은 아파트에서 면적을 바꿨으면 부드럽게, 새 아파트를 열었으면 바로 둔다
+    // 같은 아파트에서 면적을 바꿨으면 미끄러지게, 새 아파트를 열었으면 맨 앞에서 바로 둔다
     // 창을 처음 열 때는 아직 숨겨져 있어 폭을 잴 수 없으므로 창이 보인 뒤(다음 차례)에 맞춘다
-    areaList.scrollLeft = keepScroll;
-    setTimeout(() => aptPanel.centerArea(areaList, areaIndex, sameApartment), 0);
+    if (!sameChips) areaList.scrollLeft = 0;
+    setTimeout(() => aptPanel.centerArea(areaList, areaIndex, sameChips), 0);
 
     document.querySelectorAll('.apt__unit-option').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.unit === unit));
@@ -584,15 +589,78 @@ const aptPanel = {
   //   출구를 못 찾은 역은 exit 없이 { name: "상무역 광주1호선", meters, item }
   // item(A-06의 시설 하나)은 줄을 누르면 지도에서 그 시설을 찾아 보여 주려고 같이 둔다
   // 면적 칸에 한 번만 단다: 마우스 휠(위아래)로도 옆으로 넘기고, 넘길 것이 남은 쪽 끝을 흐리게 한다 (sheet.css)
+  // 네이버 지도처럼 끊김 없이 (2026-10-20): 움직임은 브라우저의 smooth 대신 직접 그린다 (slideArea, 감속 곡선).
+  //   휠: 굴린 만큼 목표를 더해 그쪽으로 미끄러진다 (빠르게 여러 번 굴려도 이어서 간다)
+  //   마우스로 잡아 끌기: 손을 따라 움직이고, 놓으면 그 빠르기로 조금 더 미끄러지다 멈춘다 (터치는 브라우저 기본 그대로)
   watchAreaList(list) {
     if (list.dataset.watched) return;
     list.dataset.watched = 'true';
+    const max = () => Math.max(0, list.scrollWidth - list.clientWidth);
     list.addEventListener('wheel', (event) => {
-      if (list.scrollWidth <= list.clientWidth || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      if (max() === 0 || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       event.preventDefault(); // 창이 위아래로 스크롤되지 않게
-      list.scrollLeft += event.deltaY;
+      const from = list.slide ? list.slide.to : list.scrollLeft;
+      aptPanel.slideArea(list, from + event.deltaY, 260);
     }, { passive: false });
     list.addEventListener('scroll', () => aptPanel.markAreaEdges(list), { passive: true });
+
+    let drag = null;
+    list.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0 || max() === 0) return;
+      aptPanel.stopArea(list);
+      drag = { x: event.clientX, left: list.scrollLeft, moved: false, samples: [[event.timeStamp, event.clientX]] };
+    });
+    window.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      const dx = event.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) < 4) return; // 조금 흔들린 것은 누름으로 둔다
+      if (!drag.moved) list.classList.add('apt__area-list--dragging');
+      drag.moved = true;
+      list.scrollLeft = drag.left - dx;
+      drag.samples.push([event.timeStamp, event.clientX]);
+      if (drag.samples.length > 5) drag.samples.shift();
+    });
+    window.addEventListener('pointerup', () => {
+      if (!drag) return;
+      const { moved, samples } = drag;
+      drag = null;
+      list.classList.remove('apt__area-list--dragging');
+      if (!moved) return;
+      list.dataset.dragged = 'true'; // 바로 뒤에 오는 click을 막는다
+      setTimeout(() => delete list.dataset.dragged, 0);
+      // 놓기 직전의 빠르기(px/ms)로 관성. 0.3초 동안 그 빠르기의 약 1/3만큼 더 간다
+      const [t0, x0] = samples[0];
+      const [t1, x1] = samples[samples.length - 1];
+      const speed = t1 > t0 ? (x1 - x0) / (t1 - t0) : 0;
+      if (Math.abs(speed) > 0.1) aptPanel.slideArea(list, list.scrollLeft - speed * 120, 420);
+    });
+  },
+
+  // 면적 칸을 left까지 ms 동안 미끄러뜨린다. 처음 빠르고 끝에 천천히 멈춘다 (easeOutCubic).
+  // 움직이는 중에 다시 부르면 지금 자리에서 새 목표로 이어 간다
+  slideArea(list, left, ms = 380) {
+    const to = Math.max(0, Math.min(left, list.scrollWidth - list.clientWidth));
+    aptPanel.stopArea(list);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      list.scrollLeft = to;
+      return;
+    }
+    const from = list.scrollLeft;
+    const start = performance.now();
+    const slide = { to, frame: 0 };
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      list.scrollLeft = from + (to - from) * (1 - (1 - t) ** 3);
+      if (t < 1) slide.frame = requestAnimationFrame(step);
+      else list.slide = null;
+    };
+    list.slide = slide;
+    slide.frame = requestAnimationFrame(step);
+  },
+
+  stopArea(list) {
+    if (list.slide) cancelAnimationFrame(list.slide.frame);
+    list.slide = null;
   },
 
   // index번째 면적이 칸 가운데에 오게 옆으로 민다. 끝 쪽 면적이면 끝까지만
@@ -602,7 +670,11 @@ const aptPanel = {
       const chip = picked.getBoundingClientRect();
       const box = list.getBoundingClientRect();
       const left = list.scrollLeft + (chip.left - box.left) - (list.clientWidth - chip.width) / 2;
-      list.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
+      if (smooth) aptPanel.slideArea(list, left);
+      else {
+        aptPanel.stopArea(list);
+        list.scrollLeft = Math.max(0, left);
+      }
     }
     aptPanel.markAreaEdges(list);
   },
