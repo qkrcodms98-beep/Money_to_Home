@@ -91,6 +91,8 @@ const mapBoundary = (() => {
   // 고른 구 · 동의 선과 칠은 그 구의 색 (map.css의 --gu-*, 2026-10-20 팀장 결정). 모르는 구면 --boundary-picked
   const GU_COLOR = { 광산구: '--gu-gwangsan', 북구: '--gu-buk', 서구: '--gu-seo', 동구: '--gu-dong', 남구: '--gu-nam' };
   const pickedColor = (gu) => (GU_COLOR[gu] && color(GU_COLOR[gu])) || color('--boundary-picked');
+  // 경계선은 그 구의 선 색(--gu-*-line)이 있으면 그것을 쓴다. 지도 바탕과 겹치는 색(남구)만 따로 진하게 둔다
+  const pickedLineColor = (gu) => (GU_COLOR[gu] && color(`${GU_COLOR[gu]}-line`)) || pickedColor(gu);
 
   // 테두리만 있는 선. 면이 없어 그 안을 눌러도 지도를 누른 것이 된다
   function lines(geometry, style, colorName, zIndex) {
@@ -197,7 +199,8 @@ const mapBoundary = (() => {
     setPickedFills(shape, style.fillOpacity);
     setPickedLines(shape);
     shapes.pickedFills.forEach((fill) => fill.setOptions({ fillColor: tint }));
-    shapes.pickedLines.forEach((line) => line.setOptions({ strokeWeight: style.strokeWeight, strokeOpacity: style.strokeOpacity, strokeColor: tint }));
+    const lineTint = pickedLineColor(region && region.gu);
+    shapes.pickedLines.forEach((line) => line.setOptions({ strokeWeight: style.strokeWeight, strokeOpacity: style.strokeOpacity, strokeColor: lineTint }));
     applyLevel(); // 동을 고르거나 풀면 행정동 선을 감추거나 다시 보인다
   }
 
