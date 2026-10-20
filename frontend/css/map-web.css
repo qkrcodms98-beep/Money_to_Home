@@ -302,7 +302,7 @@
     right: 12px;
     z-index: 2;
     gap: 0;
-    padding: 0 4px;
+    padding: 2px 4px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.5);
   }
@@ -314,6 +314,22 @@
 
   #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .share-icon {
     stroke: #fff;
+  }
+
+  /* 마우스를 올리면 그 단추에 옅은 흰 원 */
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .share-action,
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .apt__nav-button--close {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+  }
+
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .share-action:hover,
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .share-action:focus-visible,
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .apt__nav-button--close:hover,
+  #apartment-panel:has(> .apt-roadview:not([hidden])) .apt__nav .apt__nav-button--close:focus-visible {
+    background: rgba(255, 255, 255, 0.22);
   }
 
   html[data-map-web-fold] #apartment-panel {
