@@ -84,6 +84,7 @@ const APT_NEAR_SCHOOLS = [
   { kind: 'high', label: '고등학교' },
   { kind: 'university', label: '대학교' },
 ];
+const APT_AREA_SLIDE_MS = 380; // 면적 칸이 고른 면적으로 미끄러지는 시간 (slideArea)
 const APT_NEAR_MORE = '학교 종류별로 보기';
 const APT_NEAR_LESS = '학교 종류별 접기';
 const APT_NEAR_NONE = '근처에 없음'; // 반경 안에 없을 때
@@ -154,6 +155,8 @@ const aptPanel = {
   listPlace: null,
   handlers: {},
   details: new Map(), // 아파트 번호 → A-06 응답. 받은 것만 둔다
+  areaOnly: false, // 지금 다시 그리는 것이 면적 칩을 눌러서인가 (render 동안만 true)
+  similarTimer: null, // 면적 칸이 다 미끄러진 뒤 비슷한 아파트를 받는 타이머
   loading: new Set(), // 받는 중인 아파트 번호
   failed: new Set(), // 받지 못한 아파트 번호 ("다시 시도"를 누르면 지운다)
   roadview: null, // 카카오 로드뷰 (처음 보일 때 한 번 만든다)
@@ -302,7 +305,13 @@ const aptPanel = {
       chip.addEventListener('click', () => {
         if (areaList.dataset.dragged) return; // 잡아 끈 뒤 놓은 것은 누름이 아니다
         aptPanel.areaIndex = i;
-        aptPanel.render();
+        // 면적만 바꿨다: 같은 아파트라 로드뷰는 그대로 두고, 비슷한 아파트는 칸이 다 미끄러진 뒤에 받는다 (2026-10-20, 덜 끊기게)
+        aptPanel.areaOnly = true;
+        try {
+          aptPanel.render();
+        } finally {
+          aptPanel.areaOnly = false;
+        }
       });
       return chip;
     }));
@@ -326,7 +335,7 @@ const aptPanel = {
 
     aptPanel.renderInfo();
     aptPanel.renderScenario();
-    aptPanel.renderRoadview();
+    if (!aptPanel.areaOnly) aptPanel.renderRoadview(); // 면적만 바꿨으면 로드뷰는 바뀔 것이 없다 (다시 맞추는 데 약 12ms)
   },
 
   // ───────── 좌표가 없는 아파트 (P-06 ⑱) ─────────
@@ -484,6 +493,13 @@ const aptPanel = {
 
   // 아파트 정보 탭이 보일 때 부른다. 아파트, 면적, 조건이 지난번과 같으면 다시 부르지 않는다
   renderSimilar() {
+    // 면적만 바꿨으면 칸이 미끄러지는 동안(약 0.4초)은 기다렸다가 받는다. 도중에 카드를 다시 그리면 움직임이 걸렸다.
+    // 기다린 뒤에는 그때의 아파트 · 면적으로 다시 본다 (그사이 바뀌었어도 맞는 것을 받는다)
+    clearTimeout(aptPanel.similarTimer);
+    if (aptPanel.areaOnly) {
+      aptPanel.similarTimer = setTimeout(() => aptPanel.renderSimilar(), APT_AREA_SLIDE_MS + 40);
+      return;
+    }
     const { apartment } = aptPanel;
     const box = aptPanel.similarBox();
     if (!box || !apartment || !aptPanel.infoVisible()) return;
@@ -638,7 +654,7 @@ const aptPanel = {
 
   // 면적 칸을 left까지 ms 동안 미끄러뜨린다. 처음 빠르고 끝에 천천히 멈춘다 (easeOutCubic).
   // 움직이는 중에 다시 부르면 지금 자리에서 새 목표로 이어 간다
-  slideArea(list, left, ms = 380) {
+  slideArea(list, left, ms = APT_AREA_SLIDE_MS) {
     const to = Math.max(0, Math.min(left, list.scrollWidth - list.clientWidth));
     aptPanel.stopArea(list);
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
