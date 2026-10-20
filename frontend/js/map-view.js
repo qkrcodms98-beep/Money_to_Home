@@ -682,6 +682,23 @@ function pairBusStops(stops) {
   return places;
 }
 
+// 정류장 하나(정보 탭의 가장 가까운 정류장)를 지도가 띄우는 자리로 바꾼다. 같은 이름의 짝과 묶였으면 그 가운데 자리,
+// 아니면 그대로. 거리(distance)는 정보 탭과 같은 숫자가 나오게 원래 값을 둔다. 정류장을 못 받으면 그대로
+function snapBusPlace(place) {
+  const dLat = (BUS_PAIR_M * 2) / 111000;
+  const dLng = dLat / Math.cos((place.y * Math.PI) / 180);
+  return busStopsIn({ south: place.y - dLat, west: place.x - dLng, north: place.y + dLat, east: place.x + dLng }).then((stops) => {
+    if (!stops) return place;
+    let best = null;
+    pairBusStops(stops).forEach((candidate) => {
+      if (candidate.place_name !== place.place_name) return;
+      const m = pickedMeters(place.y, place.x, candidate.y, candidate.x);
+      if (m <= BUS_PAIR_M && (!best || m < best.m)) best = { candidate, m };
+    });
+    return best ? { ...best.candidate, distance: place.distance } : place;
+  });
+}
+
 // 영역을 덮는 칸들의 버스정류장을 모아 준다 (A-28). 한 칸이라도 실패하면 null
 function busStopsIn(area) {
   const tiles = [];
@@ -954,6 +971,19 @@ function showFacilityOnMap(kindName, item) {
   const apartment = selectedApartment();
   const place = facilityPlace(item);
   if (!mapState.map || !kind || !place || !apartment) return;
+  // 버스정류장은 지도가 길 건너편 한 쌍을 가운데 하나로 묶어 띄운다 (pairBusStops). 정보 탭의 정류장은 그 한쪽이라,
+  // 그대로 띄우면 묶은 아이콘 옆에 하나가 더 생겼다. 묶은 자리를 찾아 그 아이콘을 쓴다 (2026-10-20)
+  if (kind.code === FACILITY_BUS_KIND.code) {
+    snapBusPlace(place).then((snapped) => {
+      if (selectedApartment() === apartment) pinFacility(kind, snapped);
+    });
+    return;
+  }
+  pinFacility(kind, place);
+}
+
+// 시설 하나를 펼쳐 띄우고, 고른 아파트와 함께 보이게 창을 30%로 맞춘다
+function pinFacility(kind, place) {
   closeFacilityName(); // 앞에서 펼친 이름과 점선은 접는다. 화면 안 시설 아이콘은 그대로 둔다
   mapState.facilityPin = { kind, place };
   if (sheet.stage === '30' && sheet.phase === 'open' && !sheet.moving) {
