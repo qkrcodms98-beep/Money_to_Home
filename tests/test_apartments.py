@@ -308,6 +308,32 @@ def test_sort_with_filters_uses_remaining_first_area(client, chipyeong):
     assert _sorted_ids(client, "price_asc", filters={"price_min": 310_000_000}) == [15, 11, 13, 14]
 
 
+def test_sort_newest_puts_unknown_year_last(client, chipyeong):
+    # 라 2020, 다 2015, 가 2005, 나 1995, 마 모름
+    assert _sorted_ids(client, "newest") == [14, 13, 11, 12, 15]
+
+
+def test_sort_area_desc_by_first_area(client, chipyeong):
+    # 첫째 면적: 가 · 다 · 라 · 마 84㎡, 나 59㎡. 같으면 번호 순
+    assert _sorted_ids(client, "area_desc") == [11, 13, 14, 15, 12]
+
+
+def test_sort_households_desc_puts_unknown_last(client, db, chipyeong):
+    db.get(models.Apartment, 13).households = 300
+    db.get(models.Apartment, 11).households = 120
+    db.commit()
+    assert _sorted_ids(client, "households_desc") == [13, 11, 12, 14, 15]
+
+
+def test_where_all_finds_every_gu(client, chipyeong):
+    ids = {a["id"] for a in _search(client, where={"all": True}).json()["apartments"]}
+    assert ids == {11, 12, 13, 14, 15, 16}
+
+
+def test_where_all_with_gu_is_rejected(client, chipyeong):
+    assert _search(client, where={"all": True, "gu": "서구"}).status_code == 422
+
+
 def test_unknown_sort_is_rejected(client, chipyeong):
     res = _search(client, sort="name")
     assert res.status_code == 422

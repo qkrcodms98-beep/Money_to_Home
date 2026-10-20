@@ -151,6 +151,10 @@ const mapState = {
   tappedAt: 0, // 지도 위 표시를 마지막으로 누른 때 (ms)
   loadSeq: 0, // 아파트를 받는 요청의 번호. 늦게 온 앞의 응답을 버린다
   loadFailed: false, // 마지막으로 아파트를 받다가 실패했는가. 목록 자리에 오류가 그려져 있다
+  city: null, // 광주 전체 목록의 A-05 응답 { key, data } (renderCityList)
+  citySeq: 0, // 광주 전체를 받는 요청의 번호
+  listCity: false, // 목록에 지금 광주 전체가 그려져 있는가
+  idleTimer: null, // 확대 · 끌기 뒤 idle을 기다리는 타이머 (watchIdle)
   focus: null, // 구·동을 골라 그 지역에 맞춘 상태 { gu, dong, kind }. kind: 'dong', 'gu', 'drill'(구 표시 누름). 위 FIT_ 설명
   focusLabel: null, // 고른 동의 이름과 아파트 수 (kakao.maps.CustomOverlay). 한 번 만들어 다시 쓴다
   facilities: [], // 지도 위 주변 시설 아이콘 (kakao.maps.CustomOverlay). 축척 100m 이하에서 화면 안 아파트들의 시설 + 아파트 창에서 띄운 시설
@@ -215,11 +219,13 @@ function createMap(center) {
   const map = new kakao.maps.Map(container, { center: toLatLng(center), level: DEFAULT_LEVEL });
   map.setMinLevel(MIN_LEVEL);
   map.setMaxLevel(MAX_LEVEL);
-  kakao.maps.event.addListener(map, 'zoom_changed', () => {
+  guardWheel(container);
+  kakao.maps.event.addListener(map, 'zoom_changed', safely(() => {
     renderScale();
     onZoomChanged();
     drawFacilityLink(); // 확대 수준이 바뀌면 점선의 길이(px)가 바뀐다
-  });
+    watchIdle(map);
+  }));
   // 손으로 끌어 옮기면 보이는 영역의 아파트로 바꾼다 (FR-MAP-22). 코드가 옮길 때는 이 사건이 나지 않는다.
   kakao.maps.event.addListener(map, 'dragstart', adoptPreload); // 끌기 시작하면 미리 받아 둔 주변을 바로 그린다
   // 창을 닫은 뒤 남겨 둔 말풍선(keepOnClose)은 지도를 끌면 푼다
@@ -227,20 +233,73 @@ function createMap(center) {
     if (sheet.phase === 'closed' && mapState.selectedId !== null) selectMarker(null);
   });
   kakao.maps.event.addListener(map, 'click', onMapClick);
-  kakao.maps.event.addListener(map, 'dragend', () => scheduleBoundsLoad());
-  kakao.maps.event.addListener(map, 'idle', () => {
-    renderScale();
-    hideKakaoScale();
-    // 확대 수준이 바뀌면 말풍선끼리 겹치는 정도가 달라진다. 움직임이 끝난 뒤에 다시 묶는다.
-    if (mapState.mode === 'apartment' && mapState.level !== map.getLevel()) renderMarkers();
-    renderFacilities();
-    keepFacilityNameInside(); // 지도가 움직였으면 펼친 이름표가 화면 밖으로 나가지 않게 다시 맞춘다
-  });
+  kakao.maps.event.addListener(map, 'dragend', safely(() => {
+    scheduleBoundsLoad();
+    watchIdle(map);
+  }));
+  kakao.maps.event.addListener(map, 'idle', safely(() => {
+    clearTimeout(mapState.idleTimer);
+    onMapIdle(map);
+  }));
   hideKakaoScale();
   // 경계 (js/boundary.js). 행정동 선은 동 표시가 나오기 전(말풍선 수준)에서만 그린다
   // 경계가 오면 구 표시를 경계 안으로 다시 벌린다 (먼저 그려졌으면 경계 확인 없이 벌려져 있다)
   mapBoundary.attach(map, { dongLevel: DONG_MARKER_LEVEL }).then(() => respreadGuMarkers());
   return map;
+}
+
+// 지도가 멈춘 뒤 (idle). 확대 수준이 바뀌면 말풍선끼리 겹치는 정도가 달라진다. 움직임이 끝난 뒤에 다시 묶는다.
+function onMapIdle(map) {
+  renderScale();
+  hideKakaoScale();
+  // 빠르게 확대 · 축소하면 앞 수준에서 받던 자료가 늦게 와서 표시가 지금 수준과 어긋난 채 남았다 (9인데 동 표시).
+  // 멈춘 뒤 한 번 더 맞춘다
+  if (mapState.data && markerMode() !== mapState.mode) onZoomChanged();
+  if (mapState.mode === 'apartment' && mapState.level !== map.getLevel()) renderMarkers();
+  renderFacilities();
+  keepFacilityNameInside(); // 지도가 움직였으면 펼친 이름표가 화면 밖으로 나가지 않게 다시 맞춘다
+}
+
+// ───────── 무리한 확대 · 축소 막기 (2026-10-20) ─────────
+// 휠을 세게 굴리면 카카오맵이 확대 애니메이션을 끝내지 못하고, 서로 다른 수준의 지도 조각과 경계가 겹친 채 멈췄다.
+// 1. 휠은 WHEEL_GAP_MS에 한 번만 카카오맵에 넘긴다 (그 사이의 휠은 버린다).
+// 2. 화면을 그리는 코드가 오류를 내도 카카오맵의 사건 처리가 끊기지 않게 잡는다 (safely).
+// 3. 확대 · 끌기 뒤 IDLE_WAIT_MS 안에 idle이 오지 않으면 지도를 다시 그리게 하고, idle에서 할 일을 대신 한다.
+const WHEEL_GAP_MS = 120;
+const IDLE_WAIT_MS = 1200;
+
+function guardWheel(container) {
+  let last = 0;
+  // 지도 상자의 부모에서 먼저 잡는다 (capture). 카카오맵은 지도 상자와 그 안에서 휠을 받는다
+  container.parentElement.addEventListener('wheel', (event) => {
+    if (!container.contains(event.target)) return;
+    const now = Date.now();
+    if (now - last < WHEEL_GAP_MS) {
+      event.preventDefault(); // 화면이 대신 스크롤되지 않게
+      event.stopPropagation(); // 카카오맵까지 가지 않는다
+      return;
+    }
+    last = now;
+  }, { capture: true, passive: false });
+}
+
+function safely(handler) {
+  return (...args) => {
+    try {
+      handler(...args);
+    } catch (error) {
+      console.error('지도 사건 처리 중 오류', error);
+    }
+  };
+}
+
+function watchIdle(map) {
+  clearTimeout(mapState.idleTimer);
+  mapState.idleTimer = setTimeout(safely(() => {
+    map.relayout(); // 멈춘 조각을 지금 수준으로 다시 그린다
+    map.setCenter(map.getCenter());
+    onMapIdle(map);
+  }), IDLE_WAIT_MS);
 }
 
 // 지도를 누르면 지도 위의 창을 닫는다. 말풍선을 누른 직후의 click은 말풍선의 것이라 넘긴다 (onTap)
@@ -1089,6 +1148,7 @@ function renderMarkers() {
   mapState.mode = markerMode();
   mapState.level = map.getLevel();
   renderRegionName();
+  if ((mapState.mode === 'gu') !== Boolean(mapState.listCity)) renderList(); // 구 표시 수준을 드나들면 목록을 광주 전체 ↔ 지역으로
   if (mapState.mode === 'gu') {
     renderAreaMarkers('gu');
     return;
@@ -1353,7 +1413,7 @@ function renderAreaMarkers(level) {
   if (!Array.isArray(groups)) return;
   const gu = level === 'gu';
   const shown = groups.filter(hasCoord);
-  const places = gu ? spreadGuMarkers(shown) : null; // 구 표시는 서로 겹치지 않게 벌린다
+  const places = gu ? spreadGuMarkers(shown) : null; // 구 표시는 고정 자리 (GU_MARKER_PLACES)
   mapState.markers = shown.map((group, i) => {
     const overlay = new kakao.maps.CustomOverlay({
       position: places ? places[i] : toLatLng(group),
@@ -1374,112 +1434,29 @@ function renderAreaMarkers(level) {
   });
 }
 
-// 구 표시를 서로 벌린다 (2026-10-18). 아파트 좌표 평균에 두면 서구·남구·동구처럼 가운데가 몰린 구는 넓게 볼 때 원이 겹친다.
-// 화면에서 원끼리 GU_MARKER_GAP만큼 떨어지게 조금씩 밀어내되, 원 둘레까지 그 구의 경계 안에 있는 자리로만 옮긴다
-// (다른 구를 침범하지 않게). 경계 자료가 아직 없으면 경계 확인 없이 벌린다. 돌려주는 것은 표시마다의 LatLng
-const GU_MARKER_RADIUS = 35; // map.css의 .dong-marker--gu (70 × 70)
-const GU_MARKER_FAR_RADIUS = 28; // 가장 넓게 볼 때(GU_MARKER_FAR_LEVEL 이상)는 56 × 56 (new-style.css의 .map--far)
-const GU_MARKER_FAR_LEVEL = 9;
-const GU_MARKER_GAP = 16;
-// 구 표시 자리 보정 (가장 넓게 보는 수준의 화면 px, 오른쪽·아래가 +). 남구는 서구 경계선에 걸쳐 보여 오른쪽 아래로 (2026-10-18)
-const GU_MARKER_NUDGE = { 남구: { x: 8, y: 14 } }; // 오른쪽 8, 아래 14: 원 둘레 8곳 중 7곳이 남구 안, 동구와 76px
-
-// 구 표시의 자리는 한 번만 정하고(구 → LatLng) 구 표시 수준(7 ~ 9) 모두에서 그대로 쓴다 (2026-10-18).
-// 가장 넓게 보는 수준(9)에서 겹치지 않게 정하므로 더 가까이 보면(8, 7) 원 사이가 2배, 4배로 저절로 넓어진다.
-// 예전에는 그릴 때마다 그때 받은 구 표시 좌표(조건·지역에 따라 달라지는 아파트 평균)에서 다시 벌려,
-// 다른 구나 동을 누르면 구 표시가 움직였다
-let guMarkerPlaces = null; // Map(구 → LatLng). 경계 자료가 온 뒤에 정한 것만 둔다
+// 구 표시의 자리는 고정 좌표다 (2026-10-20 팀장 결정). 데이터 · 조건 · 화면 크기 · 불러오는 순서와 상관없이 늘 같은 자리에 뜬다.
+// 예전에는 열 때마다 아파트 좌표 평균에서 시작해 경계 안에서 서로 벌려 정했는데, 경계 자료가 오기 전과 후,
+// 지역 목록(A-02)이 오기 전과 후에 결과가 달라 구 표시가 매번 다른 자리에 떴다.
+// 아래 좌표는 그 벌리기 계산을 경계 자료가 다 온 뒤 수준 9(가장 넓게)에서 돌린 결과다 (남구 보정 포함).
+//   - 다섯 곳 모두 자기 구의 경계 안이다
+//   - 수준 9에서 원(56 × 56) 사이가 76px 이상이라 겹치지 않는다. 더 가까이 보면(8, 7) 사이가 2배, 4배로 넓어진다
+// 자리를 바꾸려면 이 좌표만 고친다. 표에 없는 구는 받은 구 표시의 좌표에 둔다
+const GU_MARKER_FAR_LEVEL = 9; // 이 수준부터 원을 56 × 56으로 줄인다 (new-style.css의 .map--far)
+const GU_MARKER_PLACES = {
+  광산구: { latitude: 35.177639, longitude: 126.816271 },
+  남구: { latitude: 35.109735, longitude: 126.902413 },
+  동구: { latitude: 35.14193, longitude: 126.938803 },
+  북구: { latitude: 35.186966, longitude: 126.898463 },
+  서구: { latitude: 35.149398, longitude: 126.86313 },
+};
 
 function spreadGuMarkers(groups) {
-  const { map } = mapState;
-  const far = map.getLevel() >= GU_MARKER_FAR_LEVEL;
+  const far = mapState.map.getLevel() >= GU_MARKER_FAR_LEVEL;
   document.getElementById('kakao-map').classList.toggle('map--far', far);
-  if (guMarkerPlaces && groups.every((g) => guMarkerPlaces.has(g.gu))) return groups.map((g) => guMarkerPlaces.get(g.gu));
-
-  // 시작점은 늘 같은 값: 지역 목록(A-02)의 구 좌표(그 구 전체 아파트의 평균). 없으면 구 표시의 좌표. 이름순으로 벌린다
-  const start = new Map(groups.map((g) => [g.gu, g]));
-  mapState.regions.filter(hasCoord).forEach((r) => start.set(r.gu, r));
-  const names = [...start.keys()].sort();
-  const places = spreadGuPlaces(names.map((gu) => ({ gu, at: toLatLng(start.get(gu)) })));
-  // 경계 자료가 온 뒤에 정한 자리만 기억한다 (먼저 그리면 경계 확인 없이 벌린 자리라 나중에 다시 정한다)
-  const sample = start.get(names[0]);
-  if (mapBoundary.contains(names[0], null, sample.latitude, sample.longitude) !== null) guMarkerPlaces = places;
-  return groups.map((g) => places.get(g.gu));
+  return groups.map((g) => toLatLng(GU_MARKER_PLACES[g.gu] || g));
 }
 
-// 구들의 자리를 가장 넓게 보는 수준(GU_MARKER_FAR_LEVEL)의 화면 크기로 벌린다. 지금 수준과 상관없이 결과가 같다.
-// items: [{ gu, at: LatLng }]. 돌려주는 것은 Map(구 → LatLng)
-function spreadGuPlaces(items) {
-  const { map } = mapState;
-  const projection = map.getProjection();
-  const radius = GU_MARKER_FAR_RADIUS;
-  // 지금 수준의 화면 좌표 → 기준 수준의 화면 좌표. 수준이 하나 올라가면 반으로 준다
-  const scale = 2 ** (map.getLevel() - GU_MARKER_FAR_LEVEL);
-  const toScreen = (x, y) => new kakao.maps.Point(x / scale, y / scale);
-  const points = items.map(({ gu, at }) => {
-    const p = projection.containerPointFromCoords(at);
-    return { gu, x: p.x * scale, y: p.y * scale };
-  });
-  // 원의 가운데와 둘레 여덟 점 가운데 그 구 안에 있는 점의 수 (0 ~ 9). 가운데가 밖이면 -1. 경계를 모르면 9
-  const inside = (gu, x, y) => {
-    const at = (dx, dy) => {
-      const c = projection.coordsFromContainerPoint(toScreen(x + dx, y + dy));
-      return mapBoundary.contains(gu, null, c.getLat(), c.getLng()) !== false;
-    };
-    if (!at(0, 0)) return -1;
-    let count = 1;
-    for (let k = 0; k < 8; k += 1) {
-      const a = (Math.PI / 4) * k;
-      if (at(Math.cos(a) * radius, Math.sin(a) * radius)) count += 1;
-    }
-    return count;
-  };
-  // 옮겨도 되는 자리: 가운데는 반드시 그 구 안. 둘레는 지금보다 더 밖으로 나가지 않거나, 거의(7점 이상) 안이면 된다.
-  // 가장 넓게 볼 때(9)는 구가 원보다 작아 둘레까지 다 넣을 수 없으므로 가운데만 지킨다
-  const fits = (pt, x, y) => {
-    const next = inside(pt.gu, x, y);
-    if (next < 0) return false;
-    return next >= Math.min(inside(pt.gu, pt.x, pt.y), 7);
-  };
-  const need = radius * 2 + GU_MARKER_GAP;
-  for (let round = 0; round < 80; round += 1) {
-    let moved = false;
-    for (let i = 0; i < points.length; i += 1) {
-      for (let j = i + 1; j < points.length; j += 1) {
-        const a = points[i];
-        const b = points[j];
-        let dx = b.x - a.x;
-        let dy = b.y - a.y;
-        let dist = Math.hypot(dx, dy);
-        if (dist >= need) continue;
-        if (dist < 0.01) { dx = 1; dy = 0; dist = 1; }
-        const push = (need - dist) / 2 + 0.5;
-        const ux = dx / dist;
-        const uy = dy / dist;
-        // 둘 다 반씩 밀고, 한쪽이 경계 밖으로 나가면 다른 쪽이 그만큼 더 간다
-        const tryMove = (pt, sx, sy) => {
-          if (!fits(pt, pt.x + sx, pt.y + sy)) return false;
-          pt.x += sx;
-          pt.y += sy;
-          return true;
-        };
-        const aOk = tryMove(a, -ux * push, -uy * push);
-        const bOk = tryMove(b, ux * (aOk ? push : push * 2), uy * (aOk ? push : push * 2));
-        if (!bOk && aOk) tryMove(a, -ux * push, -uy * push);
-        moved = moved || aOk || bOk;
-      }
-    }
-    if (!moved) break;
-  }
-  // 손으로 맞춘 보정 (가장 넓게 보는 수준의 화면 px). 계산한 자리가 경계선에 걸쳐 보이는 구만
-  points.forEach((pt) => {
-    const nudge = GU_MARKER_NUDGE[pt.gu];
-    if (nudge) { pt.x += nudge.x; pt.y += nudge.y; }
-  });
-  return new Map(points.map((pt) => [pt.gu, projection.coordsFromContainerPoint(toScreen(pt.x, pt.y))]));
-}
-
-// 구 표시를 보는 채로 확대·축소하면 화면 거리가 달라지므로 다시 벌린다
+// 구 표시를 보는 채로 확대·축소하면 원 크기(.map--far)를 다시 맞춘다. 자리는 고정이라 그대로다
 function respreadGuMarkers() {
   if (mapState.mode !== 'gu' || !mapState.markers.length || !mapState.markers[0].group) return;
   const places = spreadGuMarkers(mapState.markers.map((overlay) => overlay.group));
@@ -1596,6 +1573,11 @@ const listPlace = () => {
 // 목록 (P-06 ⑤). 그리기는 김목산의 list.js. A-05 응답을 받을 때마다 부른다.
 function renderList() {
   if (!mapState.data) return;
+  mapState.listCity = mapState.mode === 'gu';
+  if (mapState.listCity) {
+    renderCityList();
+    return;
+  }
   listView.render(document.getElementById('apt-list'), visibleData(), {
     where: mapState.byBounds ? { gu: BOUNDS_NAME } : mapState.region, // 머리의 이름. "지도에 보이는 곳 · 31곳"
     sort: currentSort(),
@@ -1604,6 +1586,42 @@ function renderList() {
     onClose: () => sheet.close(),
     ...(currentFilters() ? { onResetFilters: () => applyFilters(null), onChangeFilters: () => openFilters() } : {}),
   });
+}
+
+// ───────── 구 표시 수준의 목록: 광주 전체 (2026-10-20) ─────────
+// 지도를 구 표시 수준으로 넓게 보면 목록에 광주 5개 구 전체의 아파트를 보인다 (A-05 where.all).
+// 지도의 표시와 자료(mapState.data)는 그대로 두고 목록만 따로 받는다. 같은 조건 · 정렬이면 받아 둔 것을 쓴다.
+// 목록에서 아파트를 고르면 이름 검색에서 고른 것처럼 그 동으로 옮겨 연다 (onSearchPick).
+const CITY_NAME = '광주 전체';
+
+async function renderCityList() {
+  const list = document.getElementById('apt-list');
+  const key = requestKey();
+  const options = {
+    where: { gu: CITY_NAME },
+    sort: currentSort(),
+    onSort: changeSort,
+    onSelect: (apartment) => onSearchPick(apartment),
+    onClose: () => sheet.close(),
+    ...(currentFilters() ? { onResetFilters: () => applyFilters(null), onChangeFilters: () => openFilters() } : {}),
+  };
+  if (mapState.city && mapState.city.key === key) {
+    listView.render(list, mapState.city.data, options);
+    return;
+  }
+  const mine = ++mapState.citySeq;
+  listView.renderLoading(list, { where: options.where, onClose: options.onClose });
+  let data;
+  try {
+    data = await api.post('/api/apartments/search', withFilters({ conditions: guard.conditions(), where: { all: true }, sort: currentSort() }));
+  } catch (error) {
+    if (mine !== mapState.citySeq || !mapState.listCity) return;
+    listView.renderError(list, { message: error.status === 422 ? error.detail : MSG.dataFail, onRetry: renderCityList, onClose: options.onClose });
+    return;
+  }
+  if (mine !== mapState.citySeq || !mapState.listCity) return; // 그사이 다시 받았거나 구 표시 수준을 벗어났다
+  mapState.city = { key, data };
+  listView.render(list, data, options);
 }
 
 // ───────── 조건 창 (P-05 ②) ─────────
@@ -2107,7 +2125,7 @@ function regionCenter({ gu, dong }) {
 }
 
 // 목록의 정렬 (A-05의 sort). store의 map.sort에 둔다. 모르는 값이면 구분순이다.
-const SORTS = ['category', 'price_asc', 'price_desc'];
+const SORTS = ['category', 'price_asc', 'price_desc', 'area_desc', 'households_desc', 'newest'];
 const currentSort = () => (SORTS.includes(store.get('map').sort) ? store.get('map').sort : 'category');
 
 // 조건 창에서 고른 조건 (A-05, A-12의 filters). store의 map.filters에 둔다. 조건이 하나도 없으면 null

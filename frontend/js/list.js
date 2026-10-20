@@ -43,6 +43,9 @@ const LIST_SORTS = [
   { key: 'category', label: '구분순' },
   { key: 'price_asc', label: '가격 낮은 순' },
   { key: 'price_desc', label: '가격 높은 순' },
+  { key: 'area_desc', label: '면적 넓은 순' },
+  { key: 'households_desc', label: '세대수 많은 순' },
+  { key: 'newest', label: '최근 준공 순' },
 ];
 const LIST_DEFAULT_SORT = 'category';
 
@@ -496,8 +499,8 @@ const listView = {
         [{ text: LIST_TEXT.noTargetButton, onClick: () => { location.href = 'plan.html'; } }]));
     }
 
-    // 가격순이면 구분별 제목 없이 서버가 준 순서로 잇는다. 구분은 카드의 배지로만 보인다 (B2)
-    if (options.sort === 'price_asc' || options.sort === 'price_desc') {
+    // 구분순이 아니면(가격 · 면적 · 세대수 · 준공 순) 구분별 제목 없이 서버가 준 순서로 잇는다. 구분은 카드의 배지로만 보인다 (B2)
+    if (options.sort && options.sort !== 'category') {
       const section = listEl('div', 'list__group');
       result.apartments.forEach((a) => section.append(listCard(a, options)));
       root.append(section);
