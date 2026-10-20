@@ -363,9 +363,20 @@
     top: 24px;
   }
 
-  /* 조건 줄의 [조건]과 같은 일이라 검색 줄 오른쪽의 조건 아이콘은 웹에서 숨긴다 */
-  .search-filter {
-    display: none;
+  /* 조건 줄의 "조건"은 파란색(primary)으로 (2026-10-20 팀장 결정). 검색 줄 오른쪽의 조건 아이콘도 모바일처럼 웹에서 보인다 */
+  .map-web-filter__button:not(.map-web-filter__region) {
+    color: var(--color-primary);
+  }
+
+  /* 아파트 패널의 "아파트 정보 · 시나리오" 탭을 조금 작게. 글자와 밑줄 사이를 좁혀 아래 정보 칸을 넓힌다 (47 → 36px, 2026-10-20) */
+  #apartment-panel .apt__tab {
+    height: 36px;
+    padding: 0;
+    font-size: var(--text-label);
+  }
+
+  #apartment-panel .apt__tab[aria-selected="true"]::after {
+    height: 2px;
   }
 
   /* ───────── 지도: 머리 줄 아래, 패널 오른쪽 ───────── */
