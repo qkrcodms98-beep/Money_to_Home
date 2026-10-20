@@ -186,7 +186,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: var(--color-bg-sub);
+  background: rgba(0, 0, 0, 0.5); /* 사진 위 공유 · ✕ 바탕(map-web.css)과 같은 색 · 진하기. 회색 덮개는 너무 티가 났다 */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
