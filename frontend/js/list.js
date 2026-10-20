@@ -183,6 +183,7 @@ const LIST_TEXT = {
   loading: '아파트를 불러오는 중', // 와이어프레임 P-05 ⑯의 알림과 같은 말
   noCoord: '위치 없음',
   overCap: '상한 초과',
+  overCapHelp: '평균가가 고른 대출 상품의 대상 주택 가격 상한을 넘습니다. 이 상품으로는 대출을 받기 어려울 수 있습니다.',
 };
 
 // 실거래 수집 기준일 (A-13). 화면을 연 동안 한 번만 받는다. 받지 못하거나 없으면 null
@@ -274,7 +275,9 @@ function listCard(apartment, handlers) {
     }
     // 평균가가 상품의 대상 주택 가격 상한을 넘는 면적 (FR-LOAN-14). 알리기만 하고 빼지 않는다
     if (area.over_price_cap) {
-      meta.append(listEl('span', 'list-card__tag list-card__tag--cap', LIST_TEXT.overCap));
+      const cap = listEl('span', 'list-card__tag list-card__tag--cap', LIST_TEXT.overCap);
+      cap.title = LIST_TEXT.overCapHelp;
+      meta.append(cap);
     }
     mid.append(meta);
     if (listViewMode() === 'gauge') mid.append(listGauge(area));

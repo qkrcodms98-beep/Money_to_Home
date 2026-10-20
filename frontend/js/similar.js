@@ -34,6 +34,7 @@ const SIMILAR_TEXT = {
   retry: '다시 시도',
   noCoord: '위치 없음',
   overCap: '상한 초과',
+  overCapHelp: '평균가가 고른 대출 상품의 대상 주택 가격 상한을 넘습니다. 이 상품으로는 대출을 받기 어려울 수 있습니다.',
 };
 
 const SIMILAR_BADGE = { now: '지금 가능', within: '기간 내 가능', lack: '자금 부족' };
@@ -119,7 +120,9 @@ const similarView = (() => {
       meta.append(el('span', 'list-card__tag', SIMILAR_TEXT.noCoord));
     }
     if (area.over_price_cap) {
-      meta.append(el('span', 'list-card__tag list-card__tag--cap', SIMILAR_TEXT.overCap));
+      const cap = el('span', 'list-card__tag list-card__tag--cap', SIMILAR_TEXT.overCap);
+      cap.title = SIMILAR_TEXT.overCapHelp;
+      meta.append(cap);
     }
     body.append(meta, moneyLine(area));
     body.setAttribute('aria-label', `${apartment.name}, ${apartment.gu} ${apartment.dong}, ${SIMILAR_BADGE[area.category]}`);
