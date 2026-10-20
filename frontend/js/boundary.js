@@ -59,6 +59,7 @@ const mapBoundary = (() => {
   let shapes = null; // 한 번 만든 카카오 도형들
   let wanted = null; // 강조할 지역. 자료가 오기 전에 select가 불리면 여기 두었다가 그린다
   let resolveBdong = null;
+  let bdongLoading = true; // 법정동 경계를 받는 중인가
   const bdongPromise = new Promise((resolve) => { resolveBdong = resolve; }); // 법정동을 받았으면 true, 못 받았으면 false
   let shownLevelBand = null; // 행정동 선을 지금 그리고 있는가 (true/false). 바뀔 때만 setMap을 부른다
 
@@ -197,8 +198,11 @@ const mapBoundary = (() => {
   }
 
   // 법정동 경계가 있는 동을 골랐는가
+  // 법정동을 아직 받는 중이면(bdongLoading) 동을 고른 것으로 본다. 받기 전에 동을 고르면 행정동 선 전체가 잠깐 보였다가
+  // 법정동이 오면 사라졌다 (2026-10-20). 받지 못했으면 예전처럼 구를 강조하고 행정동 선을 보인다
   function dongPicked() {
-    return Boolean(wanted && wanted.dong && data && data.bdong.has(`${wanted.gu} ${wanted.dong}`));
+    if (!wanted || !wanted.dong || !data) return false;
+    return bdongLoading || data.bdong.has(`${wanted.gu} ${wanted.dong}`);
   }
 
   // 도형을 감싼 사각형. 한 번 계산하면 기억해 둔다
@@ -260,9 +264,12 @@ const mapBoundary = (() => {
       try {
         data.bdong = readData(await api.get(BOUNDARY_BDONG_URL)).bdong;
         draw();
+        bdongLoading = false;
         resolveBdong(true);
       } catch (error) {
         console.warn('[boundary] 법정동 경계를 받지 못했습니다. 동을 고르면 구를 강조합니다.', error.status ?? '');
+        bdongLoading = false;
+        draw(); // 행정동 선을 다시 보인다
         resolveBdong(false);
       }
     },

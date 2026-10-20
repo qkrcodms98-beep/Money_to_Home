@@ -2672,6 +2672,9 @@ async function zoomToRegion({ gu, dong }) {
   mapState.region = { gu, dong };
   store.set('map', { gu, dong });
   mapState.focus = fit ? { gu, dong, kind: dong ? 'dong' : 'drill' } : null;
+  // 확대가 시작되기 전에 경계 강조를 새 지역으로 바꾼다 (2026-10-20). 예전에는 확대가 끝나고 표시를 다시 그릴 때에야 바뀌어서,
+  // 확대하는 동안 앞에서 고른 동의 테두리나 다른 동들의 선이 잠깐 보였다가 사라졌다
+  renderRegionName();
   quietZoom(ZOOM_MS + 400);
   const { map } = mapState;
   const target = fit ? fit.center : toLatLng(center);
