@@ -45,7 +45,7 @@ const BOUNDARY_WORLD = { south: 33.0, west: 124.5, north: 37.5, east: 129.5 };
 // 굵기(px)와 불투명도. 색은 CSS에서 읽는다
 const BOUNDARY_STYLE = {
   mask: { fillOpacity: 0.16 },
-  gu: { strokeWeight: 2, strokeOpacity: 0.55 },
+  gu: { strokeWeight: 2, strokeOpacity: 0.3 }, // 옅게 (2026-10-20 팀장, 0.55 → 0.3)
   hdong: { strokeWeight: 1, strokeOpacity: 0.9 },
   pickedGu: { strokeWeight: 2.5, strokeOpacity: 0.9, fillOpacity: 0.04 },
   pickedDong: { strokeWeight: 2.5, strokeOpacity: 1, fillOpacity: 0.06 }, // 남색 (2026-10-19). 칠을 옅게 해 아래 이름과 길이 보이게
@@ -103,6 +103,46 @@ const mapBoundary = (() => {
     return result;
   }
 
+  // 구 사이의 선만 (2026-10-20 팀장: 광주 바깥 테두리는 긋지 않는다).
+  // 구 고리의 마디 중 바깥 경계(outline)에 있는 마디는 빼고, 이어진 나머지만 선으로 긋는다
+  function innerLines(geometry, outline, style, colorName, zIndex) {
+    const key = ([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`;
+    const edge = new Set();
+    for (const polygon of polygonsOf(outline)) {
+      for (const ring of polygon) {
+        for (let i = 0; i + 1 < ring.length; i += 1) {
+          const a = key(ring[i]);
+          const b = key(ring[i + 1]);
+          edge.add(`${a}|${b}`);
+          edge.add(`${b}|${a}`);
+        }
+      }
+    }
+    const result = [];
+    const flush = (run) => {
+      if (run.length < 2) return;
+      result.push(new kakao.maps.Polyline({
+        path: run.map(([lng, lat]) => new kakao.maps.LatLng(lat, lng)), strokeColor: color(colorName), strokeStyle: 'solid', zIndex, ...style,
+      }));
+    };
+    for (const polygon of polygonsOf(geometry)) {
+      for (const ring of polygon) {
+        let run = [];
+        for (let i = 0; i + 1 < ring.length; i += 1) {
+          if (edge.has(`${key(ring[i])}|${key(ring[i + 1])}`)) {
+            flush(run);
+            run = [];
+            continue;
+          }
+          if (run.length === 0) run.push(ring[i]);
+          run.push(ring[i + 1]);
+        }
+        flush(run);
+      }
+    }
+    return result;
+  }
+
   // 칠한 면. 사건을 달지 않는다 (위의 설명: 그 위에서도 지도를 끌 수 있게)
   function area(paths, style, colorName, zIndex) {
     return new kakao.maps.Polygon({
@@ -127,7 +167,7 @@ const mapBoundary = (() => {
     });
     shapes = {
       mask: area(maskPaths(data.outline), BOUNDARY_STYLE.mask, '--boundary-mask', BOUNDARY_Z.mask),
-      gu: [...data.gu.values()].flatMap((geometry) => lines(geometry, BOUNDARY_STYLE.gu, '--boundary-gu', BOUNDARY_Z.gu)),
+      gu: [...data.gu.values()].flatMap((geometry) => innerLines(geometry, data.outline, BOUNDARY_STYLE.gu, '--boundary-gu', BOUNDARY_Z.gu)),
       hdong: data.hdong.flatMap((geometry) => lines(geometry, BOUNDARY_STYLE.hdong, '--boundary-dong', BOUNDARY_Z.hdong)),
       // 고른 지역: 조각마다 면 하나, 고리마다 선 하나. 고를 때마다 새로 만들지 않고 모양만 바꾼다 (모자랄 때만 만든다)
       pickedFills: [],
