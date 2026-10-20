@@ -180,20 +180,28 @@
   z-index: 0; /* 카카오 로드뷰 안의 쌓임을 이 안에 가둔다. 그래야 아래 덮개가 그 위에 온다 */
 }
 
-/* 아파트를 바꾸는 동안 덮개 (apartment.js의 coverRoadview, 2026-10-20). 덮을 때는 바로, 걷을 때는 천천히 */
+/* 아파트를 바꾸는 동안 덮개 두 장 (apartment.js의 coverRoadview, 2026-10-20 팀장 결정). 덮을 때는 바로, 걷을 때는 천천히
+     아래(::before): 투명하지 않은 흰 판. 바뀌는 사진이 비치지 않게 다 가린다
+     위(::after): 사진 위 공유 · ✕ 바탕(map-web.css)과 같은 색 · 진하기의 반투명 검정 */
 .apt-roadview::before,
 .apt-roadview::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: rgba(0, 0, 0, 0.5); /* 사진 위 공유 · ✕ 바탕(map-web.css)과 같은 색 · 진하기. 회색 덮개는 너무 티가 났다 */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
-/* 같은 색 · 진하기의 덮개를 두 장 겹친다 (2026-10-20 팀장 결정). 바꾸는 동안 사진이 더 어둡게 가려진다 */
+.apt-roadview::before {
+  background: var(--color-bg);
+}
+
+.apt-roadview::after {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 .apt-roadview--switching::before,
 .apt-roadview--switching::after {
   opacity: 1;
