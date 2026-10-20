@@ -657,7 +657,7 @@
 .apt-near__row {
   display: flex;
   align-items: center;
-  padding: 7px 0;
+  padding: 11px 0; /* 줄마다 두세 줄이 되어 사이를 조금 더 띄운다 (2026-10-19, 7px → 11px) */
   line-height: var(--line-height);
 }
 
@@ -704,7 +704,7 @@
 }
 
 .apt-near__row--sub {
-  padding: 4px 0;
+  padding: 8px 0;
 }
 
 .apt-near__row--sub .apt-near__label {
@@ -796,7 +796,7 @@
   fill: var(--color-primary);
 }
 
-/* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준 · 직선거리" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */
+/* 맨 아래 출처 "카카오 장소 정보 · 2026년 10월 19일 기준" (apartment.js의 renderNear). 미리 받아 둔 값이라 받은 날을 적는다 */
 .apt-near__source {
   margin: 6px 0 0;
   color: var(--color-text-sub);

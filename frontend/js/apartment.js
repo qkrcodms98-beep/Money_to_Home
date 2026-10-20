@@ -87,8 +87,9 @@ const APT_NEAR_SCHOOLS = [
 const APT_NEAR_MORE = '학교 종류별로 보기';
 const APT_NEAR_LESS = '학교 종류별 접기';
 const APT_NEAR_NONE = '근처에 없음'; // 반경 안에 없을 때
-const APT_NEAR_SOURCE = '카카오 장소 정보'; // 맨 아래 출처. 뒤에 받은 날과 거리 안내를 붙인다
-const APT_NEAR_WALK_NOTE = '거리 · 시간은 직선거리로 어림'; // 맨 아래 출처 끝. 걷는 거리가 실제 길이 아님을 알린다
+// 맨 아래 출처. 뒤에 받은 날을 붙인다: "카카오 장소 정보 · 2026년 10월 19일 기준".
+// 미리 받아 둔 자료라 받은 날을 적는다. "직선거리로 어림" 안내는 뺐다 (2026-10-20 팀장 결정. 세환 의견: '어림'으로 끝나는 말이 좋지 않다)
+const APT_NEAR_SOURCE = '카카오 장소 정보';
 const APT_NEAR_ON_MAP = '지도에서 보기'; // 찾은 줄의 단추 이름 끝에 붙인다 (화면 읽기)
 // 찾은 줄 끝의 작은 위치 표시. 누르면 지도에서 보여 준다는 뜻
 const APT_NEAR_PIN = 'M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z';
@@ -564,7 +565,7 @@ const aptPanel = {
     });
     const [year, month, day] = (detail.facilities_base_date || '').split('-');
     box.querySelector('.apt-near__source').textContent = year
-      ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준 · ${APT_NEAR_WALK_NOTE}`
+      ? `${APT_NEAR_SOURCE} · ${year}년 ${Number(month)}월 ${Number(day)}일 기준`
       : '';
   },
 
