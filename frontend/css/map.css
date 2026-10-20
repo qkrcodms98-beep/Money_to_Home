@@ -25,7 +25,7 @@
 
   /* 광주 5개 구 경계 (P-05 ⑪, FR-MAP-28). js/boundary.js가 읽어 카카오맵의 선과 면에 쓴다. 굵기와 불투명도는 boundary.js에 있다.
      경계는 지도를 이해시키는 보조 선이라 말풍선보다 눈에 띄지 않게 회색으로 두고, 고른 지역만 동 표시와 같은 연보라로 칠한다. */
-  --boundary-gu: var(--color-text-sub); /* 구 경계 */
+  --boundary-gu: #5b6b8c; /* 구 경계. 남색 회색 (2026-10-20 팀장) */
   --boundary-dong: var(--color-line-strong); /* 행정동 경계. 연한 회색, 가까이 볼 때만 */
   --boundary-picked: var(--color-dong); /* 고른 구·동의 선과 반투명 칠 */
   --boundary-mask: var(--color-dim); /* 경계 밖을 덮는 반투명 면 */

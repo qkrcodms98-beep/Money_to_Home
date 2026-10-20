@@ -45,7 +45,7 @@ const BOUNDARY_WORLD = { south: 33.0, west: 124.5, north: 37.5, east: 129.5 };
 // 굵기(px)와 불투명도. 색은 CSS에서 읽는다
 const BOUNDARY_STYLE = {
   mask: { fillOpacity: 0.16 },
-  gu: { strokeWeight: 2, strokeOpacity: 0.3 }, // 옅게 (2026-10-20 팀장, 0.55 → 0.3)
+  gu: { strokeWeight: 2, strokeOpacity: 0.45 }, // 남색 회색 #5b6b8c (map.css) 45% (2026-10-20 팀장)
   hdong: { strokeWeight: 1, strokeOpacity: 0.9 },
   pickedGu: { strokeWeight: 2.5, strokeOpacity: 0.9, fillOpacity: 0.04 },
   pickedDong: { strokeWeight: 2.5, strokeOpacity: 1, fillOpacity: 0.06 }, // 남색 (2026-10-19). 칠을 옅게 해 아래 이름과 길이 보이게
