@@ -1422,3 +1422,95 @@
     max-width: 560px;
   }
 }
+
+/* 모바일 아파트 창 머리를 오밀조밀하게 (2026-10-20 팀장). 공유 · ✕ 줄, 이름, 면적 칩 · ㎡/평, 탭의 높이와 간격을 줄인다.
+   누르는 단추는 36px 이상으로 둔다. 웹(1024px 이상)은 map-web.css가 정한다 */
+@media (max-width: 1023px) {
+  .apt__head {
+    gap: 11px;
+  }
+
+  .apt__top {
+    min-height: 36px;
+    margin-top: -14px;
+    margin-bottom: -6px;
+  }
+
+  .apt__nav-button,
+  .apt__nav .share-action {
+    width: 36px;
+    height: 36px;
+    min-height: 0;
+  }
+
+  .apt__name {
+    font-size: 18px;
+  }
+
+  .apt__title .badge {
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-size: 12px;
+  }
+
+  .apt__areas {
+    gap: 6px;
+  }
+
+  .apt__area {
+    height: 26px;
+    padding: 0 8px;
+  }
+
+  .apt__unit {
+    padding: 2px;
+    border-radius: 8px;
+  }
+
+  .apt__unit-option {
+    width: 26px;
+    height: 26px;
+  }
+
+  .apt__tab {
+    height: 34px;
+    font-size: 14px;
+  }
+}
+
+/* 모바일 아파트 창을 전체로 올렸을 때 (2026-10-20 팀장): 로드뷰 위의 내 조건 줄을 없애고,
+   공유 · ✕는 웹처럼 로드뷰 사진 오른쪽 위에 반투명 검은 바탕 + 흰 아이콘으로 올린다. 비는 첫 줄은 접는다 ("← 목록"이 있으면 둔다) */
+@media (max-width: 1023px) {
+  .map-app[data-sheet="full"][data-sheet-mode="apartment"] .condition-bar {
+    visibility: hidden;
+  }
+
+  .sheet[data-stage="full"]:has(> .apt-roadview:not([hidden])) .apt__top:not(:has(.apt__back:not([hidden]))) {
+    height: 0;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .sheet[data-stage="full"]:has(> .apt-roadview:not([hidden])) .apt__nav {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+    z-index: 2;
+    gap: 0;
+    padding: 2px 4px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .sheet[data-stage="full"]:has(> .apt-roadview:not([hidden])) .apt__nav .share-action,
+  .sheet[data-stage="full"]:has(> .apt-roadview:not([hidden])) .apt__nav .apt__nav-button--close {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    color: #fff;
+  }
+
+  .sheet[data-stage="full"]:has(> .apt-roadview:not([hidden])) .apt__nav .share-icon {
+    stroke: #fff;
+  }
+}

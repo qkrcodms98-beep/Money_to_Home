@@ -500,8 +500,10 @@
     background: var(--color-bg);
   }
 
-  /* 로드뷰: 아파트 패널 맨 위, 패널 폭(420) × 황금비. 두 탭 모두 보인다 (js/map-web.js가 자리를 옮긴다) */
+  /* 로드뷰: 아파트 패널 맨 위. 두 탭 모두 보인다 (js/map-web.js가 자리를 옮긴다).
+     가로:세로 2 : 1 (420 폭에서 210). 예전 황금비(260)보다 50 줄여 아래 정보가 더 보이게 (2026-10-20 팀장) */
   #apartment-panel > .apt-roadview {
+    aspect-ratio: 2 / 1;
     margin: 0 0 8px;
   }
 
