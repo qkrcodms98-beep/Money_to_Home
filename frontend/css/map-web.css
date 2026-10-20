@@ -184,9 +184,14 @@
     top: 15px;
   }
 
-  .map-controls {
+  /* 지도 버튼은 세로 가운데보다 살짝 아래 (2026-10-20 팀장 결정). 창 단계(sheet.css의 data-sheet="30")와 상관없이 둔다 */
+  .map-controls,
+  .map-app[data-sheet] .map-controls {
+    top: 56%;
     right: 16px;
-    bottom: 32px;
+    bottom: auto;
+    transform: translateY(-50%);
+    transition: none;
   }
 
   /* 목록이 늘 보이므로 지도 위 "목록" 단추는 숨긴다 */

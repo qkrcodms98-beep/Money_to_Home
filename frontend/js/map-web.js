@@ -212,15 +212,18 @@ const mapWeb = {
   // ───────── 패널 폭이 바뀌면 지도에 알린다 ─────────
   // 카카오맵은 상자의 크기가 바뀐 것을 모른다. relayout()을 불러야 새 크기로 그린다.
   // 아파트 패널이 열리고 닫히거나 목록을 접으면 지도의 폭이 바뀐다. 고른 아파트가 있으면 줄어든 지도의 가운데로 옮긴다.
+  // 고른 아파트가 없으면 보던 가운데를 그대로 둔다. relayout()은 왼쪽 위를 붙잡아 두므로, 창을 줄이거나 모바일로 바꾸면
+  // 보던 곳이 오른쪽으로 밀려나 구 표시가 엉뚱한 자리에 있는 것처럼 보였다 (2026-10-20).
   watchMapSize() {
     const box = document.getElementById('kakao-map');
     if (!box || typeof ResizeObserver === 'undefined') return;
     new ResizeObserver(() => {
       if (!mapState.map || box.clientWidth === mapWeb.mapWidth) return;
       mapWeb.mapWidth = box.clientWidth;
+      const center = mapState.map.getCenter(); // relayout 전에는 아직 예전 크기의 가운데
       mapState.map.relayout();
       mapState.mapHeight = box.clientHeight;
-      if (mapWeb.isOn()) centerSelected();
+      if (!(mapWeb.isOn() && centerSelected())) mapState.map.setCenter(center);
     }).observe(box);
   },
 };
