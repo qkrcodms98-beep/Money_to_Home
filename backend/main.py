@@ -8,6 +8,7 @@
 - 상태 확인: http://localhost:8000/api/health
 """
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import FRONTEND_DIR
@@ -18,6 +19,10 @@ from backend.services import auth as auth_service
 app = FastAPI(title="머니 to 홈", version="0.1.0")
 
 register_error_handlers(app)
+
+# 1KB가 넘는 응답은 압축해서 보낸다 (2026-10-20). 광주 전체 아파트(A-05, 약 520KB)와 법정동 경계(약 550KB)가 크게 줄어든다.
+# 브라우저가 Accept-Encoding: gzip을 보낼 때만 압축하므로 다른 동작은 그대로다
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)  # 9(기본)보다 조금 덜 줄지만 압축이 몇 배 빠르다
 
 
 @app.middleware("http")
@@ -49,10 +54,17 @@ app.include_router(auth.router)
 app.include_router(saved_results.router)
 
 class FrontendFiles(StaticFiles):
-    """화면 파일. 브라우저가 쓸 때마다 바뀌었는지 서버에 묻게 한다. 안 바뀌었으면 304라 다시 받지 않는다."""
-    def file_response(self, *args, **kwargs):
-        response = super().file_response(*args, **kwargs)
-        response.headers["Cache-Control"] = "no-cache"
+    """화면 파일. 브라우저가 쓸 때마다 바뀌었는지 서버에 묻게 한다. 안 바뀌었으면 304라 다시 받지 않는다.
+
+    ?v= 버전이 붙은 CSS · JS는 (2026-10-20) 하루 동안 묻지 않고 브라우저에 둔 것을 쓴다. 파일을 고치면 ?v= 숫자를 올리는 것이
+    팀 규칙이라(CLAUDE.md) 숫자가 바뀌면 새 주소가 되어 바로 새로 받는다. 화면(HTML)과 버전이 없는 파일은 지금처럼 매번 묻는다.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        versioned = b"v=" in scope.get("query_string", b"") and path.endswith((".css", ".js"))
+        if response.status_code in (200, 304):
+            response.headers["Cache-Control"] = "public, max-age=86400" if versioned else "no-cache"
         return response
 
 app.mount("/", FrontendFiles(directory=FRONTEND_DIR, html=True), name="frontend")

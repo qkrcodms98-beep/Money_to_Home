@@ -11,8 +11,9 @@ A-06 아파트 한 곳은 backend/routers/apartment_detail.py에 있다 (담당:
 
 요청의 conditions만 쓴다. 로그인 정보와 profiles 표를 읽지 않는다 (NFR-18).
 DB를 다루는 코드는 backend/services/apartment.py, 계산은 backend/services/calc.py에 있다 (NFR-13).
+A-05와 A-12는 같은 요청의 응답을 잠깐 기억해 둔다 (backend/services/response_cache.py, 2026-10-20).
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -27,7 +28,7 @@ from backend.schemas.apartment import (
     SummaryIn,
     SummaryOut,
 )
-from backend.services import apartment
+from backend.services import apartment, response_cache
 
 router = APIRouter(prefix="/api", tags=["아파트 탐색"])
 
@@ -41,15 +42,26 @@ def list_regions(db: Session = Depends(get_db)):
 @router.post("/apartments/search", response_model=SearchOut)
 def search_apartments(body: SearchIn, db: Session = Depends(get_db)):
     where = body.where
-    return apartment.search(
-        db, body.conditions, where.gu, where.dong, body.filters, body.sort, where.keyword, where.bounds,
-        everywhere=bool(where.all),
-    )
+
+    def make() -> bytes:
+        result = apartment.search(
+            db, body.conditions, where.gu, where.dong, body.filters, body.sort, where.keyword, where.bounds,
+            everywhere=bool(where.all),
+        )
+        return SearchOut.model_validate(result).model_dump_json().encode()
+
+    content = response_cache.get_or_make(db, "search", body.model_dump_json(), make)
+    return Response(content=content, media_type="application/json")
 
 
 @router.post("/regions/summary", response_model=SummaryOut)
 def summarize_regions(body: SummaryIn, db: Session = Depends(get_db)):
-    return apartment.regions_summary(db, body.conditions, body.level, body.gu, body.filters)
+    def make() -> bytes:
+        result = apartment.regions_summary(db, body.conditions, body.level, body.gu, body.filters)
+        return SummaryOut.model_validate(result).model_dump_json().encode()
+
+    content = response_cache.get_or_make(db, "summary", body.model_dump_json(), make)
+    return Response(content=content, media_type="application/json")
 
 
 @router.get("/data-status", response_model=DataStatusOut)
