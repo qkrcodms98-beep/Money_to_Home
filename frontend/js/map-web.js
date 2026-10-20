@@ -6,7 +6,7 @@
 // 웹에서 바뀌는 것
 //   - 단계가 없다. 창은 늘 30% 단계로 연다 (지도가 보이는 단계. 주변 시설 줄을 누르면 지도에 점선을 잇는 것도 이 단계에서 된다).
 //     모양은 map-web.css가 단계와 상관없이 왼쪽 패널로 그린다. 손잡이를 누르거나 끌어도 바뀌지 않는다.
-//   - 목록은 늘 열려 있다. 아파트 창을 닫으면(✕, 뒤로 가기, 다른 지역 고르기) 창을 닫지 않고 목록만 남긴다.
+//   - 목록은 늘 열려 있다. 아파트 창을 닫으면(✕, 뒤로 가기, 다른 지역 고르기) 창을 닫지 않고 목록만 남긴다. 목록의 스크롤 자리는 그대로 둔다.
 //   - 지도는 창에 가리지 않으므로 고른 아파트는 지도의 가운데에 둔다. 패널 폭이 바뀌면 카카오맵에 알린다 (relayout).
 //   - 목록 패널을 접고 펼 수 있다 (store의 map.web_fold).
 //   - 로드뷰는 아파트 패널 맨 위에 늘 보인다 (아파트 정보 탭 · 시나리오 탭 모두, 2026-10-20 팀장 결정).
@@ -102,7 +102,12 @@ const mapWeb = {
     // 모바일의 단계 표시(.map-app의 data-sheet, data-sheet-map)를 떼어 sheet.css의 단계별 규칙
     // (검색 줄 · 버튼 숨기기, 지도 줄이기)이 걸리지 않게 하고, 웹 표시를 단다
     sheet.apply = () => {
+      // 웹에서는 목록이 늘 옆에 보이므로 보던 자리를 그대로 둔다 (2026-10-20 팀장 결정).
+      // sheet.js는 보이는 칸이 바뀌면(아파트 → 목록) 목록을 맨 위로 보내므로, 그 전 자리를 기억했다가 되돌린다
+      const list = document.getElementById('apt-list');
+      const keep = mapWeb.isOn() ? list.scrollTop : null;
       base.apply();
+      if (keep !== null && mapWeb.isOn()) list.scrollTop = keep;
       const app = document.querySelector('.map-app');
       const root = document.documentElement;
       if (!mapWeb.isOn()) {
@@ -162,10 +167,10 @@ const mapWeb = {
     sheet.reopened = false;
   },
 
-  // 아파트 창 → 목록. 창은 닫지 않고 보이는 것만 바꾼다 (map-view.js의 backToList와 같이 말풍선을 풀고 맨 위부터)
+  // 아파트 창 → 목록. 창은 닫지 않고 보이는 것만 바꾼다 (map-view.js의 backToList와 같이 말풍선을 푼다).
+  // 목록은 늘 옆에 보이던 것이라 보던 자리를 그대로 둔다 (모바일은 맨 위부터)
   backToList() {
     selectMarker(null);
-    scrollListTop();
     sheet.mode = 'list';
     sheet.apply();
   },
