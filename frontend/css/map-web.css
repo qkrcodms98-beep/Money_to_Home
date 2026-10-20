@@ -76,8 +76,8 @@
     z-index: 5;
     display: block;
     height: var(--map-web-bar);
-    border-bottom: 1px solid var(--color-line);
-    background: var(--color-bg);
+    /* 파랑 머리 줄 (2026-10-20 팀장 결정). 왼쪽 rgb(41, 111, 197)에서 오른쪽으로 조금 밝아지는 은은한 그라데이션 */
+    background: linear-gradient(90deg, rgb(41, 111, 197) 0%, rgb(74, 139, 214) 100%);
   }
 
   /* 로고. 모양은 입력 화면과 같다 (common.css의 .header__home, .header__logo, .header__name, .header__to) */
@@ -99,7 +99,7 @@
     align-items: center;
     gap: 8px;
     min-height: var(--touch-size);
-    color: var(--color-text);
+    color: #ffffff; /* 파랑 머리 줄 위라 흰 글씨. "to"는 아래 금색 그대로 */
     font-size: var(--text-amount);
     font-weight: var(--font-bold);
     letter-spacing: -0.02em;
@@ -160,6 +160,7 @@
 
   .condition-bar__link {
     height: var(--touch-size);
+    color: #ffffff; /* 파랑 머리 줄 위의 "로그인" */
   }
 
   /* 내 조건 문장과 수정은 목록 맨 위의 내 조건 상자(list.js, 김목산)로 옮겼다. 머리 줄에는 로그인만 남는다 (2026-10-20) */

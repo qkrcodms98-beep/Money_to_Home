@@ -250,6 +250,13 @@
   line-height: 28px;
 }
 
+/* 구마다 색 (2026-10-20 팀장 결정). 바탕 · 테두리는 위의 --color-dong을 쓰므로 색만 바꾼다. 글씨는 흰색 그대로 (map-view.js가 data-gu를 단다) */
+.dong-marker--gu[data-gu="광산구"] { --color-dong: #5b8fc9; }
+.dong-marker--gu[data-gu="북구"] { --color-dong: #e98243; }
+.dong-marker--gu[data-gu="서구"] { --color-dong: #369ba5; }
+.dong-marker--gu[data-gu="동구"] { --color-dong: #e56670; }
+.dong-marker--gu[data-gu="남구"] { --color-dong: #ad8968; }
+
 /* 목표할 수 있는 곳이 없는 동은 점선 테두리에 더 옅은 바탕 */
 .dong-marker--empty {
   border-style: dashed;
