@@ -349,6 +349,14 @@ function animateZoom(level, options = {}) {
   if (target === map.getLevel()) return;
   const animate = options.animate;
   const ms = animate ? (typeof animate === 'object' && animate.duration) || ZOOM_ANIM_MS : 0;
+  // 붙잡을 점이 없거나 숫자가 아니거나 지도가 숨어 있으면 애니메이션 없이 바로 바꾼다 (카카오맵 안 오류 막기)
+  const box = document.getElementById('kakao-map');
+  const a = options.anchor;
+  const badAnchor = a && !(Number.isFinite(a.getLat()) && Number.isFinite(a.getLng()));
+  if (badAnchor || !box.clientWidth || !box.clientHeight) {
+    map.setLevel(target);
+    return;
+  }
   mapState.zoomUntil = now + ms + ZOOM_SETTLE_MS;
   map.setLevel(target, options);
 }
@@ -380,6 +388,14 @@ function ensureMapSize({ force = false } = {}) {
   const heightChanged = height !== mapState.mapHeight;
   if (!force && !widthChanged && !heightChanged) return false;
   if (!force && !widthChanged && sheet.moving) return false;
+  // 확대 · 축소가 움직이는 중에 relayout하면 카카오맵 안의 애니메이션이 깨져
+  // "Cannot read properties of undefined (reading 'x')"가 매 프레임 나고 지도가 멈춘다 (2026-10-20). 끝난 뒤에 맞춘다
+  const wait = mapState.zoomUntil - Date.now();
+  if (wait > 0) {
+    clearTimeout(mapState.sizeTimer);
+    mapState.sizeTimer = setTimeout(safely(() => ensureMapSize({ force })), wait + 20);
+    return false;
+  }
   const center = map.getCenter(); // relayout 전에는 아직 예전 크기의 가운데
   map.relayout();
   mapState.mapWidth = width;
