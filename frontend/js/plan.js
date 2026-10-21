@@ -90,6 +90,10 @@
     const { value, error } = checkMoney(saving.input.value);
     const shown = error || serverError;
     if (value !== null) saving.input.value = format.comma(value); // 천 단위 쉼표
+    else if (error === MSG.max) {
+      // 상한을 넘어도 쉼표는 바른 자리에 ("100,0001" → "1,000,001"). 자릿수가 많아도 숫자를 바꾸지 않게 글자로 다룬다
+      saving.input.value = saving.input.value.replace(/,/g, '').trim().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
     saving.read.textContent = value === null ? '' : value === 0 ? '0원' : format.won(format.manToWon(value));
     saving.field.classList.toggle('field--error', Boolean(shown));
     saving.message.textContent = shown || MSG.help;
