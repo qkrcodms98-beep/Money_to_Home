@@ -6,7 +6,7 @@
   <!-- 늘 밝은 화면으로 (2026-10-20). 휴대폰 브라우저의 "웹 페이지 어둡게"가 우리 색을 뒤집지 않게 한다 -->
   <meta name="color-scheme" content="only light">
   <title>로그인 · 머니 to 홈</title>
-  <link rel="stylesheet" href="css/common.css?v=20261021-1">
+  <link rel="stylesheet" href="css/common.css?v=20261021-2">
   <link rel="stylesheet" href="css/auth.css?v=20261020-90">
 </head>
 <body data-page="login">
@@ -21,7 +21,7 @@
     <a class="progress__back" href="index.html" id="auth-back" aria-label="이전 화면">‹</a>
   </nav>
 
-  <form id="login-form" class="form-page form-page--keys auth" novalidate>
+  <form id="login-form" class="form-page auth" novalidate>
     <main class="page">
       <!-- P-07 ③ 저장하려다 넘어온 경우. 시나리오 탭의 "결과 저장"이 store place.pending_save를 남기고 보냈을 때만 보인다 -->
       <p class="notice auth__pending" id="login-pending" role="status" hidden>결과를 저장하려면 로그인이 필요합니다. 입력한 값은 이 기기에 그대로 남아 있습니다.</p>
@@ -73,8 +73,7 @@
   <script src="js/format.js?v=20261019-2"></script>
   <script src="js/guard.js"></script>
   <script src="js/layout.js?v=20261019-1"></script>
-  <script src="js/form-flow.js?v=20261021-1"></script>
-  <script src="js/auth.js?v=20261021-1"></script>
+  <script src="js/auth.js"></script>
   <script src="js/scrollbar.js?v=20261020-6"></script>
 </body>
 </html>

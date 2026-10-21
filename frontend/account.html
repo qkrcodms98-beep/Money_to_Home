@@ -6,7 +6,7 @@
   <!-- 늘 밝은 화면으로 (2026-10-20). 휴대폰 브라우저의 "웹 페이지 어둡게"가 우리 색을 뒤집지 않게 한다 -->
   <meta name="color-scheme" content="only light">
   <title>계정 · 머니 to 홈</title>
-  <link rel="stylesheet" href="css/common.css?v=20261021-1">
+  <link rel="stylesheet" href="css/common.css?v=20261021-2">
   <link rel="stylesheet" href="css/auth.css?v=20261020-90">
   <link rel="stylesheet" href="css/account.css">
 </head>
@@ -24,7 +24,7 @@
   </nav>
 
   <!-- P-10 비밀번호 변경 (C4) -->
-  <form id="password-form" class="form-page form-page--keys auth" novalidate hidden>
+  <form id="password-form" class="form-page auth" novalidate hidden>
     <main class="page">
       <header class="form-page__head auth__head">
         <h1 class="title">비밀번호를 바꿉니다</h1>
@@ -82,7 +82,7 @@
   </section>
 
   <!-- P-11 회원 탈퇴 (C5) -->
-  <form id="withdraw-form" class="form-page form-page--keys auth" novalidate hidden>
+  <form id="withdraw-form" class="form-page auth" novalidate hidden>
     <main class="page">
       <header class="form-page__head auth__head">
         <h1 class="title">탈퇴하면 저장한 정보가 모두 지워집니다</h1>
@@ -137,9 +137,8 @@
   <script src="js/guard.js"></script>
   <script src="js/layout.js?v=20261019-1"></script>
   <script src="js/account.js"></script>
-  <script src="js/form-flow.js?v=20261021-1"></script>
-  <script src="js/auth.js?v=20261021-1"></script>
-  <script src="js/account-page.js?v=20261021-1"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/account-page.js"></script>
   <script src="js/scrollbar.js?v=20261020-6"></script>
 </body>
 </html>
