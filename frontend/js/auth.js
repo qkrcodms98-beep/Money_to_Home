@@ -185,6 +185,7 @@ function initLogin() {
     update();
   });
 
+  formFlow.enterToNext([idInput, passwordInput]); // 아이디에서 "다음"을 누르면 비밀번호로, 비밀번호에서 누르면 로그인
   update();
   (savedId ? passwordInput : idInput).focus();
 }
@@ -221,7 +222,7 @@ function initSignup() {
   let step = 'id';
   let sending = false;
 
-  // 단계를 바꾼다. 앞 단계의 입력란은 위에 남는다. 새로 나타나는 입력란은 밀려 들어온다
+  // 단계를 바꾼다. 새로 나타나는 입력란은 맨 위에 밀려 들어오고 앞 단계의 입력란은 아래에 남는다 (signup.html의 칸 순서)
   function setStep(next) {
     const before = step;
     step = next;
@@ -250,6 +251,8 @@ function initSignup() {
     if (next !== before) {
       const focus = { id: id.input, password: password.input, confirm: confirm.input }[next];
       if (focus) focus.focus();
+      // 비밀번호 확인까지 맞으면 키보드를 내리고 동의와 가입하기 버튼이 보이게 내린다 (2026-10-21 팀장 요청)
+      if (next === 'ready') formFlow.revealSubmit(submit);
     }
     update();
   }

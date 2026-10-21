@@ -212,17 +212,24 @@
     }
   }
 
+  // 월 저축 가능액을 마치고 목표 기간으로 간다. 확인 버튼, 키보드의 "다음"(Enter), 아이폰 키패드의 ✓가 모두 여기로 온다
+  function toTerm() {
+    store.set('input', { monthly_saving: currentValues().monthly_saving });
+    goTo('term');
+    calculate(); // 돌아와서 금액만 고쳤으면 고른 기간으로 바로 다시 계산한다
+  }
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     if (submit.disabled) return;
-    if (step === 'saving') {
-      store.set('input', { monthly_saving: currentValues().monthly_saving });
-      goTo('term');
-      calculate(); // 돌아와서 금액만 고쳤으면 고른 기간으로 바로 다시 계산한다
-    } else {
-      save();
-    }
+    if (step === 'saving') toTerm();
+    else save();
   });
+
+  // 아이폰 숫자 키패드에는 "다음"이 없다. ✓로 키보드를 닫으면 금액이 맞을 때 목표 기간으로 간다 (form-flow.js)
+  formFlow.onDone(saving.input, () => {
+    if (step === 'saving' && !submit.disabled) toTerm();
+  }, submit);
 
   // 값을 고치면 오류 문구가 바로 사라지고, 결과가 바로 바뀐다.
   saving.input.addEventListener('input', () => {
@@ -241,7 +248,8 @@
       errorBar.hidden = true;
       store.set('input', { target_years: pickedYears() });
       render();
-      calculate();
+      // 결과가 나오면 아래의 "지도에서 보기"가 보이게 조금 내린다 (2026-10-21 팀장 요청)
+      calculate().then(() => formFlow.revealSubmit(submit));
     });
   }
 
