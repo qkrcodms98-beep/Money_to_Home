@@ -14,15 +14,19 @@ from sqlalchemy.orm import Session
 from backend.errors import ApiError
 from backend.models import Apartment, SavedResult
 from backend.services import calc, scenario
+from backend.services import profile as profile_service
 
 MSG_NOT_FOUND = "저장한 결과를 찾을 수 없습니다."
 
 
-def save(db: Session, user_id: int, conditions, apartment_id: int, area_band: int) -> dict:
+def save(db: Session, user_id: int, conditions, apartment_id: int, area_band: int, profile_id: int | None = None) -> dict:
     """A-21. 다시 계산해서 저장하고, 저장한 것을 돌려준다.
 
     없는 아파트나 면적, 맞지 않는 대출 조합은 시나리오와 같은 오류(404, 422)다.
+    profile_id는 찜할 때 고른 재무정보다. 남의 것이나 없는 번호면 404 (2026-10-21)
     """
+    if profile_id is not None:
+        profile_service.find_mine(db, user_id, profile_id)
     result = scenario.scenario(db, apartment_id, area_band, conditions)
     apartment = db.get(Apartment, apartment_id)
     loan = result["loan"]
@@ -32,6 +36,7 @@ def save(db: Session, user_id: int, conditions, apartment_id: int, area_band: in
         user_id=user_id,
         apartment_id=apartment.id,
         loan_product_id=loan["product_id"] if with_loan else None,
+        profile_id=profile_id,
         apartment_name=apartment.name,
         gu=apartment.gu,
         dong=apartment.dong,
@@ -77,6 +82,15 @@ def find_one(db: Session, user_id: int, result_id: int) -> dict:
     return to_out(row)
 
 
+def delete(db: Session, user_id: int, result_id: int) -> None:
+    """A-35. 찜 해제. 없거나 남의 것이면 404 (2026-10-21)"""
+    row = db.get(SavedResult, result_id)
+    if row is None or row.user_id != user_id:
+        raise ApiError(404, MSG_NOT_FOUND)
+    db.delete(row)
+    db.flush()
+
+
 def to_out(row: SavedResult) -> dict:
     """표의 한 줄을 응답 모양(시나리오 A-07과 같은 모양)으로 바꾼다. 다시 계산하지 않는다.
 
@@ -97,6 +111,7 @@ def to_out(row: SavedResult) -> dict:
     return {
         "id": row.id,
         "created_at": row.created_at,
+        "profile_id": row.profile_id,
         "apartment": {
             "id": row.apartment_id,
             "name": row.apartment_name,

@@ -5,6 +5,8 @@
 //   const loginId = await account.me();       로그인했으면 아이디, 아니면 null. 한 화면에서 한 번만 묻는다
 //   await account.save('/api/profile/plan', values);
 //                                            로그인했을 때만 서버에 저장한다 (FR-PROFILE-04). 아니면 아무것도 하지 않는다
+//                                            시작 화면에서 고른 재무정보(place.profile_id)가 있으면 그 재무정보에 저장한다
+//                                            (주소 끝에 ?profile_id=, 재무정보 3개, 2026-10-21)
 //   await account.logout();                  로그아웃
 //
 // 30분 동안 요청이 없어 로그인이 풀리면 (FR-USER-08, 와이어프레임 P-01 ⑤)
@@ -35,7 +37,7 @@ const account = (() => {
 
   // 로그인이 풀렸다. 시작 화면에서 안내를 보이게 표시를 남기고 보낸다.
   function expire() {
-    store.set('place', { login_id: null, expired: true });
+    store.set('place', { login_id: null, expired: true, profile_id: null, profile_name: null });
     if (!location.pathname.endsWith(`/${ACCOUNT_START_PAGE}`) && location.pathname !== '/') {
       location.href = ACCOUNT_START_PAGE;
     }
@@ -75,8 +77,9 @@ const account = (() => {
     // 로그인했을 때만 저장한다. 저장하다 401이면 로그인이 풀린 것이다.
     async save(path, body) {
       if (!(await api_.me())) return null;
+      const profileId = store.get('place').profile_id;
       try {
-        const data = await api.put(path, body);
+        const data = await api.put(profileId ? `${path}?profile_id=${encodeURIComponent(profileId)}` : path, body);
         lastRequest = Date.now();
         return data;
       } catch (error) {
@@ -95,7 +98,7 @@ const account = (() => {
         // 이미 풀렸어도 화면은 로그아웃한 것으로 둔다
       }
       asked = Promise.resolve(null);
-      store.set('place', { login_id: null, expired: false });
+      store.set('place', { login_id: null, expired: false, profile_id: null, profile_name: null });
     },
 
     // 이 탭에서 "로그인이 풀렸다"는 안내를 보여야 하는가. 한 번 보이면 지운다.

@@ -198,6 +198,16 @@ const aptPanel = {
           supply_area: area.supply_area, exclusive_area: area.exclusive_area };
       }));
     }
+    // 찜 하트 (2026-10-21, 박채은의 scenario.js). 공유 아이콘 앞에 둔다. ♡ 누르면 찜, ♥ 다시 누르면 찜 해제
+    if (typeof scenarioView !== 'undefined') {
+      const share = document.getElementById('apt-close').previousElementSibling;
+      const before = share && share.classList.contains('share-action') ? share : document.getElementById('apt-close');
+      before.before(scenarioView.heartButton(() => {
+        const { apartment } = aptPanel;
+        if (!apartment) return null;
+        return { conditions: guard.conditions(), apartment_id: apartment.id, area_band: apartment.areas[aptPanel.areaIndex].area_band };
+      }));
+    }
 
     document.querySelectorAll('.apt__unit-option').forEach((button) => {
       button.addEventListener('click', () => {
@@ -297,6 +307,7 @@ const aptPanel = {
     const badge = document.getElementById('apt-badge');
     badge.className = `badge badge--${area.category}`; // 고른 면적의 구분
     badge.textContent = APT_CATEGORY_NAMES[area.category];
+    if (typeof scenarioView !== 'undefined') scenarioView.refreshSave(); // 찜 하트를 이 아파트 · 면적으로 (2026-10-21)
     aptPanel.renderNoCoordTag();
 
     // 이전·다음
