@@ -74,6 +74,7 @@ const startProfiles = {
   savedFilter: null, // 'all', 'deleted', 또는 재무정보 번호
   offIds: new Set(), // ♡로 바꾼(해제한) 찜 번호. 새로 고치기 전까지 카드는 그 자리에 남는다
   toastTimer: null,
+  lockedTop: 0, // 창을 열 때 보던 스크롤 위치
 
   $: (id) => document.getElementById(id),
 
@@ -336,12 +337,31 @@ const startProfiles = {
     }
     dim.append(sheet);
     startProfiles.$('start-layer').replaceChildren(dim);
-    document.documentElement.classList.add('profile-lock'); // 창이 열린 동안 뒤 화면은 스크롤되지 않는다
+    startProfiles.lock();
+  },
+
+  // 창이 열린 동안 뒤 화면은 스크롤되지 않는다.
+  // 뒤 화면(body)의 너비와 높이를 부모(html, 곧 화면)의 100%로 고정하고 넘치는 부분은 숨긴다.
+  // 보던 위치는 body 안에서 그대로 보여 주고, 창을 닫으면 그 위치로 돌아간다
+  lock() {
+    const root = document.documentElement;
+    if (root.classList.contains('profile-lock')) return;
+    const top = window.scrollY;
+    startProfiles.lockedTop = top;
+    root.classList.add('profile-lock');
+    document.body.scrollTop = top;
+  },
+
+  unlock() {
+    const root = document.documentElement;
+    if (!root.classList.contains('profile-lock')) return;
+    root.classList.remove('profile-lock');
+    window.scrollTo({ top: startProfiles.lockedTop || 0, behavior: 'instant' });
   },
 
   closeLayer() {
     startProfiles.$('start-layer').replaceChildren();
-    document.documentElement.classList.remove('profile-lock');
+    startProfiles.unlock();
     document.removeEventListener('keydown', startProfiles.onEsc);
   },
 
