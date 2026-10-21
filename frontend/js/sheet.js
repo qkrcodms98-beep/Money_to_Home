@@ -6,10 +6,13 @@
 //
 // 단계 (화면 설계서 7.1, 와이어프레임 2.5, guide_sehwan 4장)
 //   '30'   262px. 말풍선을 누름
-//   '80'   지도 영역의 80% (390 × 844에서 643). 목록 보기, 목록의 카드, 30%에서 손잡이
-//   'full' 내 조건 줄 바로 아래부터. 80%에서 손잡이
+//   '80'   지도 영역의 90% (2026-10-21 세환. 예전 80%라 이름이 '80'). 목록 창의 하나뿐인 단계
+//   'full' 내 조건 줄 바로 아래부터
 //
-// 손잡이를 누르면 다음 단계로 바뀐다. 30% → 80% → 전체 → 30% (전체에서 누르면 30%. 2026-10-13 세환이 정함).
+// 창마다 쓰는 단계 (2026-10-21 세환. 예전에는 둘 다 30% → 80% → 전체 → 30%)
+//   아파트 창: 30% ↔ 전체. 손잡이를 누르면 다른 쪽으로. 80%로 열라고 하면(목록의 카드) 전체로 연다
+//   목록 창:   90% 하나. 무엇으로 열든(목록 보기, 결과 없음, 불러오기 실패) 90%로 열고, 손잡이를 누르면 닫는다
+// 웹(1024px 이상)은 map-web.js가 창을 왼쪽 패널로 쓰고 단계를 바꾸지 않으므로, 이 단계는 모바일에서만 보인다.
 // 닫기 버튼, 아래로 길게 끌기, 브라우저의 뒤로 가기로 닫는다. 뒤로 가기는 페이지를 떠나지 않고 창만 닫는다 (화면 설계서 7.1).
 //
 // 끌기 (FR-MAP-17, T-MAP-17, 화면 설계서 7.1과 7.6)
@@ -57,12 +60,12 @@
 //                                             그리기는 list.js의 listView.renderError를 부른다.
 //                                             message를 빼면 list.js의 문장 "아파트를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
 
-const SHEET_NEXT_STAGE = { 30: '80', 80: 'full', full: '30' };
 const SHEET_HISTORY_KEY = 'sheet'; // history.state에 남기는 표시. 창이 열려 있다는 뜻이다
 // 단계마다 지도가 쓰는 자리의 크기 순서. 클수록 지도가 넓다. 전체 단계에서는 지도를 줄이지 않는다 (창에 다 가려진다).
 const SHEET_MAP_ROOM = { 80: 1, 30: 2, full: 3 };
-const SHEET_RATIO_80 = 0.8; // sheet.css의 80% 높이와 같은 값
-const SHEET_STAGES = ['30', '80', 'full']; // 낮은 것부터
+const SHEET_RATIO_80 = 0.9; // sheet.css의 '80' 단계 높이(90%)와 같은 값 (2026-10-21 세환. 예전 0.8)
+const SHEET_LIST_STAGES = ['80']; // 목록 창의 단계. 90% 하나 (2026-10-21 세환)
+const SHEET_APT_STAGES = ['30', 'full']; // 아파트 창의 단계. 낮은 것부터. 80%는 쓰지 않는다 (2026-10-21 세환)
 // 끌기 (화면 설계서 7.1, 7.6). 손잡이와 머리 부분에서만 받는다. 목록의 머리는 김목산의 list.js가 그린다.
 const SHEET_DRAG_AREA = '.sheet__handle, .apt__head, .list__head';
 const SHEET_DRAG_START = 8; // 이만큼(px) 움직여야 끌기로 본다. 그보다 적으면 누르기다
@@ -88,7 +91,10 @@ const sheet = {
 
   init() {
     document.getElementById('sheet-handle').addEventListener('click', () => {
-      if (sheet.stage) sheet.setStage(SHEET_NEXT_STAGE[sheet.stage]);
+      if (!sheet.stage) return;
+      const next = sheet.nextStage(sheet.stage);
+      if (next) sheet.setStage(next);
+      else sheet.close(); // 단계가 하나뿐인 창(목록)은 손잡이를 누르면 닫는다
     });
 
     // 브라우저의 뒤로 가기. 창을 열 때 남긴 기록에서 빠져나오면 창을 닫는다.
@@ -121,6 +127,21 @@ const sheet = {
 
   isShown: () => sheet.phase === 'opening' || sheet.phase === 'open',
 
+  // 그 내용(mode)이 쓰는 단계. 낮은 것부터
+  stagesFor: (mode) => (mode === 'apartment' ? SHEET_APT_STAGES : SHEET_LIST_STAGES),
+  // 그 내용에 없는 단계는 그 내용의 가장 높은 단계로. 아파트 창의 80%는 전체로, 목록 창의 30% · 전체는 90%로
+  fitStage(stage, mode) {
+    const stages = sheet.stagesFor(mode);
+    return stages.includes(stage) ? stage : stages[stages.length - 1];
+  },
+  // 손잡이를 누르면 갈 단계. 맨 위에서 누르면 맨 아래로. 단계가 하나뿐이면 null (닫는다)
+  nextStage(stage) {
+    const stages = sheet.stagesFor(sheet.mode);
+    if (stages.length < 2) return null;
+    const index = stages.indexOf(stage);
+    return stages[(index + 1) % stages.length];
+  },
+
   // 움직이는 시간(ms). sheet.css의 --sheet-duration을 읽는다.
   // 움직임을 줄이도록 설정했으면 0이다 (바로 열리고, 바로 바뀌고, 바로 닫힌다).
   duration() {
@@ -149,6 +170,7 @@ const sheet = {
   // 닫혀 있으면(내려가는 중도) 아래에서 올라오게 연다. 열려 있으면 단계와 내용을 바꾼다.
   // 기록은 열 때 하나만 남긴다. 그래서 몇 번을 바꿔도 뒤로 가기 한 번이면 창이 닫힌다.
   show(stage, mode) {
+    stage = sheet.fitStage(stage, mode);
     if (sheet.backPending) sheet.reopened = true; // 닫기가 아직 끝나지 않았다. popstate에서 닫지 않는다
     else if (!sheet.isOwnHistory()) history.pushState({ [SHEET_HISTORY_KEY]: true }, '');
     if (sheet.isShown()) {
@@ -169,6 +191,7 @@ const sheet = {
   },
 
   setStage(stage) {
+    stage = sheet.fitStage(stage, sheet.mode);
     if (!sheet.isShown() || sheet.stage === stage) return;
     sheet.changeStage(stage);
   },
@@ -295,12 +318,13 @@ const sheet = {
     sheet.moving = true;
   },
 
-  // 창의 높이를 손가락에 맞춘다. 전체보다 높이 가지 않는다.
-  // 30%보다 낮으면 높이는 30% 그대로 두고 창을 아래로 내린다 (안의 내용이 찌그러지지 않게).
+  // 창의 높이를 손가락에 맞춘다. 그 창의 가장 높은 단계(아파트는 전체, 목록은 90%)보다 높이 가지 않는다.
+  // 가장 낮은 단계(아파트는 30%, 목록은 90%)보다 낮으면 높이는 그대로 두고 창을 아래로 내린다 (안의 내용이 찌그러지지 않게).
   moveDrag(height) {
     const box = document.getElementById('sheet');
-    const low = sheet.stageHeight('30');
-    const h = Math.min(height, sheet.stageHeight('full'));
+    const stages = sheet.stagesFor(sheet.mode);
+    const low = sheet.stageHeight(stages[0]);
+    const h = Math.min(height, sheet.stageHeight(stages[stages.length - 1]));
     box.style.height = `${Math.max(h, low)}px`;
     box.style.transform = h < low ? `translateY(${low - h}px)` : '';
   },
@@ -310,7 +334,7 @@ const sheet = {
     const box = document.getElementById('sheet');
     box.classList.remove('sheet--dragging');
     sheet.dragging = false;
-    const down = sheet.stageHeight('30') - height; // 30%보다 내린 거리
+    const down = sheet.stageHeight(sheet.stagesFor(sheet.mode)[0]) - height; // 가장 낮은 단계(아파트 30%, 목록 90%)보다 내린 거리
     if (down > SHEET_CLOSE_DISTANCE) {
       // 내린 자리에서 이어서 내려가게 한다 (sheet.css의 sheet-down이 --sheet-drag-y에서 출발한다)
       box.style.setProperty('--sheet-drag-y', `${down}px`);
@@ -331,21 +355,23 @@ const sheet = {
 
   // 뗀 높이와 빠르기로 갈 단계를 고른다.
   // 위로 튕겼으면 지금 높이보다 높은 첫 단계, 아래로 튕겼으면 낮은 첫 단계, 아니면 가장 가까운 단계
+  // 아파트 창은 30%와 전체 둘 가운데서 고른다 (stagesFor)
   pickStage(height, speed) {
-    const heights = SHEET_STAGES.map((stage) => sheet.stageHeight(stage));
+    const stages = sheet.stagesFor(sheet.mode);
+    const heights = stages.map((stage) => sheet.stageHeight(stage));
     if (speed <= -SHEET_FLICK_SPEED) {
       const index = heights.findIndex((h) => h > height + 1);
-      return SHEET_STAGES[index === -1 ? SHEET_STAGES.length - 1 : index];
+      return stages[index === -1 ? stages.length - 1 : index];
     }
     if (speed >= SHEET_FLICK_SPEED) {
       const lower = heights.filter((h) => h < height - 1).length;
-      return SHEET_STAGES[Math.max(lower - 1, 0)];
+      return stages[Math.max(lower - 1, 0)];
     }
     let best = 0;
     heights.forEach((h, index) => {
       if (Math.abs(h - height) < Math.abs(heights[best] - height)) best = index;
     });
-    return SHEET_STAGES[best];
+    return stages[best];
   },
 
   // 끌며 붙인 높이와 위치를 지운다 (sheet.css의 단계 높이로 돌아간다)
@@ -390,12 +416,12 @@ const sheet = {
 
   // ───────── 예외 화면 ─────────
 
-  // 결과 없음 (P-05 ⑨). 목록 30%. 목록은 받은 응답(0곳)으로 list.js가 이미 그려 두었다.
+  // 결과 없음 (P-05 ⑨). 목록 90% (2026-10-21. 예전 30%). 목록은 받은 응답(0곳)으로 list.js가 이미 그려 두었다.
   showEmpty() {
-    sheet.show('30', 'list');
+    sheet.show('80', 'list');
   },
 
-  // 아파트를 불러오지 못함. 목록 자리에 오류 문장과 '다시 시도'를 그리고 목록 30%로 연다.
+  // 아파트를 불러오지 못함. 목록 자리에 오류 문장과 '다시 시도'를 그리고 목록 90%로 연다 (2026-10-21. 예전 30%).
   // list.js를 불러오지 않았으면 아무것도 하지 않는다.
   showLoadError({ message, onRetry } = {}) {
     if (typeof listView === 'undefined' || typeof listView.renderError !== 'function') return;
@@ -404,7 +430,7 @@ const sheet = {
       onRetry,
       onClose: () => sheet.close(),
     });
-    sheet.show('30', 'list');
+    sheet.show('80', 'list');
   },
 
   apply() {
@@ -438,7 +464,8 @@ const sheet = {
       sheet.scrollToTop(sheet.topPending); // 30%에서 높이가 없던 내용이 창을 키워 보이게 됐다
     }
     sheet.shownMode = showing;
-    document.getElementById('sheet-handle').setAttribute('aria-label', stage === 'full' ? '창 줄이기' : '창 키우기');
+    const single = sheet.stagesFor(mode).length < 2; // 목록 창은 손잡이를 누르면 닫는다
+    document.getElementById('sheet-handle').setAttribute('aria-label', single ? '창 닫기' : stage === 'full' ? '창 줄이기' : '창 키우기');
 
     sheet.listeners.forEach((listener) => listener());
   },
