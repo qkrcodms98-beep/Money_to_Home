@@ -2,6 +2,7 @@
 //
 // 값 세 개를 한 번에 하나씩 묻는다.
 //   rrn(주민등록번호 앞 7자리 → 만 나이) → income(연 소득) → assets(현재 보유자산) → confirm(확인)
+// 새로 묻는 칸은 늘 맨 위에 나오고 앞의 값은 아래로 내려간다 (profile.html의 칸 순서). 키보드의 "다음"·✓로 넘어간다 (js/form-flow.js)
 //
 // 주민등록번호 앞 7자리는 만 나이를 계산하는 데만 쓴다.
 // 브라우저 저장소, 서버 요청 어디에도 넣지 않는다. 보관하는 것은 만 나이뿐이다 (NFR-25).
@@ -139,7 +140,7 @@
 
   // 확인 단계로 바뀔 때 제목과 값들이 한 번 뛰어오른다. 화면이 바뀐 것을 알아보게 한다. 모양은 common.css의 .jump
   function jump() {
-    const targets = [$('profile-title').parentElement, ageField, money.income.field, money.assets.field];
+    const targets = [$('profile-title').parentElement, money.assets.field, money.income.field, ageField]; // 화면의 위에서 아래 순서
     targets.forEach((target, index) => {
       target.classList.remove('field--enter', 'jump');
       void target.offsetWidth;
@@ -194,27 +195,42 @@
 
   // ── 움직임 ───────────────────────────────────────────
 
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (!canGoOn()) return;
+  // 지금 칸을 마치고 다음 칸으로 간다. 확인 버튼, 키보드의 "다음"(Enter), 아이폰 키패드의 ✓가 모두 여기로 온다.
+  // focus: 다음 칸에 바로 커서를 둘지. 키보드가 떠 있을 때만 둔다 (✓로 키보드를 닫았으면 다시 띄우지 않는다)
+  function advance(focus = true) {
     if (step === 'rrn') {
       age = renderRrn();
       rrn.front.value = '';
       rrn.back.value = ''; // 일곱 자리는 만 나이를 구한 뒤 바로 지운다
       store.set('input', { age });
-      if (!money.income.input.value) goTo('income', money.income.input);
-      else if (!money.assets.input.value) goTo('assets', money.assets.input);
+      if (!money.income.input.value) goTo('income', focus && money.income.input);
+      else if (!money.assets.input.value) goTo('assets', focus && money.assets.input);
       else goTo('confirm');
     } else if (step === 'income') {
       store.set('input', { annual_income: currentValues().annual_income });
-      goTo(money.assets.input.value ? 'confirm' : 'assets', money.assets.input);
+      if (money.assets.input.value) goTo('confirm');
+      else goTo('assets', focus && money.assets.input);
     } else if (step === 'assets') {
       store.set('input', { current_assets: currentValues().current_assets });
       goTo('confirm');
-    } else {
-      save();
     }
+    // 다 넣었으면 키보드를 내리고 아래의 버튼이 보이게 조금 내린다 (2026-10-21 팀장 요청)
+    if (step === 'confirm') formFlow.revealSubmit(submit);
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!canGoOn()) return;
+    if (step === 'confirm') save();
+    else advance();
   });
+
+  // 아이폰 숫자 키패드에는 "다음"이 없다. ✓로 키보드를 닫으면 값이 맞을 때 다음 칸으로 간다 (form-flow.js)
+  for (const name of Object.keys(money)) {
+    formFlow.onDone(money[name].input, () => {
+      if (step === name && canGoOn()) advance(false);
+    }, submit);
+  }
 
   // 값을 고치면 오류 문구가 바로 사라진다. 서버가 거부했던 값도 고치면 다시 시도할 수 있다.
   for (const name of Object.keys(money)) {
@@ -228,7 +244,18 @@
     if (rrn.front.value.length === 6 && !/\D/.test(rrn.front.value)) rrn.back.focus(); // 여섯 자리를 다 치면 뒤 첫째 자리로
     render();
   });
-  rrn.back.addEventListener('input', render);
+  // 일곱 자리를 다 넣고 맞으면 바로 다음 칸(연 소득)으로 간다. 키보드는 그대로 둔다
+  rrn.back.addEventListener('input', () => {
+    if (step === 'rrn' && canGoOn()) advance();
+    else render();
+  });
+  // 앞 여섯 자리에서 키보드의 "다음"을 누르면 뒤 첫째 자리로 (폼을 보내지 않는다)
+  rrn.front.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      rrn.back.focus();
+    }
+  });
   rrn.back.addEventListener('keydown', (event) => {
     if (event.key === 'Backspace' && rrn.back.value === '') rrn.front.focus();
   });

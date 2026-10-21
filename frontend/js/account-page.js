@@ -50,6 +50,7 @@ function initPasswordChange() {
     input: document.getElementById('password-confirm'),
     message: document.getElementById('password-confirm-message'),
   };
+  formFlow.enterToNext([current.input, next.input, confirm.input]); // "다음"(Enter)으로 다음 칸, 마지막 칸에서는 바꾸기
   let sending = false;
 
   // 확인 값 아래 문구. 같으면 "✓ 비밀번호가 같습니다", 새 비밀번호만큼 넣었는데 다르면 "비밀번호가 서로 다릅니다."
