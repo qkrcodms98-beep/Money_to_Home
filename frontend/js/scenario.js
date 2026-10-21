@@ -19,7 +19,8 @@
 //   평균가가 상품의 대상 주택 가격 상한을 넘으면 안내 (FR-LOAN-14, P-06 ⑲의 문장)
 //   처음 받는 동안: 결과 상자와 값 줄 자리에 회색 자리 표시(스켈레톤) (FR-COMMON-10)
 //   조건 바꿔 보기: 월 저축액, 목표 기간, "다시 계산" (A2 ~ A4). 다시 계산하는 동안 결과 상자만 흐리게 둔다
-//   결과 저장 (3차, C2): A-21. 저장하면 "저장됨 ✓", 아래 알림에 "저장한 결과 보기"
+//   찜 (3차, C2. 2026-10-21에 "결과 저장"을 "찜"으로): A-21. 찜하면 [♥ 찜함], 아래 알림에 "찜한 시나리오 보기".
+//     [♥ 찜함]이나 아파트 창의 ♥를 다시 누르면 찜 해제 (A-35). 찜할 때 지금 고른 재무정보 번호를 보낸다
 //     로그인하지 않았으면(401) 저장할 값을 store의 place.pending_save에 남기고 로그인 화면으로 보낸다 (P-07 ③).
 //     로그인한 뒤 지도 화면으로 돌아오면 남긴 값을 저장하고 알린다 (resumePendingSave).
 //   안내 문구: 추정치, 실거래 기록, 적용한 가정 (FR-COMMON-01, 02, 08)
@@ -54,18 +55,29 @@ const SCENARIO_TEXT = {
   estimateNone: '가정에 따른 추정치입니다. 판매 중인 매물이 아니라 실거래 기록입니다.',
   assumeLoan: '적용한 가정: 무주택, 자격 충족, 현재 가치 기준, 대표 금리, 기존 대출 없음',
   assumeNone: '적용한 가정: 무주택, 현재 가치 기준, 대출 없이 계산',
-  // 결과 저장 (와이어프레임 C2)
-  save: '결과 저장',
-  saving: '저장하는 중',
-  saved: '저장됨 ✓',
-  savedToast: '결과를 저장했습니다.',
-  savedLink: '저장한 결과 보기',
-  saveFailed: '결과를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  // 찜 (와이어프레임 C2의 결과 저장을 "찜"으로, 2026-10-21)
+  save: '♡ 찜하기',
+  saving: '찜하는 중',
+  saved: '♥ 찜함',
+  unsaveHint: '누르면 찜을 해제합니다',
+  savedToast: '찜했습니다.',
+  savedToastWith: '기준으로 찜했습니다.', // 앞에 재무정보 이름. "재무정보 1 기준으로 찜했습니다."
+  savedLink: '찜한 시나리오 보기',
+  saveFailed: '찜하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  unsavedToast: '찜을 해제했습니다.',
+  unsaveFailed: '찜을 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  heartOn: '이 시나리오 찜하기',
+  heartOff: '찜 해제하기',
+};
+// 하트 그림 (고정된 그림만 innerHTML로 넣는다)
+const SCENARIO_ICONS = {
+  heart: '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.4-7.5-10.1A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+  heartOn: '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.4-7.5-10.1A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1z" fill="currentColor"/></svg>',
 };
 const SCENARIO_LOGIN_PAGE = 'login.html';
 // 값 줄 가운데 용어 설명(? 버튼)을 붙이는 줄 (요구사항 부록 C의 용어). 허용 상승률은 따로 붙인다
 const SCENARIO_TERMS = { '예상 월 상환액': 'repayment' };
-const SCENARIO_SAVED_PAGE = 'saved.html';
+const SCENARIO_SAVED_PAGE = 'index.html#saved'; // 찜한 시나리오 목록은 로그인한 시작 화면 아래에 있다 (2026-10-21)
 
 const scenarioView = {
   root: null, // 그리는 자리 (#scenario-panel)
@@ -80,7 +92,10 @@ const scenarioView = {
   errorText: '',
   seq: 0, // 늦게 온 앞의 응답을 버리려고 요청마다 번호를 붙인다
   toastTimer: null,
-  savedKeys: new Set(), // 이번에 저장한 것 ("아파트:면적대:조건"). 같은 것을 두 번 저장하지 않게 버튼을 끈다
+  savedKeys: new Set(), // 찜한 것 ("아파트:면적대:조건"). [♥ 찜함]과 하트를 켠다
+  savedIds: new Map(), // 열쇠 → 찜 번호들. 찜 해제(A-35)에 쓴다
+  savedLoaded: false, // 이미 찜한 것을 서버에서 받았는가 (로그인했을 때 한 번)
+  hearts: [], // 아파트 창의 하트 (heartButton)
   saving: false,
 
   // ───────── 부르는 쪽이 쓰는 함수 ─────────
@@ -371,7 +386,11 @@ const scenarioView = {
     return box;
   },
 
-  // ───────── 결과 저장 (3차, A-21) ─────────
+  // ───────── 찜 (결과 저장 3차 A-21, 찜 해제 A-35. 2026-10-21) ─────────
+  // 시나리오 탭 아래 [♡ 찜하기] / [♥ 찜함]과 아파트 창 머리의 하트(heartButton)가 같은 상태를 쓴다.
+  // 찜하면 지금 고른 재무정보(store의 place.profile_id)를 함께 보낸다. [♥ 찜함]이나 ♥를 다시 누르면 찜 해제.
+  // 찜하거나 해제할 때는 시나리오 전체를 다시 그리지 않고 버튼만 바꾼다.
+  // 전체를 다시 그리면 그래프가 새로 그려지는 동안 길이가 줄어 화면이 시나리오 맨 위로 튕긴다.
 
   // 저장할 값. 화면의 계산 결과는 보내지 않는다. 서버가 다시 계산해서 저장한다 (API 명세서 3.5)
   saveBody() {
@@ -382,26 +401,83 @@ const scenarioView = {
     };
   },
 
-  saveKey: (body) => `${body.apartment_id}:${body.area_band}:${JSON.stringify(body.conditions)}`,
+  // 같은 아파트 · 면적 · 조건인지 가리는 열쇠. 조건은 정해진 순서로 적는다 (객체의 순서와 상관없이 같게)
+  saveKey(body) {
+    const c = body.conditions;
+    const product = c.loan_choice === 'product';
+    return [body.apartment_id, body.area_band, c.current_assets, c.monthly_saving, c.target_years, c.loan_choice,
+      product ? c.loan_product_id : '', product ? c.repayment_years : ''].join(':');
+  },
+
+  // 찜한 결과(A-21 ~ A-23의 모양) 하나의 열쇠
+  resultKey(r) {
+    const product = r.loan.choice === 'product';
+    return scenarioView.saveKey({
+      apartment_id: r.apartment.id,
+      area_band: r.apartment.area_band,
+      conditions: {
+        current_assets: r.current_assets, monthly_saving: r.monthly_saving, target_years: r.target_years,
+        loan_choice: r.loan.choice, loan_product_id: product ? r.loan.product_id : null,
+        repayment_years: product ? r.loan.repayment_years : null,
+      },
+    });
+  },
+
+  // 찜했다고 적어 둔다. 같은 열쇠로 여러 번 찜했으면 번호를 모두 둔다 (해제할 때 모두 지운다)
+  remember(key, id) {
+    scenarioView.savedKeys.add(key);
+    const ids = scenarioView.savedIds.get(key) || [];
+    if (!ids.includes(id)) scenarioView.savedIds.set(key, [...ids, id]);
+  },
+
+  // 로그인했으면 이미 찜한 것을 한 번 받아, 하트와 [♥ 찜함]이 처음부터 켜져 있게 한다
+  async loadSaved() {
+    if (scenarioView.savedLoaded) return;
+    scenarioView.savedLoaded = true;
+    try {
+      const { results } = await api.get('/api/saved-results');
+      results.forEach((r) => {
+        if (r.apartment.id !== null) scenarioView.remember(scenarioView.resultKey(r), r.id);
+      });
+    } catch (error) {
+      scenarioView.savedLoaded = false; // 로그인하지 않았거나 받지 못했다. 다음에 다시 묻는다
+      return;
+    }
+    scenarioView.refreshSave();
+  },
+
+  // 버튼과 하트만 다시 그린다
+  refreshSave() {
+    const old = scenarioView.root && scenarioView.root.querySelector('.scenario__save');
+    if (old && scenarioView.result) old.replaceWith(scenarioView.saveButton());
+    scenarioView.hearts.forEach((heart) => heart.sync());
+  },
 
   saveButton() {
     const button = scenarioView.make('button', 'button scenario__save');
     button.type = 'button';
-    const done = scenarioView.savedKeys.has(scenarioView.saveKey(scenarioView.saveBody()));
-    button.disabled = done || scenarioView.saving || scenarioView.status === 'recalc';
+    const key = scenarioView.saveKey(scenarioView.saveBody());
+    const done = scenarioView.savedKeys.has(key);
+    button.disabled = scenarioView.saving || scenarioView.status === 'recalc';
     button.textContent = done ? SCENARIO_TEXT.saved : (scenarioView.saving ? SCENARIO_TEXT.saving : SCENARIO_TEXT.save);
-    button.addEventListener('click', () => scenarioView.save());
+    if (done) {
+      button.classList.add('scenario__save--on');
+      button.setAttribute('aria-pressed', 'true');
+      button.title = SCENARIO_TEXT.unsaveHint;
+    }
+    button.addEventListener('click', () => (done ? scenarioView.unsave(key) : scenarioView.save(scenarioView.saveBody())));
     return button;
   },
 
-  async save() {
-    const body = scenarioView.saveBody();
+  // 찜하기. body는 saveBody()의 모양 (아파트 창의 하트는 지금 고른 아파트 · 면적으로 만든다)
+  async save(body) {
+    const profileId = store.get('place').profile_id;
     scenarioView.saving = true;
-    scenarioView.draw();
+    scenarioView.refreshSave();
     try {
-      await api.post('/api/saved-results', body);
-      scenarioView.savedKeys.add(scenarioView.saveKey(body));
-      scenarioView.toast(SCENARIO_TEXT.savedToast, { text: SCENARIO_TEXT.savedLink, href: SCENARIO_SAVED_PAGE });
+      const saved = await api.post('/api/saved-results', profileId ? { ...body, profile_id: profileId } : body);
+      scenarioView.remember(scenarioView.saveKey(body), saved.id);
+      scenarioView.toast(scenarioView.savedToastText(), { text: SCENARIO_TEXT.savedLink, href: SCENARIO_SAVED_PAGE });
     } catch (error) {
       if (error.status === 401) {
         // 로그인하지 않았다. 저장할 값을 남기고 로그인 화면으로 (P-07 ③). 입력한 값은 그대로 둔다
@@ -409,23 +485,73 @@ const scenarioView = {
         location.href = SCENARIO_LOGIN_PAGE;
         return;
       }
+      if (error.status === 404 && profileId) store.set('place', { profile_id: null, profile_name: null }); // 그 재무정보가 지워졌다
       scenarioView.toast(error.status >= 400 && error.status < 500 ? error.detail : SCENARIO_TEXT.saveFailed);
     } finally {
       scenarioView.saving = false;
     }
-    scenarioView.draw();
+    scenarioView.refreshSave();
   },
 
-  // 로그인하고 지도 화면으로 돌아왔을 때, 로그인 전에 누른 "결과 저장"을 이어서 한다 (P-07 ③)
+  // 찜 해제 (A-35). 같은 아파트 · 면적 · 조건으로 찜한 것을 모두 지운다
+  async unsave(key) {
+    const ids = scenarioView.savedIds.get(key) || [];
+    try {
+      await Promise.all(ids.map((id) => api.delete(`/api/saved-results/${id}`).catch((error) => {
+        if (error.status !== 404) throw error; // 이미 지워졌으면 그대로 넘어간다
+      })));
+      scenarioView.savedKeys.delete(key);
+      scenarioView.savedIds.delete(key);
+      scenarioView.toast(SCENARIO_TEXT.unsavedToast);
+    } catch (error) {
+      scenarioView.toast(error.status >= 400 && error.status < 500 ? error.detail : SCENARIO_TEXT.unsaveFailed);
+    }
+    scenarioView.refreshSave();
+  },
+
+  // "재무정보 1 기준으로 찜했습니다." 고른 재무정보가 없으면(로그인 전에 누른 찜) "찜했습니다."
+  savedToastText() {
+    const name = store.get('place').profile_name;
+    return name ? `${name} ${SCENARIO_TEXT.savedToastWith}` : SCENARIO_TEXT.savedToast;
+  },
+
+  // 아파트 창 머리의 하트 (♡ 찜하기 / ♥ 찜함). 안세환의 apartment.js가 공유 아이콘 앞에 붙인다.
+  //   getBody: 지금 고른 아파트 · 면적의 saveBody 모양을 돌려주는 함수. 아파트가 없으면 null
+  //   아파트나 면적이 바뀌면 apartment.js가 scenarioView.refreshSave()를 부른다
+  heartButton(getBody, className = 'share-action') {
+    const heart = scenarioView.make('button', `${className} scenario-heart`);
+    heart.type = 'button';
+    heart.sync = () => {
+      const body = getBody();
+      const on = Boolean(body && scenarioView.savedKeys.has(scenarioView.saveKey(body)));
+      heart.setAttribute('aria-pressed', String(on));
+      heart.setAttribute('aria-label', on ? SCENARIO_TEXT.heartOff : SCENARIO_TEXT.heartOn);
+      heart.innerHTML = on ? SCENARIO_ICONS.heartOn : SCENARIO_ICONS.heart; // 고정된 그림만 넣는다
+    };
+    heart.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const body = getBody();
+      if (!body || scenarioView.saving) return;
+      const key = scenarioView.saveKey(body);
+      if (scenarioView.savedKeys.has(key)) scenarioView.unsave(key);
+      else scenarioView.save(body);
+    });
+    scenarioView.hearts.push(heart);
+    heart.sync();
+    return heart;
+  },
+
+  // 로그인하고 지도 화면으로 돌아왔을 때, 로그인 전에 누른 찜을 이어서 한다 (P-07 ③)
+  // 로그인 전에 누른 것이라 어느 재무정보인지는 보내지 않는다 (API 명세서 A-21)
   async resumePendingSave() {
     const body = store.get('place').pending_save;
     if (!body) return;
     try {
-      await api.post('/api/saved-results', body);
+      const saved = await api.post('/api/saved-results', body);
       store.set('place', { pending_save: null });
-      scenarioView.savedKeys.add(scenarioView.saveKey(body));
+      scenarioView.remember(scenarioView.saveKey(body), saved.id);
       scenarioView.toast(SCENARIO_TEXT.savedToast, { text: SCENARIO_TEXT.savedLink, href: SCENARIO_SAVED_PAGE });
-      if (scenarioView.root && scenarioView.result) scenarioView.draw();
+      scenarioView.refreshSave();
     } catch (error) {
       if (error.status === 401) return; // 아직 로그인하지 않았다. 남겨 둔다
       store.set('place', { pending_save: null });
@@ -527,5 +653,7 @@ const scenarioView = {
 
 // 지도 화면(시나리오 탭이 있는 화면)이 열리면 로그인 전에 누른 "결과 저장"을 이어서 한다.
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.getElementById('scenario-panel')) scenarioView.resumePendingSave();
+  if (!document.getElementById('scenario-panel')) return;
+  scenarioView.resumePendingSave();
+  scenarioView.loadSaved(); // 로그인하지 않았으면 401이라 아무것도 켜지 않는다
 });

@@ -8,6 +8,7 @@
 | DB | MariaDB 11.4. 개발 도구는 HeidiSQL |
 | 생성 스크립트 | `db/schema.sql`. MariaDB 11.4에서 실행해 확인했다. |
 | 표 | 8개, 칸 93개. 1차 5개, 2차 2개, 3차 1개 |
+| 바뀐 것 (2026-10-21) | 재무정보를 회원 한 명에 **3개까지** 둔다 (`profiles`에 `id`, `slot`, `name`, `selected_at`). 찜(`saved_results`)에 어느 재무정보로 찜했는지(`profile_id`)를 남긴다. 3.2, 3.8, 4장, `db/schema.sql`, 옮기는 SQL `db/migrate_20261021_multi_profile.sql`. 1.2의 PNG 그림은 아직 다시 만들지 않았다 (Mermaid 그림은 고쳤다). |
 
 ## 목차
 
@@ -35,7 +36,7 @@
 | 표 | 담는 것 | 줄 수 (예상) | 단계 | 근거 |
 | --- | --- | --- | --- | --- |
 | `users` | 회원. 아이디, 비밀번호 해시, 가입일 | 회원 수 | 2차 (1차에 테스트 사용자 한 줄) | FR-USER-01, 14, T-USER-01, 08 |
-| `profiles` | 회원의 재무정보, 대출 선택, 저축 계획. 회원 한 명에 한 줄 | 회원 수 | 1차 | FR-PROFILE-04, T-PROFILE-01, T-PLAN-01 |
+| `profiles` | 회원의 재무정보, 대출 선택, 저축 계획. 회원 한 명에 3줄까지 (재무정보 1 ~ 3, 2026-10-21) | 회원 수 × 1 ~ 3 | 1차 | FR-PROFILE-04, T-PROFILE-01, T-PLAN-01 |
 | `loan_products` | 대출 상품의 조건 | 2 | 1차 | FR-DATA-06, T-LOAN-03 |
 | `apartments` | 아파트. 주소, 준공 연도, 좌표, 세대수 | 약 1,054 | 1차 | FR-DATA-04, 13, T-DATA-08 |
 | `trades` | 실거래 한 건씩 | 약 16,919 | 1차 | FR-DATA-02, 09, T-DATA-08 |
@@ -73,7 +74,7 @@
 
 ```mermaid
 erDiagram
-    users ||--o| profiles : "한 명에 한 줄"
+    users ||--o{ profiles : "한 명에 3줄까지"
     loan_products |o--o{ profiles : "고른 상품"
     apartments ||--o{ trades : "거래"
     apartments ||--o{ apartment_prices : "면적대별 평균"
@@ -81,6 +82,7 @@ erDiagram
     users ||--o{ saved_results : "저장"
     apartments |o--o{ saved_results : "참조"
     loan_products |o--o{ saved_results : "참조"
+    profiles |o--o{ saved_results : "찜한 재무정보"
 
     users {
         INT id PK "번호"
@@ -104,7 +106,11 @@ erDiagram
         VARCHAR source_url "출처 주소"
     }
     profiles {
-        INT user_id PK, FK "회원"
+        INT id PK "번호"
+        INT user_id FK, UK "회원"
+        TINYINT slot UK "칸 번호 1~3"
+        VARCHAR name "이름"
+        DATETIME selected_at "마지막으로 고른 시각"
         TINYINT age "만 나이"
         BIGINT annual_income "연 소득"
         BIGINT current_assets "현재 보유자산"
@@ -186,6 +192,7 @@ erDiagram
         INT user_id FK "회원"
         INT apartment_id FK "아파트"
         INT loan_product_id FK "대출 상품"
+        INT profile_id FK "찜한 재무정보"
         VARCHAR apartment_name "저장 당시 아파트명"
         VARCHAR gu "저장 당시 구"
         VARCHAR dong "저장 당시 동"
@@ -214,12 +221,13 @@ erDiagram
 
 | 관계 | 종류 | 뜻 |
 | --- | --- | --- |
-| `users` → `profiles` | 1 : 0 또는 1 | 회원 한 명에 재무정보 한 줄. 입력 전에는 없다. |
+| `users` → `profiles` | 1 : 0 ~ 3 | 회원 한 명에 재무정보 3줄까지 (재무정보 1 ~ 3, 2026-10-21). 입력 전에는 없다. |
 | `loan_products` → `profiles` | 0 또는 1 : 여러 | 상품 하나를 여러 회원이 고를 수 있다. 아직 고르지 않았거나 대출 없이 계산이면 연결이 없다. |
 | `apartments` → `trades` | 1 : 여러 | 아파트 하나에 거래 여러 건 |
 | `apartments` → `apartment_prices` | 1 : 여러 | 아파트 하나에 면적대별로 한 줄씩 |
 | `users` → `saved_results` | 1 : 여러 | 회원이 결과를 여러 개 저장한다. |
 | `apartments`, `loan_products` → `saved_results` | 0 또는 1 : 여러 | 저장한 결과가 가리키는 아파트와 상품. 원본이 없어져도 저장한 결과는 남는다. |
+| `profiles` → `saved_results` | 0 또는 1 : 여러 | 어느 재무정보로 찜했는지. 그 재무정보를 지워도 찜은 남고 연결만 비워진다 ("삭제된 재무정보", 2026-10-21). |
 | `data_collections` | 혼자 | 다른 표와 연결하지 않는다. |
 | `bus_stops` | 혼자 | 다른 표와 연결하지 않는다. 아파트와의 거리는 화면이 좌표로 잰다 (2026-10-20). |
 
@@ -268,11 +276,15 @@ erDiagram
 
 ### 3.2 `profiles` 재무정보, 대출 선택, 저축 계획
 
-회원 한 명에 한 줄이다. `user_id`가 기본키라서 두 줄이 생길 수 없다. 재무정보 단계를 마칠 때 줄이 생기고, 대출상품 단계와 저축 계획 단계를 마칠 때마다 해당 칸이 채워진다 (FR-PROFILE-04).
+회원 한 명에 **3줄까지**다 (2026-10-21. 예전에는 한 줄이었다). 화면의 "재무정보 1 ~ 3" 칸 하나가 한 줄이다. (`user_id`, `slot`)을 묶어 겹칠 수 없게 해서 같은 칸이 두 줄 생기지 않는다. 입력 단계로 처음 저장하면 재무정보 1이 생기고, 대출상품 단계와 저축 계획 단계를 마칠 때마다 해당 칸이 채워진다 (FR-PROFILE-04). 로그인한 시작 화면(P-01)에서 일곱 값을 한 번에 넣어 칸을 더하거나 고칠 수 있다.
 
 | 칸 | 형식 | 빈 값 | 설명 | 근거 |
 | --- | --- | --- | --- | --- |
-| `user_id` | INT UNSIGNED | | 기본키이자 `users.id`를 가리키는 외래키 | FR-USER-15 |
+| `id` | INT UNSIGNED, 자동 증가 | | 기본키. 지운 번호는 다시 쓰지 않는다. 찜(`saved_results.profile_id`)이 이 번호를 가리킨다. (2026-10-21) | |
+| `user_id` | INT UNSIGNED | | `users.id`를 가리키는 외래키 | FR-USER-15 |
+| `slot` | TINYINT UNSIGNED | | 칸 번호. 1, 2, 3 중 하나. 더할 때 비어 있는 가장 작은 번호를 쓴다. 회원 안에서 겹칠 수 없다. (2026-10-21) | |
+| `name` | VARCHAR(10) | | 칸 이름. 1 ~ 10자. 처음에는 "재무정보 1"처럼 칸 번호로 짓고, 시작 화면에서 바꿀 수 있다. (2026-10-21) | |
+| `selected_at` | DATETIME | ○ | 시작 화면에서 이 칸을 골라 지도를 본 마지막 시각. 다음에 로그인하면 이 값이 가장 늦은 칸이 골라져 있다. 아무 칸도 고른 적이 없으면 칸 번호가 가장 작은 것 (2026-10-21) | |
 | `age` | TINYINT UNSIGNED | | 만 나이. 15 ~ 100. 계산에 쓰지 않는다. | FR-PROFILE-01, 08 |
 | `annual_income` | BIGINT | | 연 소득(원). 0 ~ 100억. 계산에 쓰지 않는다. | FR-PROFILE-01, 21 |
 | `current_assets` | BIGINT | | 현재 보유자산(원). 0 ~ 100억 | FR-PROFILE-01, 21 |
@@ -293,7 +305,9 @@ erDiagram
 | 대출 없이 계산 | `none` | 빈 값 | 빈 값 |
 
 - 상환 기간이 그 상품의 선택지에 있는지는 서버에서 검사한다. 표의 제약으로는 걸 수 없다.
-- 시나리오 탭에서 다시 계산하면 `monthly_saving`과 `target_years`를 고친다 (FR-RESULT-06).
+- 시나리오 탭에서 다시 계산하면 **지금 고른 재무정보 줄의** `monthly_saving`과 `target_years`를 고친다 (FR-RESULT-06).
+- 칸을 지우면 그 줄을 지운다. 그 칸으로 찜한 결과는 남고 `saved_results.profile_id`만 비워진다 (4장). 같은 칸 번호로 새로 만들어도 `id`가 달라 예전 찜과 이어지지 않는다.
+- 다섯째 줄 이상은 서버가 막는다 (3개까지). 표의 제약으로는 걸 수 없다.
 
 저장한 값을 언제 남기고 언제 지우는지는 아래와 같다.
 
@@ -457,6 +471,7 @@ erDiagram
 | | `user_id` | INT UNSIGNED | | `users.id`를 가리킨다. 본인 것만 조회한다. |
 | | `apartment_id` | INT UNSIGNED | ○ | `apartments.id`를 가리킨다. "지도에서 이 아파트 보기"에 쓴다. |
 | | `loan_product_id` | INT UNSIGNED | ○ | `loan_products.id`를 가리킨다. |
+| | `profile_id` | INT UNSIGNED | ○ | 찜할 때 고른 재무정보. `profiles.id`를 가리킨다. 그 재무정보를 지우면 비워진다. 비어 있으면 화면에 "삭제된 재무정보"로 보인다 (2026-10-21) |
 | 아파트 | `apartment_name` | VARCHAR(100) | | 저장 당시의 아파트명 |
 | | `gu`, `dong` | VARCHAR | | 저장 당시의 지역 |
 | | `area_band` | SMALLINT UNSIGNED | | 면적대 |
@@ -493,6 +508,7 @@ erDiagram
 | `apartment_prices.apartment_id` | `apartments.id` | 함께 지운다 (CASCADE) | 위와 같다. |
 | `saved_results.apartment_id` | `apartments.id` | 빈 값으로 바꾼다 (SET NULL) | 저장한 결과는 남긴다. 아파트명은 복사해 두었다. |
 | `saved_results.loan_product_id` | `loan_products.id` | 빈 값으로 바꾼다 (SET NULL) | 위와 같다. |
+| `saved_results.profile_id` | `profiles.id` | 빈 값으로 바꾼다 (SET NULL) | 재무정보를 지워도 찜은 남긴다. 화면은 "삭제된 재무정보"로 묶는다 (2026-10-21). |
 
 - 다시 수집할 때 `apartments`의 줄은 지우지 않는다. 지웠다가 다시 넣으면 번호가 바뀌어 `saved_results`의 연결이 끊어진다. 있으면 고치고 없으면 넣는다.
 - 탈퇴는 `users`의 줄 하나를 지우면 끝난다. 나머지는 제약이 지운다.
@@ -565,7 +581,7 @@ erDiagram
 | 5 | 아파트 이름 검색 | `apartments` | 없음. 1,054줄이라 전부 훑어도 빠르다. | FR-MAP-08 |
 | 6 | 아파트 한 곳의 정보와 모든 면적대 | `apartments`, `apartment_prices` | `apartment_prices`의 (아파트, 면적대) | FR-APT-12, 13, 15, 16 |
 | 7 | 상품 목록 | `loan_products` | | FR-LOAN-01, 02 |
-| 8 | 내 재무정보 조회와 저장 | `profiles` | 기본키 | FR-PROFILE-04, 05 |
+| 8 | 내 재무정보(3개까지) 조회와 저장 | `profiles` | (회원, 칸 번호) | FR-PROFILE-04, 05 |
 | 9 | 수집 기준일 | `data_collections` | | FR-DATA-05 |
 | 10 | 내가 저장한 결과 목록 | `saved_results` | (회원, 저장한 시각) | FR-RESULT-08 |
 | 11 | 지도에 보이는 영역의 버스정류장 (A-28) | `bus_stops` | (위도, 경도) | FR-MAP-23 |
@@ -778,7 +794,10 @@ CREATE TABLE IF NOT EXISTS loan_products (
 -- 재무정보, 대출 선택, 저축 계획 (1차). 회원 한 명에 한 줄
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS profiles (
+  id               INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT '번호. 찜이 이 번호를 가리킨다 (2026-10-21)',
   user_id          INT UNSIGNED     NOT NULL COMMENT '회원',
+  slot             TINYINT UNSIGNED NOT NULL COMMENT '칸 번호. 1, 2, 3 중 하나 (재무정보 1 ~ 3)',
+  name             VARCHAR(10)      NOT NULL COMMENT '칸 이름. 1~10자',
   age              TINYINT UNSIGNED NOT NULL COMMENT '만 나이. 15~100. 계산에 쓰지 않는다',
   annual_income    BIGINT           NOT NULL COMMENT '연 소득. 원. 계산에 쓰지 않는다',
   current_assets   BIGINT           NOT NULL COMMENT '현재 보유자산. 원',
@@ -789,10 +808,14 @@ CREATE TABLE IF NOT EXISTS profiles (
   target_years     TINYINT UNSIGNED NULL     COMMENT '목표 기간. 0, 3, 5, 10 중 하나. 0은 지금',
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '처음 저장한 시각',
   updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
-  PRIMARY KEY (user_id),
+  selected_at      DATETIME NULL     COMMENT '시작 화면에서 이 칸을 골라 지도를 본 마지막 시각',
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_profiles_user_slot (user_id, slot),
   KEY ix_profiles_loan_product (loan_product_id),
   CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   CONSTRAINT fk_profiles_loan_product FOREIGN KEY (loan_product_id) REFERENCES loan_products (id),
+  CONSTRAINT ck_profiles_slot   CHECK (slot BETWEEN 1 AND 3),
+  CONSTRAINT ck_profiles_name   CHECK (CHAR_LENGTH(name) BETWEEN 1 AND 10),
   CONSTRAINT ck_profiles_age    CHECK (age BETWEEN 15 AND 100),
   CONSTRAINT ck_profiles_income CHECK (annual_income BETWEEN 0 AND 10000000000),
   CONSTRAINT ck_profiles_assets CHECK (current_assets BETWEEN 0 AND 10000000000),
@@ -934,6 +957,7 @@ CREATE TABLE IF NOT EXISTS saved_results (
   user_id                  INT UNSIGNED      NOT NULL COMMENT '회원',
   apartment_id             INT UNSIGNED      NULL     COMMENT '아파트. 원본이 지워지면 비워진다',
   loan_product_id          INT UNSIGNED      NULL     COMMENT '대출 상품. 원본이 지워지면 비워진다',
+  profile_id               INT UNSIGNED      NULL     COMMENT '찜한 재무정보. 그 재무정보를 지우면 비워진다 (2026-10-21)',
   apartment_name           VARCHAR(100)      NOT NULL COMMENT '저장 당시 아파트명',
   gu                       VARCHAR(10)       NOT NULL COMMENT '저장 당시 구',
   dong                     VARCHAR(20)       NOT NULL COMMENT '저장 당시 동',
@@ -957,9 +981,11 @@ CREATE TABLE IF NOT EXISTS saved_results (
   created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '저장한 시각',
   PRIMARY KEY (id),
   KEY ix_saved_user_created (user_id, created_at),
+  KEY ix_saved_profile (profile_id),
   CONSTRAINT fk_saved_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   CONSTRAINT fk_saved_apartment FOREIGN KEY (apartment_id) REFERENCES apartments (id) ON DELETE SET NULL,
-  CONSTRAINT fk_saved_loan_product FOREIGN KEY (loan_product_id) REFERENCES loan_products (id) ON DELETE SET NULL
+  CONSTRAINT fk_saved_loan_product FOREIGN KEY (loan_product_id) REFERENCES loan_products (id) ON DELETE SET NULL,
+  CONSTRAINT fk_saved_profile FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='저장한 결과';
 
 -- ------------------------------------------------------------------

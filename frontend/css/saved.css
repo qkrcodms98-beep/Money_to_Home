@@ -159,3 +159,66 @@
   margin-top: 8px;
   font-weight: var(--font-bold);
 }
+
+/* ───────── 2026-10-21 (재무정보 3개 + 찜) ───────── */
+/* 웹(가로 1200px 이상): ‹ 줄도 가운데 기둥 폭 안에 */
+@media (min-width: 1200px) {
+  body:has(> .header) .saved__nav {
+    max-width: var(--page-width);
+    margin: 0 auto;
+  }
+}
+
+/* 구분 배지: 지도 아파트 창의 배지(new-style.css의 .apt__title .badge)와 같은 모양. 회색 바탕, 검은 글자, 색 집 아이콘 */
+.saved__title-row .badge {
+  gap: 5px;
+  border: none;
+  background: rgb(228, 228, 228);
+  color: #0f0f0f;
+}
+
+.saved__title-row .badge::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1.5 5.3 6 1.5l4.5 3.8v5.2h-9z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1.5 5.3 6 1.5l4.5 3.8v5.2h-9z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.saved__title-row .badge--now::before {
+  background: var(--color-now);
+}
+
+.saved__title-row .badge--within::before {
+  background: var(--color-within);
+}
+
+.saved__title-row .badge--lack::before {
+  background: var(--color-lack);
+}
+
+/* 이름 줄 오른쪽 끝의 ♥ (누르면 찜 해제, ♡를 다시 누르면 다시 찜) */
+.saved__heart {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  margin: 0 -8px 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--color-error);
+  cursor: pointer;
+}
+
+.saved__heart svg {
+  width: 30px;
+  height: 30px;
+}
+
+.saved__heart[aria-pressed='false'] {
+  color: var(--color-text-sub);
+}

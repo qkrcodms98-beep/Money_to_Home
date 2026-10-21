@@ -15,6 +15,8 @@ class SavedResult(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     apartment_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("apartments.id", ondelete="SET NULL"))
     loan_product_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("loan_products.id", ondelete="SET NULL"))
+    # 찜할 때 고른 재무정보. 그 재무정보를 지우면 비워진다 ("삭제된 재무정보", 2026-10-21)
+    profile_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("profiles.id", ondelete="SET NULL"))
 
     # 저장 당시의 아파트
     apartment_name: Mapped[str] = mapped_column(String(100))

@@ -3,6 +3,7 @@
 - A-21 POST /api/saved-results      : SavedResultIn → SavedResultOut (201)
 - A-22 GET  /api/saved-results      : SavedResultsOut
 - A-23 GET  /api/saved-results/{id} : SavedResultOut
+- A-35 DELETE /api/saved-results/{id} : 204. 찜 해제 (2026-10-21)
 
 요청에는 계산 결과를 받지 않는다. 조건과 아파트만 받고 서버가 다시 계산해 저장한다 (API 명세서 3.5, NFR-13).
 응답의 모양은 시나리오(A-07)와 같게 맞췄다. 화면이 시나리오 탭과 같은 함수로 그릴 수 있게 한다.
@@ -22,6 +23,7 @@ class SavedResultIn(BaseModel):
     conditions: Conditions
     apartment_id: StrictInt
     area_band: StrictInt  # 고른 면적대. ㎡
+    profile_id: StrictInt | None = None  # 찜할 때 고른 재무정보 (2026-10-21). 없어도 된다
 
 
 class SavedApartment(BaseModel):
@@ -54,6 +56,7 @@ class SavedResultOut(BaseModel):
 
     id: int
     created_at: datetime  # 저장한 시각
+    profile_id: int | None  # 찜한 재무정보. 지웠거나 모르면 null ("삭제된 재무정보", 2026-10-21)
     apartment: SavedApartment
     price: int  # 저장 당시 평균가 (목표 부동산 가격)
     current_assets: int

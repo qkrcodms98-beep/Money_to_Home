@@ -2253,10 +2253,15 @@ async function onPlanChanged(event) {
   }
 }
 
-// 내 조건 줄의 "로그인" (P-05 ①). 로그인했으면 "로그아웃"이 되고, 누르면 로그아웃한다.
+// 내 조건 줄의 "로그인" (P-05 ①). 로그인했으면 마이페이지 ▾ 메뉴가 된다 (my-menu.js가 없으면 예전처럼 "로그아웃").
 async function renderLoginLink() {
   const link = document.getElementById('login-link');
   const loginId = await account.me();
+  // 로그인했으면 "로그인" 자리에 마이페이지 ▾ 메뉴 (2026-10-21, 박채은의 js/my-menu.js)
+  if (loginId && typeof myMenu !== 'undefined') {
+    myMenu.attach(link);
+    return;
+  }
   link.textContent = loginId ? '로그아웃' : '로그인';
   link.dataset.loggedIn = String(Boolean(loginId));
 }
