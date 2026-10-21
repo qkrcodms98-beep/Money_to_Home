@@ -264,6 +264,25 @@
   .profile-sheet {
     max-width: var(--web-page-width);
     border-radius: 20px;
+    justify-content: center;
+  }
+
+  /* 웹의 추가 · 수정 창은 위에서부터 화면 높이를 다 채운다 (2026-10-21).
+     삭제 확인 창(div.profile-sheet)은 지금처럼 가운데 작은 창 */
+  .profile-dim:has(> form.profile-sheet) {
+    justify-content: flex-start;
+  }
+
+  form.profile-sheet {
+    min-height: 100vh;
+    max-height: 100vh;
+    border: none;
+    border-radius: 0;
+  }
+
+  /* 화면 높이를 다 채우는 창이라 끌어내리는 손잡이는 숨긴다 */
+  form.profile-sheet .profile-sheet__handle {
+    display: none;
   }
 }
 
