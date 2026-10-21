@@ -48,7 +48,10 @@ CREATE TABLE IF NOT EXISTS loan_products (
 -- 재무정보, 대출 선택, 저축 계획 (1차). 회원 한 명에 한 줄
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS profiles (
+  id               INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT '번호. 찜이 이 번호를 가리킨다 (2026-10-21)',
   user_id          INT UNSIGNED     NOT NULL COMMENT '회원',
+  slot             TINYINT UNSIGNED NOT NULL COMMENT '칸 번호. 1, 2, 3 중 하나 (재무정보 1 ~ 3)',
+  name             VARCHAR(10)      NOT NULL COMMENT '칸 이름. 1~10자',
   age              TINYINT UNSIGNED NOT NULL COMMENT '만 나이. 15~100. 계산에 쓰지 않는다',
   annual_income    BIGINT           NOT NULL COMMENT '연 소득. 원. 계산에 쓰지 않는다',
   current_assets   BIGINT           NOT NULL COMMENT '현재 보유자산. 원',
@@ -59,10 +62,14 @@ CREATE TABLE IF NOT EXISTS profiles (
   target_years     TINYINT UNSIGNED NULL     COMMENT '목표 기간. 0, 3, 5, 10 중 하나. 0은 지금',
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '처음 저장한 시각',
   updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
-  PRIMARY KEY (user_id),
+  selected_at      DATETIME NULL     COMMENT '시작 화면에서 이 칸을 골라 지도를 본 마지막 시각',
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_profiles_user_slot (user_id, slot),
   KEY ix_profiles_loan_product (loan_product_id),
   CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   CONSTRAINT fk_profiles_loan_product FOREIGN KEY (loan_product_id) REFERENCES loan_products (id),
+  CONSTRAINT ck_profiles_slot   CHECK (slot BETWEEN 1 AND 3),
+  CONSTRAINT ck_profiles_name   CHECK (CHAR_LENGTH(name) BETWEEN 1 AND 10),
   CONSTRAINT ck_profiles_age    CHECK (age BETWEEN 15 AND 100),
   CONSTRAINT ck_profiles_income CHECK (annual_income BETWEEN 0 AND 10000000000),
   CONSTRAINT ck_profiles_assets CHECK (current_assets BETWEEN 0 AND 10000000000),
@@ -204,6 +211,7 @@ CREATE TABLE IF NOT EXISTS saved_results (
   user_id                  INT UNSIGNED      NOT NULL COMMENT '회원',
   apartment_id             INT UNSIGNED      NULL     COMMENT '아파트. 원본이 지워지면 비워진다',
   loan_product_id          INT UNSIGNED      NULL     COMMENT '대출 상품. 원본이 지워지면 비워진다',
+  profile_id               INT UNSIGNED      NULL     COMMENT '찜한 재무정보. 그 재무정보를 지우면 비워진다 (2026-10-21)',
   apartment_name           VARCHAR(100)      NOT NULL COMMENT '저장 당시 아파트명',
   gu                       VARCHAR(10)       NOT NULL COMMENT '저장 당시 구',
   dong                     VARCHAR(20)       NOT NULL COMMENT '저장 당시 동',
@@ -227,9 +235,11 @@ CREATE TABLE IF NOT EXISTS saved_results (
   created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '저장한 시각',
   PRIMARY KEY (id),
   KEY ix_saved_user_created (user_id, created_at),
+  KEY ix_saved_profile (profile_id),
   CONSTRAINT fk_saved_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
   CONSTRAINT fk_saved_apartment FOREIGN KEY (apartment_id) REFERENCES apartments (id) ON DELETE SET NULL,
-  CONSTRAINT fk_saved_loan_product FOREIGN KEY (loan_product_id) REFERENCES loan_products (id) ON DELETE SET NULL
+  CONSTRAINT fk_saved_loan_product FOREIGN KEY (loan_product_id) REFERENCES loan_products (id) ON DELETE SET NULL,
+  CONSTRAINT fk_saved_profile FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='저장한 결과';
 
 -- ------------------------------------------------------------------
