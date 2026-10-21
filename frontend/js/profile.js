@@ -2,7 +2,7 @@
 //
 // 값 세 개를 한 번에 하나씩 묻는다.
 //   rrn(주민등록번호 앞 7자리 → 만 나이) → income(연 소득) → assets(현재 보유자산) → confirm(확인)
-// 새로 묻는 칸은 늘 맨 위에 나오고 앞의 값은 아래로 내려간다 (profile.html의 칸 순서). 키보드의 "다음"·✓로 넘어간다 (js/form-flow.js)
+// 하나를 넣으면 다음 칸이 그 아래에 열린다. 키보드의 "다음"·✓로 넘어간다 (js/form-flow.js)
 //
 // 주민등록번호 앞 7자리는 만 나이를 계산하는 데만 쓴다.
 // 브라우저 저장소, 서버 요청 어디에도 넣지 않는다. 보관하는 것은 만 나이뿐이다 (NFR-25).
@@ -90,11 +90,17 @@
     target.message.textContent = error || target.help;
   }
 
+  // 숫자만 든 글자에 천 단위 쉼표를 다시 찍는다. 자릿수가 많아도 숫자를 바꾸지 않게 글자로 다룬다
+  function commaDigits(text) {
+    return text.replace(/,/g, '').trim().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
   // 금액 입력란 하나를 다시 그린다. 값이 맞으면 만 원 정수를 돌려준다.
   function renderMoney(name) {
     const target = money[name];
     const { value, error } = checkMoney(target.input.value);
     if (value !== null) target.input.value = format.comma(value); // 천 단위 쉼표
+    else if (error === MSG.max) target.input.value = commaDigits(target.input.value); // 상한을 넘어도 쉼표는 바른 자리에 ("100,0001" → "1,000,001")
     target.read.textContent = value !== null ? format.won(format.manToWon(value)) : '';
     showMessage(target, error || serverErrors[target.key] || null);
     return error || serverErrors[target.key] ? null : value;
@@ -140,7 +146,7 @@
 
   // 확인 단계로 바뀔 때 제목과 값들이 한 번 뛰어오른다. 화면이 바뀐 것을 알아보게 한다. 모양은 common.css의 .jump
   function jump() {
-    const targets = [$('profile-title').parentElement, money.assets.field, money.income.field, ageField]; // 화면의 위에서 아래 순서
+    const targets = [$('profile-title').parentElement, ageField, money.income.field, money.assets.field];
     targets.forEach((target, index) => {
       target.classList.remove('field--enter', 'jump');
       void target.offsetWidth;
@@ -198,6 +204,9 @@
   // 지금 칸을 마치고 다음 칸으로 간다. 확인 버튼, 키보드의 "다음"(Enter), 아이폰 키패드의 ✓가 모두 여기로 온다.
   // focus: 다음 칸에 바로 커서를 둘지. 키보드가 떠 있을 때만 둔다 (✓로 키보드를 닫았으면 다시 띄우지 않는다)
   function advance(focus = true) {
+    // 방금 입력한 칸의 자리. 다음 칸이 그 아래에 열리면 화면을 올려 그 자리에 오게 한다 (키보드에 가려지지 않게)
+    const from = { rrn: rrn.field, income: money.income.field, assets: money.assets.field }[step];
+    const top = from ? formFlow.placeOf(from) : 0;
     if (step === 'rrn') {
       age = renderRrn();
       rrn.front.value = '';
@@ -216,6 +225,7 @@
     }
     // 다 넣었으면 키보드를 내리고 아래의 버튼이 보이게 조금 내린다 (2026-10-21 팀장 요청)
     if (step === 'confirm') formFlow.revealSubmit(submit);
+    else if (focus) formFlow.keepPlace(top, { income: money.income.field, assets: money.assets.field }[step]);
   }
 
   form.addEventListener('submit', (event) => {

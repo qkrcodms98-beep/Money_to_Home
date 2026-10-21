@@ -222,9 +222,12 @@ function initSignup() {
   let step = 'id';
   let sending = false;
 
-  // 단계를 바꾼다. 새로 나타나는 입력란은 맨 위에 밀려 들어오고 앞 단계의 입력란은 아래에 남는다 (signup.html의 칸 순서)
+  // 단계를 바꾼다. 앞 단계의 입력란은 위에 남고, 새로 나타나는 입력란은 그 아래에 밀려 들어온다
   function setStep(next) {
     const before = step;
+    // 방금 입력한 칸의 자리. 다음 칸이 그 아래에 열리면 화면을 올려 그 자리에 오게 한다 (키보드에 가려지지 않게)
+    const fields = { id: id.field, password: password.field, confirm: confirm.field };
+    const top = fields[before] ? formFlow.placeOf(fields[before]) : 0;
     step = next;
     const text = SIGNUP_STEPS[next];
     title.textContent = text.title;
@@ -250,7 +253,8 @@ function initSignup() {
 
     if (next !== before) {
       const focus = { id: id.input, password: password.input, confirm: confirm.input }[next];
-      if (focus) focus.focus();
+      if (focus) focus.focus({ preventScroll: true });
+      if (focus && fields[next] && next !== 'id') formFlow.keepPlace(top, fields[next]);
       // 비밀번호 확인까지 맞으면 키보드를 내리고 동의와 가입하기 버튼이 보이게 내린다 (2026-10-21 팀장 요청)
       if (next === 'ready') formFlow.revealSubmit(submit);
     }
