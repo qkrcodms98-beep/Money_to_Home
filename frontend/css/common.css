@@ -377,7 +377,8 @@ dialog {
 .form-page {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh / var(--page-zoom, 1) - var(--top-space) - var(--progress-height));
+  /* --app-height: 키보드가 없을 때의 화면 높이 (js/form-flow.js). 키보드가 떠서 화면이 줄어도 그대로라 버튼이 따라 올라오지 않는다 */
+  min-height: calc(var(--app-height, 100vh) / var(--page-zoom, 1) - var(--top-space) - var(--progress-height));
 }
 
 .form-page .page {
@@ -388,6 +389,15 @@ dialog {
 
 .form-page .bottom-action {
   width: 100%;
+}
+
+/* 휴대폰·태블릿(1199px 이하): 글자를 넣는 화면의 버튼은 키보드 위로 떠오르지 않고 본문 맨 아래에 둔다 (2026-10-21 팀장 요청).
+   갤럭시는 키보드가 뜨면 화면이 줄어 화면 아래에 붙은 버튼이 입력란을 덮었다. 본문이 짧으면 화면 맨 아래, 길면 내려서 본다.
+   글자를 넣는 화면(form-page--keys: 재무정보, 저축 계획, 로그인, 회원가입, 내 정보)만. 고르기만 하는 화면은 버튼이 늘 보이게 그대로 둔다 */
+@media (max-width: 1199px) {
+  .form-page--keys .bottom-action {
+    position: static;
+  }
 }
 
 /* 제목과 설명 */

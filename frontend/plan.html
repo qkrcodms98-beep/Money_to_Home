@@ -27,7 +27,7 @@
     <span class="progress__label">3/4 저축 계획</span>
   </nav>
 
-  <form id="plan-form" class="form-page" novalidate>
+  <form id="plan-form" class="form-page form-page--keys" novalidate>
     <main class="page">
       <header class="form-page__head">
         <h1 class="title" id="plan-title">매달 얼마를 모을 수 있나요?</h1>
@@ -40,7 +40,7 @@
       <div class="field" id="saving-field">
         <label class="field__label" for="saving-input">월 저축 가능액</label>
         <div class="field__row">
-          <input class="field__input" id="saving-input" type="text" inputmode="numeric" autocomplete="off"
+          <input class="field__input" id="saving-input" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off"
                  placeholder="예: 100" aria-describedby="saving-help">
           <span class="field__unit">만 원</span>
         </div>
@@ -93,7 +93,8 @@
   <script src="js/guard.js"></script>
   <script src="js/layout.js?v=20261019-1"></script>
   <script src="js/account.js?v=20261014-1"></script>
-  <script src="js/plan.js?v=20261014-3"></script>
+  <script src="js/form-flow.js?v=20261021-1"></script>
+  <script src="js/plan.js?v=20261021-1"></script>
   <script src="js/scrollbar.js?v=20261020-6"></script>
 </body>
 </html>
