@@ -111,8 +111,8 @@
     display: block;
     width: 28px;
     height: 28px;
-    /* 동전 바닥(그림 아래 20% 빈칸 위)을 "머니 to 홈" 글자 바닥에 맞춘다. 지붕 끝이 글자보다 덜 솟는다 */
-    transform: translateY(3px);
+    /* 로고를 2px 내려 지붕 끝이 "머니 to 홈" 글자보다 솟지 않게 한다 (3px는 내려앉아 보였다) */
+    transform: translateY(2px);
   }
 
   .map-web-logo .header__name {
